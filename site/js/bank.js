@@ -17,6 +17,9 @@ window.R = {
     return n.toLocaleString("en-US", { minimumFractionDigits: dp, maximumFractionDigits: dp });
   },
   m: (n, dp) => "US$" + R.num(n, dp) + "m",
+  gbp: (n, dp) => "£" + R.num(n, dp) + "m",
+  gbp2: v => "£" + R.num(v, 2),
+  gbp0: v => "£" + R.num(Math.round(v), 0),
   pct: (x, dp = 1) => (x * 100).toFixed(dp) + "%",
   spct: (x, dp = 1) => (x >= 0 ? "+" : "−") + Math.abs(x * 100).toFixed(dp) + "%",
   x: (v, dp = 1) => v.toFixed(dp) + "x",

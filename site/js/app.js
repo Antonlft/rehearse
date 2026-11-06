@@ -13,9 +13,22 @@ const CATEGORIES = [
   { id: "cm", name: "ECM & DCM", desc: "IPOs, rights issues, block trades, convertibles and bond issuance" },
   { id: "maths", name: "Quick maths", desc: "CAGR, discounting, perpetuities, breakevens and basis points" },
   { id: "bt", name: "Brain teasers", desc: "Probability, logic puzzles and mental arithmetic" },
-  { id: "econ", name: "Economics & markets", desc: "Rates, inflation, FX and the macro cycle" }
+  { id: "econ", name: "Economics & markets", desc: "Rates, inflation, FX and the macro cycle" },
+  { id: "hk", group: "hl", name: "Hotel economics & KPIs", desc: "Occupancy, ADR, RevPAR, TRevPAR, GOP, GOPPAR and EBITDA(R)" },
+  { id: "hom", group: "hl", name: "Hotel operating models", desc: "Lease vs management vs franchise, OpCo/PropCo and fee structures" },
+  { id: "rev", group: "hl", name: "Real estate valuation", desc: "Yields, price per key and bed, NOI vs EBITDA(R), DCF and exit yields" },
+  { id: "liv", group: "hl", name: "Living sectors: PBSA, BTR, co-living", desc: "How each works, income stability, key metrics and valuation drivers" },
+  { id: "pf", group: "hl", name: "Property finance & rates", desc: "LTV, ICR, DSCR, debt yield, swaps, SONIA and leverage" },
+  { id: "hds", group: "hl", name: "Hospitality & living deal structuring", desc: "Sale process, asset vs share deals, leasebacks, JVs, forward funding" }
 ];
+CATEGORIES.forEach(c => c.group ||= "fin");
+const GROUPS = [{ id: "fin", name: "Finance & accounting" }, { id: "hl", name: "Hospitality & living" }];
+const LEVELS = { 1: "Basic", 2: "Intermediate", 3: "Advanced" };
 const catById = id => CATEGORIES.find(c => c.id === id);
+const groupLabel = ids => {
+  const gs = [...new Set(ids.map(id => catById(id).group))];
+  return gs.length === 1 ? GROUPS.find(g => g.id === gs[0]).name : "Finance, real estate & hospitality";
+};
 const modeInfo = mode => mode === "mixed"
   ? { title: "Financial aptitude test", sub: "Finance & accounting", n: 20 }
   : { title: catById(mode).name, sub: "Category practice", n: 10 };
@@ -54,14 +67,14 @@ function generated(fn) {
   let g;
   for (let i = 0; i < 30; i++) {
     g = fn();
-    if (new Set(g.o).size === g.o.length && !g.o.some(s => /NaN|Infinity/.test(s))) break;
+    if (g.o.length === 4 && new Set(g.o).size === 4 && !g.o.some(s => /NaN|Infinity|undefined/.test(s))) break;
   }
   return { ...g, gen: true };
 }
 
 function materialize(src, cat) {
   const perm = shuffle([0, 1, 2, 3]);
-  return { cat, id: src.id || null, gen: !!src.gen, q: src.q, why: src.why,
+  return { cat, id: src.id || null, gen: !!src.gen, lv: src.lv || null, q: src.q, why: src.why,
     o: perm.map(i => src.o[i]), a: perm.indexOf(0), x: perm.map(i => i === 0 ? null : src.x[i - 1]) };
 }
 
@@ -101,13 +114,16 @@ function allocate(cats, n) {
 
 function buildRound(mode, cats) {
   const used = new Set();
-  return allocate(cats, modeInfo(mode).n).map(cat => draw(cat, used));
+  const items = allocate(cats, modeInfo(mode).n).map(cat => draw(cat, used));
+  // Single-category practice runs from basic to advanced when the category has levels.
+  if (mode !== "mixed" && items.every(it => it.lv)) items.sort((a, b) => a.lv - b.lv);
+  return items;
 }
 
 function startRound(mode) {
   const cats = mode === "mixed" ? selectedCats() : [mode];
   const items = buildRound(mode, cats);
-  const sub = mode === "mixed" ? `Finance & accounting · ${selectionLabel(cats)}` : "Category practice";
+  const sub = mode === "mixed" ? `${groupLabel(cats)} · ${selectionLabel(cats)}` : "Category practice";
   db.attempts[mode] = { mode, sub, items, answers: Array(items.length).fill(null), marked: Array(items.length).fill(false),
     cur: 0, start: Date.now(), deadline: Date.now() + items.length * 60000 };
   persist();
@@ -145,13 +161,17 @@ function renderSetup() {
         <div><h2>Choose your categories</h2><p class="muted">Untick anything that isn't relevant to you. Your choice is remembered for next time.</p></div>
         <div class="setup-links"><button class="link" id="allBtn" type="button">Select all</button><button class="link" id="noneBtn" type="button">Clear all</button></div>
       </div>
-      <div class="check-grid">
-        ${CATEGORIES.map(c => `
-          <label class="check" for="cat-${c.id}">
-            <input type="checkbox" id="cat-${c.id}" value="${c.id}" ${sel.has(c.id) ? "checked" : ""}>
-            <span><b>${esc(c.name)}</b><small>${esc(c.desc)}</small></span>
-          </label>`).join("")}
-      </div>
+      ${GROUPS.map(g => `
+        <div class="check-group">
+          <div class="check-group-head"><h3>${esc(g.name)}</h3><button class="link" type="button" data-only="${g.id}">Only this group</button></div>
+          <div class="check-grid">
+            ${CATEGORIES.filter(c => c.group === g.id).map(c => `
+              <label class="check" for="cat-${c.id}">
+                <input type="checkbox" id="cat-${c.id}" value="${c.id}" data-group="${c.group}" ${sel.has(c.id) ? "checked" : ""}>
+                <span><b>${esc(c.name)}</b><small>${esc(c.desc)}</small></span>
+              </label>`).join("")}
+          </div>
+        </div>`).join("")}
       <div class="setup-foot">
         <p id="setupSummary" aria-live="polite"></p>
         <div class="actions"><button class="btn" id="cancelBtn" type="button">Cancel</button><button class="btn primary lg" id="goBtn" type="button">Start round</button></div>
@@ -169,6 +189,7 @@ function renderSetup() {
   boxes.forEach(b => b.onchange = sync);
   document.getElementById("allBtn").onclick = () => { boxes.forEach(b => b.checked = true); sync(); };
   document.getElementById("noneBtn").onclick = () => { boxes.forEach(b => b.checked = false); sync(); };
+  app.querySelectorAll("[data-only]").forEach(l => l.onclick = () => { boxes.forEach(b => b.checked = b.dataset.group === l.dataset.only); sync(); });
   document.getElementById("cancelBtn").onclick = () => go({ name: "home" });
   document.getElementById("backHome").onclick = () => go({ name: "home" });
   goBtn.onclick = () => {
@@ -217,7 +238,7 @@ function renderHome() {
     <section class="card test-card">
       <div class="test-row">
         <div>
-          <p class="label">Finance & accounting · ${selectionLabel(selectedCats())} <button class="link" type="button" data-setup>Choose categories</button></p>
+          <p class="label">${esc(groupLabel(selectedCats()))} · ${selectionLabel(selectedCats())} <button class="link" type="button" data-setup>Choose categories</button></p>
           <h2>Financial aptitude test</h2>
           <ul class="facts">
             <li><b>20</b> questions</li><li><b>20</b> minutes</li><li><b>${seen}</b> of ${totalWritten()} written questions seen so far</li>
@@ -233,7 +254,7 @@ function renderHome() {
     <div class="section-head"><h2>Practise one category</h2><p>10 questions · 10 minutes</p></div>
     <div class="cat-table">
       <div class="cat-row cat-head" aria-hidden="true"><span>Category</span><span>Question bank</span><span>Your accuracy</span><span></span></div>
-      ${CATEGORIES.map(catRow).join("")}
+      ${GROUPS.map(g => `<div class="cat-group">${esc(g.name)}</div>` + CATEGORIES.filter(c => c.group === g.id).map(catRow).join("")).join("")}
     </div>`;
   app.querySelectorAll("[data-new]").forEach(b => b.onclick = () => b.dataset.new === "mixed" ? go({ name: "setup" }) : newRound(b.dataset.new));
   app.querySelectorAll("[data-setup]").forEach(b => b.onclick = () => go({ name: "setup" }));
@@ -260,7 +281,7 @@ function renderQuiz() {
       <div class="timer" id="timer" role="timer"><span>Time left</span><strong id="clock">${fmt(at.deadline - Date.now())}</strong></div>
     </div>
     <section class="card question" aria-labelledby="qtext">
-      <p class="label">${esc(catById(it.cat).name)} · Question ${at.cur + 1} of ${n}</p>
+      <p class="label">${esc(catById(it.cat).name)} · Question ${at.cur + 1} of ${n}${it.lv ? ` · ${LEVELS[it.lv]}` : ""}</p>
       <p class="prompt" id="qtext">${esc(it.q)}</p>
       <div class="options" role="radiogroup" aria-labelledby="qtext">
         ${it.o.map((o, i) => `<button type="button" class="opt" role="radio" aria-checked="${at.answers[at.cur] === i}" data-opt="${i}"><span class="radio"></span><span>${esc(o)}</span></button>`).join("")}
@@ -356,7 +377,7 @@ function renderResults() {
         <div class="score-big">${r.correct}<small> / ${r.total}</small></div>
         <div>
           <p class="verdict">${verdict} · ${r.pct}%</p>
-          <p class="muted">${r.timedOut ? "Time ran out · " : ""}Time used ${fmt(r.usedMs)} of ${fmt(r.total * 60000)} ·${wrongN} wrong · ${skipN} unanswered</p>
+          <p class="muted">${r.timedOut ? "Time ran out · " : ""}Time used ${fmt(r.usedMs)} of ${fmt(r.total * 60000)} · ${wrongN} wrong · ${skipN} unanswered</p>
         </div>
       </div>
       <div class="result-actions">
@@ -399,7 +420,7 @@ function reviewItem(it, i, ans, marked) {
   return `
     <article class="card item" id="r-${i}">
       <div class="item-top">
-        <p class="label">${esc(catById(it.cat).name)} · Question ${i + 1}${it.gen ? " · Calculation" : ""}</p>
+        <p class="label">${esc(catById(it.cat).name)} · Question ${i + 1}${it.lv ? ` · ${LEVELS[it.lv]}` : ""}${it.gen ? " · Calculation" : ""}</p>
         <span class="pills"><span class="pill ${st[0]}">${st[1]}</span>${marked ? `<span class="pill flagged">Marked</span>` : ""}</span>
       </div>
       <p class="prompt">${esc(it.q)}</p>
