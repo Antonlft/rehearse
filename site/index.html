@@ -1,0 +1,626 @@
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Rehearse Aptitude</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Serif:wght@400;500;600&display=swap">
+<style>
+/* Layout: assessment-portal shell — wordmark band, one centred test sheet, question navigator under it */
+:root {
+  --bg: #f3f4f6;
+  --sheet: #ffffff;
+  --ink: #141c2b;
+  --muted: #5d6676;
+  --rule: #dfe2e8;
+  --navy: #1a2740;
+  --navy-fg: #ffffff;
+  --tint: #eef1f6;
+  --amber: #b7791f;
+  --amber-tint: #fbf3e4;
+  --good: #23784a;
+  --good-tint: #e7f4ec;
+  --bad: #b3322c;
+  --bad-tint: #fbeceb;
+  --font-display: "IBM Plex Serif", Georgia, "Times New Roman", serif;
+  --font-body: "IBM Plex Sans", -apple-system, "Segoe UI", Roboto, sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, Menlo, Consolas, monospace;
+  --radius: 6px;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0f141d; --sheet: #171e2a; --ink: #e6e9ef; --muted: #98a1b1; --rule: #2a3343;
+    --navy: #c9d5ea; --navy-fg: #111827; --tint: #1f2836;
+    --amber: #e0a94c; --amber-tint: #2c2416; --good: #5cc28a; --good-tint: #15291f; --bad: #ef7d76; --bad-tint: #2f1a1a;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0f141d; --sheet: #171e2a; --ink: #e6e9ef; --muted: #98a1b1; --rule: #2a3343;
+  --navy: #c9d5ea; --navy-fg: #111827; --tint: #1f2836;
+  --amber: #e0a94c; --amber-tint: #2c2416; --good: #5cc28a; --good-tint: #15291f; --bad: #ef7d76; --bad-tint: #2f1a1a;
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+body { background: var(--bg); color: var(--ink); font-family: var(--font-body); font-size: 15px; line-height: 1.5; }
+button { font: inherit; color: inherit; }
+:focus-visible { outline: 2px solid var(--navy); outline-offset: 2px; }
+
+.shell { padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); padding-block: 0 48px; }
+.wrap { max-width: 900px; margin: 0 auto; }
+
+.masthead { background: var(--sheet); border-bottom: 1px solid var(--rule); padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); padding-block: 18px; }
+.masthead .wrap { display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap; }
+.wordmark { display: flex; flex-direction: column; align-items: flex-start; gap: 2px; background: none; border: 0; padding: 0; cursor: pointer; }
+.wordmark b { font-family: var(--font-display); font-weight: 500; font-size: 22px; letter-spacing: 0.32em; color: var(--ink); }
+.wordmark small { font-size: 9px; letter-spacing: 0.42em; text-transform: uppercase; color: var(--muted); padding-left: 2px; }
+.masthead-meta { font-size: 13px; color: var(--muted); display: flex; gap: 14px; align-items: center; }
+.linkish { background: none; border: 0; padding: 0; color: var(--ink); text-decoration: underline; text-underline-offset: 3px; cursor: pointer; font-size: 13px; }
+
+.sheet { background: var(--sheet); border: 1px solid var(--rule); border-radius: var(--radius); padding: 24px 28px; }
+@media (max-width: 560px) { .sheet { padding: 18px 16px; } }
+
+.title-row { display: flex; justify-content: space-between; align-items: flex-end; gap: 16px; margin: 28px 0 14px; flex-wrap: wrap; }
+.title-row h1 { font-family: var(--font-body); font-size: 15px; font-weight: 600; margin: 0; }
+.title-row p { margin: 2px 0 0; font-size: 13px; color: var(--muted); }
+.timer { text-align: right; }
+.timer span { display: block; font-size: 10px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--muted); }
+.timer strong { font-family: var(--font-mono); font-weight: 500; font-size: 26px; font-variant-numeric: tabular-nums; letter-spacing: 0.02em; }
+.timer.low strong { color: var(--bad); }
+
+.eyebrow { font-size: 12px; color: var(--muted); margin: 0 0 10px; }
+.prompt { font-size: 17px; line-height: 1.55; margin: 0 0 22px; max-width: 70ch; text-wrap: pretty; }
+
+.options { display: grid; gap: 10px; margin: 0 0 26px; padding: 0; list-style: none; }
+.opt { width: 100%; display: flex; align-items: flex-start; gap: 12px; text-align: left; padding: 13px 14px; background: var(--sheet); border: 1px solid var(--rule); border-radius: var(--radius); cursor: pointer; transition: border-color .12s, background .12s; }
+.opt:hover { border-color: var(--muted); }
+.opt .dot { flex: none; width: 16px; height: 16px; margin-top: 2px; border: 1.5px solid var(--muted); border-radius: 50%; display: grid; place-items: center; }
+.opt[aria-checked="true"] { border-color: var(--navy); background: var(--tint); box-shadow: inset 3px 0 0 var(--navy); }
+.opt[aria-checked="true"] .dot { border-color: var(--navy); }
+.opt[aria-checked="true"] .dot::after { content: ""; width: 8px; height: 8px; border-radius: 50%; background: var(--navy); }
+.opt .key { font-family: var(--font-mono); font-size: 11px; color: var(--muted); margin-left: auto; padding-left: 8px; margin-top: 3px; }
+@media (hover: none) { .opt .key { display: none; } }
+
+.actions { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
+.actions .spacer { flex: 1; }
+.btn { padding: 9px 16px; border-radius: var(--radius); border: 1px solid var(--rule); background: var(--sheet); cursor: pointer; font-size: 14px; font-weight: 500; }
+.btn:hover:not(:disabled) { border-color: var(--muted); }
+.btn:disabled { opacity: .45; cursor: default; }
+.btn.primary { background: var(--navy); color: var(--navy-fg); border-color: var(--navy); }
+.btn.marked { background: var(--amber-tint); border-color: var(--amber); color: var(--amber); }
+.btn.lg { padding: 12px 22px; font-size: 15px; }
+
+.navigator { margin-top: 16px; }
+.navigator p { font-size: 12px; color: var(--muted); margin: 0 0 12px; }
+.legend { display: inline-flex; gap: 6px; align-items: center; }
+.qgrid { display: flex; flex-wrap: wrap; gap: 8px; }
+.q { width: 32px; height: 32px; border-radius: 50%; border: 1.5px solid var(--rule); background: var(--sheet); font-family: var(--font-mono); font-size: 12px; font-variant-numeric: tabular-nums; cursor: pointer; display: grid; place-items: center; padding: 0; }
+.q.answered { background: var(--navy); color: var(--navy-fg); border-color: var(--navy); }
+.q.flag { box-shadow: 0 0 0 2px var(--sheet), 0 0 0 4px var(--amber); }
+.q.current { border-color: var(--navy); border-width: 2.5px; font-weight: 600; }
+.q.answered.current { box-shadow: 0 0 0 2px var(--sheet), 0 0 0 4px var(--navy); }
+.q.answered.current.flag { box-shadow: 0 0 0 2px var(--sheet), 0 0 0 4px var(--amber); }
+.legend .q { width: 14px; height: 14px; cursor: default; pointer-events: none; }
+
+.foot { margin-top: 28px; font-size: 12px; color: var(--muted); text-align: center; }
+kbd { font-family: var(--font-mono); font-size: 11px; border: 1px solid var(--rule); border-bottom-width: 2px; border-radius: 4px; padding: 0 5px; background: var(--sheet); }
+
+/* Home */
+.hero { margin: 40px 0 22px; max-width: 60ch; }
+.hero h1 { font-family: var(--font-display); font-weight: 500; font-size: clamp(26px, 4vw, 34px); line-height: 1.2; margin: 0 0 10px; text-wrap: balance; }
+.hero p { color: var(--muted); margin: 0; }
+.section-label { font-size: 11px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--muted); margin: 0 0 10px; }
+.quiz-row { display: grid; grid-template-columns: 1fr auto; gap: 18px 24px; align-items: center; }
+@media (max-width: 620px) { .quiz-row { grid-template-columns: 1fr; } }
+.quiz-row h2 { font-family: var(--font-display); font-weight: 500; font-size: 21px; margin: 0 0 6px; }
+.quiz-row p { margin: 0 0 12px; color: var(--muted); max-width: 62ch; }
+.facts { display: flex; flex-wrap: wrap; gap: 6px 18px; font-size: 13px; margin: 0; padding: 0; list-style: none; }
+.facts li { font-variant-numeric: tabular-nums; }
+.facts li span { color: var(--muted); }
+.row-actions { display: flex; flex-direction: column; gap: 8px; align-items: stretch; min-width: 180px; }
+@media (max-width: 620px) { .row-actions { flex-direction: row; flex-wrap: wrap; } }
+.chips { display: flex; flex-wrap: wrap; gap: 6px; margin: 0 0 14px; padding: 0; list-style: none; }
+.chips li { font-size: 12px; padding: 2px 9px; border-radius: 999px; background: var(--tint); color: var(--muted); }
+.history { margin-top: 18px; padding-top: 14px; border-top: 1px solid var(--rule); font-size: 13px; color: var(--muted); display: flex; flex-wrap: wrap; gap: 6px 18px; }
+.history strong { color: var(--ink); font-variant-numeric: tabular-nums; font-weight: 600; }
+
+/* Modal */
+.backdrop { position: fixed; inset: 0; background: rgb(10 14 22 / .5); display: grid; place-items: center; padding: 16px; z-index: 20; }
+.modal { background: var(--sheet); border: 1px solid var(--rule); border-radius: var(--radius); max-width: 440px; width: 100%; padding: 22px; }
+.modal h3 { margin: 0 0 8px; font-size: 17px; }
+.modal p { margin: 0 0 18px; color: var(--muted); }
+.modal .actions { justify-content: flex-end; }
+
+/* Results */
+.score-head { display: grid; grid-template-columns: auto 1fr; gap: 8px 28px; align-items: center; }
+@media (max-width: 560px) { .score-head { grid-template-columns: 1fr; } }
+.score-big { font-family: var(--font-display); font-size: 56px; line-height: 1; font-weight: 500; font-variant-numeric: tabular-nums; }
+.score-big small { font-size: 22px; color: var(--muted); }
+.verdict { font-size: 15px; margin: 0 0 6px; font-weight: 600; }
+.score-meta { margin: 0; color: var(--muted); font-size: 13px; }
+.cats { display: grid; gap: 10px; margin: 22px 0 0; padding: 18px 0 0; border-top: 1px solid var(--rule); list-style: none; }
+.cat { display: grid; grid-template-columns: minmax(120px, 190px) 1fr 48px; gap: 12px; align-items: center; font-size: 13px; }
+@media (max-width: 480px) { .cat { grid-template-columns: 1fr 48px; } .cat .bar { grid-column: 1 / -1; grid-row: 2; } }
+.bar { height: 8px; border-radius: 4px; background: var(--tint); overflow: hidden; }
+.bar i { display: block; height: 100%; background: var(--navy); border-radius: 4px; }
+.cat b { font-family: var(--font-mono); font-weight: 500; text-align: right; font-variant-numeric: tabular-nums; }
+
+.filters { display: flex; gap: 6px; flex-wrap: wrap; margin: 26px 0 12px; }
+.filter { padding: 5px 12px; border-radius: 999px; border: 1px solid var(--rule); background: var(--sheet); font-size: 13px; cursor: pointer; }
+.filter[aria-pressed="true"] { background: var(--navy); color: var(--navy-fg); border-color: var(--navy); }
+.review { display: grid; gap: 12px; }
+.item { padding: 18px 20px; }
+.item-top { display: flex; justify-content: space-between; gap: 12px; align-items: baseline; margin-bottom: 8px; flex-wrap: wrap; }
+.pill { font-size: 11px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; padding: 2px 8px; border-radius: 999px; }
+.pill.ok { background: var(--good-tint); color: var(--good); }
+.pill.no { background: var(--bad-tint); color: var(--bad); }
+.pill.skip { background: var(--tint); color: var(--muted); }
+.pill.flagged { background: var(--amber-tint); color: var(--amber); margin-left: 6px; }
+.item .prompt { font-size: 15px; margin-bottom: 12px; }
+.ans { list-style: none; margin: 0 0 12px; padding: 0; display: grid; gap: 6px; font-size: 14px; }
+.ans li { padding: 7px 10px; border-radius: 4px; border: 1px solid transparent; display: flex; gap: 10px; }
+.ans li::before { content: attr(data-mark); font-family: var(--font-mono); width: 14px; flex: none; }
+.ans li.right { background: var(--good-tint); border-color: color-mix(in srgb, var(--good) 35%, transparent); }
+.ans li.wrong { background: var(--bad-tint); border-color: color-mix(in srgb, var(--bad) 35%, transparent); }
+.ans li.plain { color: var(--muted); }
+.ans li > div { min-width: 0; display: grid; gap: 3px; }
+.note { font-size: 13px; line-height: 1.45; color: var(--muted); }
+.ans li.right .note, .ans li.wrong .note { color: var(--ink); }
+.q.ok { background: var(--good); border-color: var(--good); color: var(--sheet); }
+.q.no { background: var(--bad); border-color: var(--bad); color: var(--sheet); }
+.q.skip { color: var(--muted); border-style: dashed; }
+.rnav { margin-top: 22px; padding-top: 18px; border-top: 1px solid var(--rule); }
+.rnav p { font-size: 12px; color: var(--muted); margin: 0 0 12px; }
+.item { scroll-margin-top: 16px; }
+.why { margin: 0; font-size: 14px; color: var(--muted); max-width: 72ch; }
+.why b { color: var(--ink); font-weight: 600; }
+
+@media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+</style>
+
+<header class="masthead">
+  <div class="wrap">
+    <button class="wordmark" id="homeLink" type="button" aria-label="Rehearse home"><b>REHEARSE</b><small>Aptitude practice</small></button>
+    <div class="masthead-meta" id="mastMeta"></div>
+  </div>
+</header>
+
+<main class="shell"><div class="wrap" id="app"></div></main>
+<div id="modalRoot"></div>
+
+<script>
+const QUIZZES = [
+  {
+    id: "finance",
+    title: "Financial aptitude test",
+    subject: "Finance & accounting",
+    blurb: "Valuation, M&A process and documents, financial statements, corporate finance and credit — the ground an investment banking or advisory screening test covers.",
+    minutes: 20,
+    questions: [
+      { cat: "Valuation", q: "Two companies in the same sector have the same EBITDA growth outlook and risk profile, but Company A trades at 11x EV/EBITDA and Company B at 8x. Which factor would most plausibly justify A's higher multiple?",
+        o: ["A needs far less capital expenditure per dollar of EBITDA, so more of its EBITDA converts into free cash flow", "A has more shares outstanding, which lowers its earnings per share", "A holds less cash, which lowers its enterprise value", "A reports in a stronger currency, which lifts its multiple when converted into US dollars"],
+        a: 0, why: "EV/EBITDA ignores capex. With equal growth and risk, the business that turns more EBITDA into free cash flow deserves more per dollar of EBITDA.",
+        x: [null, "Share count drives EPS and P/E. It has no bearing on EV/EBITDA.", "Less cash raises EV mechanically. It doesn't make each dollar of EBITDA worth more.", "A multiple divides two figures in the same currency, so currency translation cancels out."] },
+      { cat: "M&A documents", q: "What does a material adverse change (MAC) clause in an acquisition agreement typically do?",
+        o: ["Fixes the purchase price at signing, whatever happens to trading before completion", "Adjusts the adviser's success fee if the target's performance changes before completion", "Requires the seller to compensate the buyer if trading falls short of budget after completion", "Lets the buyer walk away if a significant adverse event hits the target between signing and completion"],
+        a: 3, why: "A MAC clause gives the buyer an exit if the target suffers a serious, lasting deterioration between signing and completion.",
+        x: ["Price is set by the price mechanism (locked box or completion accounts), not by a MAC clause.", "Adviser fees live in the engagement letter, not the purchase agreement.", "Post-completion shortfalls are handled by earn-outs or warranty claims. A MAC only applies before completion.", null] },
+      { cat: "M&A documents", q: "What does a letter of intent (or term sheet) in an M&A deal typically do?",
+        o: ["Replaces the share purchase agreement in smaller deals, so no further contract is needed", "Sets out the proposed price and structure, and is mostly non-binding apart from confidentiality and exclusivity", "Transfers legal ownership of the shares to the buyer, subject only to regulatory approval", "Binds the buyer to complete at the stated price, whatever due diligence later finds"],
+        a: 1, why: "An LOI records the headline price and structure so both sides can commit to diligence. Usually only confidentiality, exclusivity and costs are binding.",
+        x: ["Even small deals need a definitive purchase agreement. The LOI comes before it, not instead of it.", null, "Ownership passes at completion under the purchase agreement, not at LOI stage.", "Price stays subject to diligence. Keeping the LOI non-binding is what allows that."] },
+      { cat: "Valuation", q: "Northwind Logistics has an enterprise value of US$900m, gross debt of US$280m, cash of US$60m and non-controlling interests of US$45m. It has no other claims or investments. What is its equity value?",
+        o: ["US$515m", "US$635m", "US$680m", "US$725m"],
+        a: 1, why: "Equity = EV − debt + cash − NCI = 900 − 280 + 60 − 45 = US$635m.",
+        x: ["Cash was subtracted. Cash is added back, because EV is measured net of cash.", null, "NCI was ignored. It is a claim on the consolidated business that doesn't belong to the parent's shareholders.", "NCI was added. Like debt, it must be deducted to reach equity value."] },
+      { cat: "Accounting", q: "A company's EBITDA margin widens while revenue is flat. Which of the following most directly explains it?",
+        o: ["Depreciation expense increased", "Cost of goods sold fell as a share of revenue", "Interest expense rose on new borrowings", "A one-off tax credit was recognised in the period"],
+        a: 1, why: "Only costs above the EBITDA line move the margin. Lower COGS per dollar of sales lifts gross margin, and EBITDA margin with it.",
+        x: ["Depreciation sits below EBITDA. It would lower EBIT margin, not EBITDA margin.", null, "Interest sits below EBITDA and EBIT. It only affects pre-tax and net income.", "Tax sits below EBITDA. A credit only lifts net income."] },
+      { cat: "Corporate finance", q: "All else equal, which of the following would increase a company's weighted average cost of capital (WACC)?",
+        o: ["A fall in the company's equity beta", "A fall in the risk-free rate", "A higher cost of debt after a credit rating downgrade", "Replacing some equity with cheaper debt, at a moderate level of leverage"],
+        a: 2, why: "A downgrade raises the cost of debt, which feeds straight into WACC.",
+        x: ["Under CAPM, a lower beta lowers the cost of equity, so WACC falls.", "A lower risk-free rate lowers both the cost of equity and the cost of debt.", null, "At moderate leverage, cheaper after-tax debt lowers WACC. It only rises once distress risk kicks in."] },
+      { cat: "LBO", q: "Which combination of factors most directly drives a private equity sponsor's equity return in a leveraged buyout?",
+        o: ["EBITDA growth, debt paydown and exit multiple expansion", "Rising interest rates and a longer holding period", "Paying a higher entry multiple to win the auction", "Issuing new equity to fund growth capex"],
+        a: 0, why: "These are the three LBO return levers: grow earnings, repay debt so equity owns more of the EV, and sell at a higher multiple than you paid.",
+        x: [null, "Higher rates raise interest costs, and a longer hold lowers IRR for the same gain.", "Overpaying at entry compresses returns unless the exit multiple rises even further.", "More equity in means less leverage, which dilutes the sponsor's return."] },
+      { cat: "Accounting", q: "Goodwill recognised on an acquisition is best described as:",
+        o: ["The fair value of the target's tangible fixed assets", "The excess of the purchase price over the fair value of the net identifiable assets acquired", "The target's retained earnings at the completion date", "The present value of the cost synergies the buyer expects"],
+        a: 1, why: "Goodwill is the residual: price paid minus the fair value of identifiable net assets, including newly recognised intangibles.",
+        x: ["Tangible assets are recognised separately at fair value. Goodwill is whatever is left over.", null, "The target's retained earnings are eliminated on consolidation. They don't become goodwill.", "Synergies may explain why goodwill exists, but goodwill isn't measured as their present value."] },
+      { cat: "M&A analysis", q: "In an all-stock acquisition with no synergies, the deal will be dilutive to the acquirer's earnings per share when:",
+        o: ["The acquirer's P/E multiple is lower than the P/E paid for the target", "The acquirer's share price is higher than the target's", "The target is smaller than the acquirer by revenue", "The acquirer's P/E multiple is higher than the P/E paid for the target"],
+        a: 0, why: "Each new low-P/E share brings in less profit than the earnings it dilutes, so EPS falls.",
+        x: [null, "The share price level doesn't matter. What matters is earnings per dollar of value, which is the P/E.", "Relative size changes how big the effect is, not whether it's accretive or dilutive.", "That's the accretive case: highly valued acquirer shares buying cheaper earnings."] },
+      { cat: "Accounting", q: "Under the indirect method, which figure starts the cash flow statement and links it to the income statement?",
+        o: ["Revenue", "EBITDA", "Net income", "Operating cash flow"],
+        a: 2, why: "The indirect method starts from net income, then adds back non-cash items and adjusts for working capital.",
+        x: ["Revenue is the top line. The indirect method starts from the bottom line.", "EBITDA isn't a reported statutory line. Analysts use it to build free cash flow, but the statement starts at net income.", null, "Operating cash flow is where the reconciliation ends, not where it starts."] },
+      { cat: "Accounting", q: "All else equal, an increase in accounts receivable during a period has what effect on free cash flow?",
+        o: ["Increases it, because receivables are an asset", "No effect, because it only affects reported revenue", "Decreases it, because revenue has been booked but the cash not yet collected", "Decreases it only if the receivable is later written off"],
+        a: 2, why: "The sale is in profit but the cash hasn't arrived, so the build-up in receivables is deducted from cash flow.",
+        x: ["Being an asset is exactly why it uses cash. Money tied up in receivables isn't in the bank.", "The revenue is already in profit, so the uncollected part has to be reversed in the cash flow.", null, "The cash gap exists as soon as receivables grow. A write-off is a separate hit to the P&L."] },
+      { cat: "Ratios", q: "A company has current assets of $420m, of which inventory is $150m, and current liabilities of $300m. What is its quick (acid-test) ratio?",
+        o: ["0.56x", "0.90x", "1.40x", "1.90x"],
+        a: 1, why: "(420 − 150) ÷ 300 = 0.90x. Inventory is excluded because it can't be turned into cash quickly.",
+        x: ["That's inventory ÷ quick assets (150 ÷ 270), which isn't a liquidity ratio.", null, "1.40x is the current ratio (420 ÷ 300), which still includes inventory.", "That adds inventory instead of removing it: (420 + 150) ÷ 300."] },
+      { cat: "Capital markets", q: "In an IPO, the greenshoe (over-allotment) option allows the underwriters to:",
+        o: ["Extend the lock-up period for existing shareholders", "Sell up to around 15% more shares than planned, helping them stabilise the price after listing", "Reprice the offering downwards if demand is weak", "Guarantee the issuer a minimum first-day trading price"],
+        a: 1, why: "Banks over-allot by about 15%. If the price sags they buy shares back in the market, and if it rises they exercise the option. Either way trading is steadied.",
+        x: ["Lock-ups are agreed separately with existing shareholders.", null, "The price is fixed at the book-build. The greenshoe only comes into play after pricing.", "Banks stabilise the price. They never guarantee one."] },
+      { cat: "Credit", q: "A loan covenant caps net debt/EBITDA at 4.0x. Which event is most likely to cause a breach?",
+        o: ["Refinancing the debt at the same principal with a longer maturity", "A sharp fall in EBITDA after losing a major customer", "A rise in cash after selling a non-core asset", "A reduction in capital expenditure"],
+        a: 1, why: "The ratio rises when EBITDA falls. Losing a big customer can push it through 4.0x even if debt is unchanged.",
+        x: ["Same principal means the same debt, so the ratio doesn't move.", null, "More cash reduces net debt, so the ratio falls.", "Lower capex frees up cash and reduces net debt. It doesn't touch EBITDA."] },
+      { cat: "Valuation", q: "Which valuation method relies least on data about comparable companies or transactions?",
+        o: ["Trading comparables", "Precedent transactions", "Discounted cash flow, using an explicit cost of capital", "A football field of trading multiples"],
+        a: 2, why: "A DCF values the business on its own projected cash flows. Peers may still inform beta or the terminal value.",
+        x: ["Trading comps are entirely relative: the value comes from peers' multiples.", "Precedents rely on the multiples paid in past deals.", null, "A football field summarises the other methods, so it inherits their reliance on comparables."] },
+      { cat: "Accounting", q: "Compared with expensing it immediately, capitalising an expenditure will, in the period it is incurred:",
+        o: ["Increase reported EBITDA and net income", "Reduce reported operating cash flow", "Leave the balance sheet unchanged", "Reduce retained earnings by the full amount"],
+        a: 0, why: "The cost goes onto the balance sheet and is depreciated over time, so this period's EBITDA and net income are higher.",
+        x: [null, "It's the opposite. The outflow moves from operating to investing cash flow, so operating cash flow rises.", "Capitalising puts a new asset on the balance sheet. That's what the word means.", "That describes expensing. Capitalising spreads the hit to retained earnings over the asset's life."] },
+      { cat: "M&A documents", q: "A no-shop clause in a merger agreement is designed to:",
+        o: ["Stop the target soliciting competing offers before the deal completes", "Stop the buyer reducing the agreed price", "Require the target to keep trading with all existing suppliers", "Prevent the buyer financing the deal with new debt"],
+        a: 0, why: "A no-shop protects the buyer's time and money by stopping the target courting rival bidders, usually with a fiduciary out.",
+        x: [null, "Price changes are governed by the price adjustment terms, not by deal protection.", "Trading between signing and completion is covered by ordinary-course covenants.", "Financing is the buyer's choice. A no-shop restricts the seller."] },
+      { cat: "Corporate finance", q: "A company whose return on invested capital (ROIC) consistently exceeds its WACC is:",
+        o: ["Over-leveraged compared with peers", "Creating economic value with the capital it invests", "At risk of a going-concern qualification", "Likely to see its share count rise"],
+        a: 1, why: "Its capital earns more than it costs, so every dollar it reinvests adds value.",
+        x: ["ROIC is measured on all invested capital, however it's financed. It says nothing about leverage.", null, "Earning above the cost of capital is a sign of health, not distress.", "ROIC says nothing about issuing shares. Companies that create value often buy shares back."] },
+      { cat: "Capital markets", q: "On the day a share goes ex-dividend, all else equal, its price will typically:",
+        o: ["Rise by about the amount of the dividend", "Fall by about the amount of the dividend", "Stay unchanged until the payment date", "Fall only if the dividend is paid in shares rather than cash"],
+        a: 1, why: "From the ex-date, buyers no longer get the dividend, so the share is worth roughly that much less.",
+        x: ["Value is leaving the company for shareholders, so the price has no reason to rise.", null, "Who gets the dividend is decided on the ex-date, so the price adjusts then, not on payment.", "A cash dividend is the standard case where the price drops: cash is leaving the company."] },
+      { cat: "Credit", q: "Before committing acquisition debt to a private equity sponsor, a lender would most likely require:",
+        o: ["A quality-of-earnings report and projected debt service coverage", "A promise that the sponsor will hold the business for at least ten years", "The right to convert its loan into the target's equity", "A commitment to list the target within 12 months"],
+        a: 0, why: "Lenders size debt on sustainable cash earnings, so they want EBITDA checked (the QoE) and proof that interest and repayments can be met.",
+        x: [null, "Sponsors typically exit in 3–7 years. Lenders protect themselves with change-of-control clauses instead.", "Conversion rights belong to convertible or mezzanine debt, not senior acquisition loans.", "Lenders care about repayment, not listing. An IPO is just one possible exit."] }
+    ]
+  }
+];
+
+const STORE_KEY = "rehearse.v2";
+const store = {
+  load() { try { return JSON.parse(localStorage.getItem(STORE_KEY)) || {}; } catch { return {}; } },
+  save(d) { try { localStorage.setItem(STORE_KEY, JSON.stringify(d)); } catch {} }
+};
+let db = store.load();
+db.attempts ||= {};
+db.history ||= {};
+
+const app = document.getElementById("app");
+const mast = document.getElementById("mastMeta");
+const modalRoot = document.getElementById("modalRoot");
+let tick = null;
+let view = { name: "home" };
+let reviewFilter = "all";
+
+const esc = s => String(s).replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+const fmt = ms => { const t = Math.max(0, Math.ceil(ms / 1000)); return String(Math.floor(t / 60)).padStart(2, "0") + ":" + String(t % 60).padStart(2, "0"); };
+const quizById = id => QUIZZES.find(q => q.id === id);
+const persist = () => store.save(db);
+
+function shuffle(n) {
+  const a = [...Array(n).keys()];
+  for (let i = n - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; }
+  return a;
+}
+
+function startQuiz(id) {
+  const quiz = quizById(id);
+  const n = quiz.questions.length;
+  db.attempts[id] = { order: shuffle(n), answers: Array(n).fill(null), marked: Array(n).fill(false), cur: 0, start: Date.now(), deadline: Date.now() + quiz.minutes * 60000 };
+  persist();
+  go({ name: "quiz", id });
+}
+
+function go(v) {
+  view = v;
+  clearInterval(tick);
+  closeModal();
+  window.scrollTo(0, 0);
+  render();
+}
+
+function render() {
+  if (view.name === "quiz") renderQuiz();
+  else if (view.name === "results") renderResults();
+  else renderHome();
+}
+
+/* Home */
+function renderHome() {
+  mast.innerHTML = `<span>${QUIZZES.length} test${QUIZZES.length > 1 ? "s" : ""} available</span>`;
+  app.innerHTML = `
+    <section class="hero">
+      <h1>Timed practice tests, one question at a time</h1>
+      <p>Each test runs against the clock like a real screening test. Mark questions to come back to, then review every answer with an explanation when you submit.</p>
+    </section>
+    <p class="section-label">Tests</p>
+    <div class="review">${QUIZZES.map(homeRow).join("")}</div>
+    <p class="foot">Keyboard: <kbd>1</kbd>–<kbd>4</kbd> pick an answer · <kbd>←</kbd> <kbd>→</kbd> move · <kbd>M</kbd> mark for review. Progress is saved in this browser.</p>`;
+  app.querySelectorAll("[data-start]").forEach(b => b.onclick = () => {
+    const id = b.dataset.start;
+    if (db.attempts[id]) confirmModal("Start a new attempt?", "Your attempt in progress will be discarded.", "Start new attempt", () => startQuiz(id));
+    else startQuiz(id);
+  });
+  app.querySelectorAll("[data-resume]").forEach(b => b.onclick = () => go({ name: "quiz", id: b.dataset.resume }));
+}
+
+function homeRow(quiz) {
+  const at = db.attempts[quiz.id];
+  const hist = db.history[quiz.id] || [];
+  const cats = [...new Set(quiz.questions.map(q => q.cat))];
+  const answered = at ? at.answers.filter(a => a !== null).length : 0;
+  const best = hist.length ? Math.max(...hist.map(h => h.pct)) : null;
+  const last = hist[hist.length - 1];
+  return `
+    <article class="sheet">
+      <div class="quiz-row">
+        <div>
+          <p class="eyebrow">${esc(quiz.subject)}</p>
+          <h2>${esc(quiz.title)}</h2>
+          <p>${esc(quiz.blurb)}</p>
+          <ul class="chips">${cats.map(c => `<li>${esc(c)}</li>`).join("")}</ul>
+          <ul class="facts">
+            <li>${quiz.questions.length} <span>questions</span></li>
+            <li>${quiz.minutes} <span>minutes</span></li>
+            <li><span>Multiple choice, one correct answer</span></li>
+          </ul>
+        </div>
+        <div class="row-actions">
+          ${at ? `<button class="btn primary lg" data-resume="${quiz.id}" type="button">Resume · ${answered}/${quiz.questions.length}</button>
+                  <button class="btn" data-start="${quiz.id}" type="button">Start over</button>`
+               : `<button class="btn primary lg" data-start="${quiz.id}" type="button">Start test</button>`}
+        </div>
+      </div>
+      ${hist.length ? `<div class="history"><span>Attempts <strong>${hist.length}</strong></span><span>Best <strong>${best}%</strong></span><span>Last <strong>${last.pct}%</strong> on ${new Date(last.at).toLocaleDateString(undefined, { day: "numeric", month: "short" })}</span>
+        <button class="linkish" data-last="${quiz.id}" type="button">Review last attempt</button></div>` : ""}
+    </article>`;
+}
+
+document.addEventListener("click", e => {
+  const b = e.target.closest("[data-last]");
+  if (b) go({ name: "results", id: b.dataset.last, result: db.history[b.dataset.last].at(-1) });
+});
+
+/* Quiz */
+function renderQuiz() {
+  clearInterval(tick);
+  const quiz = quizById(view.id);
+  const at = db.attempts[view.id];
+  if (!at) return go({ name: "home" });
+  const n = quiz.questions.length;
+  const qi = at.order[at.cur];
+  const Q = quiz.questions[qi];
+  const answered = at.answers.filter(a => a !== null).length;
+
+  mast.innerHTML = `<span>${answered} of ${n} answered</span><button class="linkish" id="exitBtn" type="button">Save &amp; exit</button>`;
+  app.innerHTML = `
+    <div class="title-row">
+      <div><h1>${esc(quiz.title)}</h1><p>${esc(quiz.subject)}</p></div>
+      <div class="timer" id="timer" role="timer" aria-live="off"><span>Time left</span><strong id="clock">${fmt(at.deadline - Date.now())}</strong></div>
+    </div>
+    <section class="sheet" aria-labelledby="qtext">
+      <p class="eyebrow">${esc(Q.cat)} · Question ${at.cur + 1} of ${n}</p>
+      <p class="prompt" id="qtext">${esc(Q.q)}</p>
+      <div class="options" role="radiogroup" aria-labelledby="qtext">
+        ${Q.o.map((o, i) => `<button type="button" class="opt" role="radio" aria-checked="${at.answers[qi] === i}" data-opt="${i}"><span class="dot"></span><span>${esc(o)}</span><span class="key">${i + 1}</span></button>`).join("")}
+      </div>
+      <div class="actions">
+        <button class="btn" id="prevBtn" type="button" ${at.cur === 0 ? "disabled" : ""}>Previous</button>
+        <button class="btn primary" id="nextBtn" type="button" ${at.cur === n - 1 ? "disabled" : ""}>Next</button>
+        <button class="btn ${at.marked[qi] ? "marked" : ""}" id="markBtn" type="button" aria-pressed="${at.marked[qi]}">${at.marked[qi] ? "Marked for review" : "Mark for review"}</button>
+        <span class="spacer"></span>
+        <button class="btn" id="submitBtn" type="button">Submit test</button>
+      </div>
+    </section>
+    <section class="sheet navigator" aria-label="Question navigator">
+      <p>Go to a question ·
+        <span class="legend"><span class="q answered"></span> answered</span> ·
+        <span class="legend"><span class="q flag"></span> marked</span> ·
+        <span class="legend"><span class="q current"></span> current</span></p>
+      <div class="qgrid">
+        ${at.order.map((qIdx, pos) => {
+          const cls = ["q", at.answers[qIdx] !== null && "answered", at.marked[qIdx] && "flag", pos === at.cur && "current"].filter(Boolean).join(" ");
+          return `<button type="button" class="${cls}" data-go="${pos}" aria-label="Question ${pos + 1}${at.answers[qIdx] !== null ? ", answered" : ""}${at.marked[qIdx] ? ", marked" : ""}" ${pos === at.cur ? 'aria-current="step"' : ""}>${pos + 1}</button>`;
+        }).join("")}
+      </div>
+    </section>`;
+
+  app.querySelectorAll("[data-opt]").forEach(b => b.onclick = () => choose(+b.dataset.opt));
+  app.querySelectorAll("[data-go]").forEach(b => b.onclick = () => move(+b.dataset.go));
+  document.getElementById("prevBtn").onclick = () => move(at.cur - 1);
+  document.getElementById("nextBtn").onclick = () => move(at.cur + 1);
+  document.getElementById("markBtn").onclick = toggleMark;
+  document.getElementById("submitBtn").onclick = askSubmit;
+  document.getElementById("exitBtn").onclick = () => go({ name: "home" });
+
+  const updateClock = () => {
+    const left = at.deadline - Date.now();
+    const clock = document.getElementById("clock");
+    if (!clock) return;
+    clock.textContent = fmt(left);
+    document.getElementById("timer").classList.toggle("low", left < 120000);
+    if (left <= 0) { clearInterval(tick); submit(true); }
+  };
+  updateClock();
+  tick = setInterval(updateClock, 500);
+}
+
+function choose(i) {
+  const at = db.attempts[view.id];
+  const qi = at.order[at.cur];
+  at.answers[qi] = i;
+  persist();
+  renderQuiz();
+}
+function move(pos) {
+  const at = db.attempts[view.id];
+  if (pos < 0 || pos >= at.order.length) return;
+  at.cur = pos;
+  persist();
+  clearInterval(tick);
+  renderQuiz();
+}
+function toggleMark() {
+  const at = db.attempts[view.id];
+  const qi = at.order[at.cur];
+  at.marked[qi] = !at.marked[qi];
+  persist();
+  clearInterval(tick);
+  renderQuiz();
+}
+
+function askSubmit() {
+  const at = db.attempts[view.id];
+  const blank = at.answers.filter(a => a === null).length;
+  const flagged = at.marked.filter(Boolean).length;
+  const bits = [];
+  if (blank) bits.push(`${blank} unanswered question${blank > 1 ? "s" : ""}`);
+  if (flagged) bits.push(`${flagged} marked for review`);
+  confirmModal("Submit your test?", bits.length ? `You have ${bits.join(" and ")}. Unanswered questions score zero.` : "All questions are answered. You can't change answers after submitting.", "Submit test", () => submit(false));
+}
+
+function submit(timedOut) {
+  const quiz = quizById(view.id);
+  const at = db.attempts[view.id];
+  const correct = quiz.questions.reduce((s, q, i) => s + (at.answers[i] === q.a ? 1 : 0), 0);
+  const result = { at: Date.now(), order: at.order, answers: at.answers, marked: at.marked, correct, total: quiz.questions.length,
+    pct: Math.round(correct / quiz.questions.length * 100), usedMs: Math.min(Date.now(), at.deadline) - at.start, timedOut };
+  (db.history[view.id] ||= []).push(result);
+  db.history[view.id] = db.history[view.id].slice(-20);
+  delete db.attempts[view.id];
+  persist();
+  reviewFilter = "all";
+  go({ name: "results", id: view.id, result });
+}
+
+/* Results */
+function renderResults() {
+  const quiz = quizById(view.id);
+  const r = view.result;
+  const cats = {};
+  quiz.questions.forEach((q, i) => { const c = cats[q.cat] ||= { n: 0, ok: 0 }; c.n++; if (r.answers[i] === q.a) c.ok++; });
+  const verdict = r.pct >= 85 ? "Strong result" : r.pct >= 70 ? "Solid pass" : r.pct >= 50 ? "Borderline — worth another run" : "Needs more rehearsal";
+  const wrongN = quiz.questions.filter((q, i) => r.answers[i] !== null && r.answers[i] !== q.a).length;
+  const skipN = r.answers.filter(a => a === null).length;
+  const markN = r.marked.filter(Boolean).length;
+
+  mast.innerHTML = `<button class="linkish" id="backHome" type="button">All tests</button>`;
+  const items = r.order.map((qi, pos) => ({ qi, pos, q: quiz.questions[qi] })).filter(({ qi, q }) => {
+    const a = r.answers[qi];
+    if (reviewFilter === "wrong") return a !== q.a;
+    if (reviewFilter === "marked") return r.marked[qi];
+    return true;
+  });
+
+  app.innerHTML = `
+    <div class="title-row"><div><h1>${esc(quiz.title)} · Results</h1><p>${new Date(r.at).toLocaleString(undefined, { dateStyle: "medium", timeStyle: "short" })}</p></div></div>
+    <section class="sheet">
+      <div class="score-head">
+        <div class="score-big">${r.correct}<small> / ${r.total}</small></div>
+        <div>
+          <p class="verdict">${verdict} · ${r.pct}%</p>
+          <p class="score-meta">${r.timedOut ? "Time ran out · " : ""}Time used ${fmt(r.usedMs)} of ${quiz.minutes}:00 · ${wrongN} wrong · ${skipN} unanswered</p>
+        </div>
+      </div>
+      <div class="rnav">
+        <p>Jump to a question ·
+          <span class="legend"><span class="q ok"></span> correct</span> ·
+          <span class="legend"><span class="q no"></span> wrong</span> ·
+          <span class="legend"><span class="q skip"></span> unanswered</span> ·
+          <span class="legend"><span class="q flag"></span> marked</span></p>
+        <div class="qgrid">
+          ${r.order.map((qi, pos) => {
+            const a = r.answers[qi], st = a === null ? "skip" : a === quiz.questions[qi].a ? "ok" : "no";
+            const label = { ok: "correct", no: "wrong", skip: "unanswered" }[st];
+            return `<button type="button" class="q ${st}${r.marked[qi] ? " flag" : ""}" data-jump="${pos}" aria-label="Question ${pos + 1}, ${label}">${pos + 1}</button>`;
+          }).join("")}
+        </div>
+      </div>
+      <ul class="cats">
+        ${Object.entries(cats).sort((a, b) => a[1].ok / a[1].n - b[1].ok / b[1].n).map(([c, v]) => `
+          <li class="cat"><span>${esc(c)}</span><span class="bar"><i style="width:${v.ok / v.n * 100}%"></i></span><b>${v.ok}/${v.n}</b></li>`).join("")}
+      </ul>
+      <div class="actions" style="margin-top:22px">
+        <button class="btn primary" id="retake" type="button">Retake test</button>
+        <button class="btn" id="home2" type="button">All tests</button>
+      </div>
+    </section>
+    <div class="filters" role="group" aria-label="Filter answers">
+      ${[["all", `All ${r.total}`], ["wrong", `Wrong or skipped ${wrongN + skipN}`], ["marked", `Marked ${markN}`]].map(([k, l]) => `<button type="button" class="filter" data-filter="${k}" aria-pressed="${reviewFilter === k}">${l}</button>`).join("")}
+    </div>
+    <div class="review">
+      ${items.length ? items.map(({ qi, pos, q }) => reviewItem(q, pos, r.answers[qi], r.marked[qi])).join("") : `<div class="sheet"><p class="why">Nothing to show for this filter.</p></div>`}
+    </div>`;
+
+  document.getElementById("backHome").onclick = () => go({ name: "home" });
+  document.getElementById("home2").onclick = () => go({ name: "home" });
+  document.getElementById("retake").onclick = () => startQuiz(view.id);
+  app.querySelectorAll("[data-filter]").forEach(b => b.onclick = () => { reviewFilter = b.dataset.filter; renderResults(); });
+  app.querySelectorAll("[data-jump]").forEach(b => b.onclick = () => {
+    const pos = b.dataset.jump;
+    if (!document.getElementById("r-" + pos)) { reviewFilter = "all"; renderResults(); }
+    const smooth = !matchMedia("(prefers-reduced-motion: reduce)").matches;
+    document.getElementById("r-" + pos).scrollIntoView({ behavior: smooth ? "smooth" : "auto", block: "start" });
+  });
+}
+
+function reviewItem(q, pos, ans, marked) {
+  const status = ans === null ? ["skip", "Unanswered"] : ans === q.a ? ["ok", "Correct"] : ["no", "Incorrect"];
+  return `
+    <article class="sheet item" id="r-${pos}">
+      <div class="item-top">
+        <p class="eyebrow" style="margin:0">${esc(q.cat)} · Question ${pos + 1}</p>
+        <span><span class="pill ${status[0]}">${status[1]}</span>${marked ? `<span class="pill flagged">Marked</span>` : ""}</span>
+      </div>
+      <p class="prompt">${esc(q.q)}</p>
+      <ul class="ans">
+        ${q.o.map((o, i) => {
+          const cls = i === q.a ? "right" : i === ans ? "wrong" : "plain";
+          const mark = i === q.a ? "✓" : i === ans ? "✗" : "";
+          const tag = i === ans ? " <em>(your answer)</em>" : "";
+          const note = i === q.a ? q.why : q.x[i];
+          return `<li class="${cls}" data-mark="${mark}"><div><span>${esc(o)}${tag}</span>${note ? `<span class="note">${esc(note)}</span>` : ""}</div></li>`;
+        }).join("")}
+      </ul>
+    </article>`;
+}
+
+/* Modal */
+function confirmModal(title, body, okLabel, onOk) {
+  modalRoot.innerHTML = `
+    <div class="backdrop" id="backdrop">
+      <div class="modal" role="dialog" aria-modal="true" aria-labelledby="mTitle">
+        <h3 id="mTitle">${esc(title)}</h3>
+        <p>${esc(body)}</p>
+        <div class="actions"><button class="btn" id="mCancel" type="button">Cancel</button><button class="btn primary" id="mOk" type="button">${esc(okLabel)}</button></div>
+      </div>
+    </div>`;
+  document.getElementById("mCancel").onclick = closeModal;
+  document.getElementById("backdrop").onclick = e => { if (e.target.id === "backdrop") closeModal(); };
+  document.getElementById("mOk").onclick = () => { closeModal(); onOk(); };
+  document.getElementById("mOk").focus();
+}
+function closeModal() { modalRoot.innerHTML = ""; }
+
+document.addEventListener("keydown", e => {
+  if (e.key === "Escape") return closeModal();
+  if (view.name !== "quiz" || modalRoot.innerHTML || e.metaKey || e.ctrlKey || e.altKey) return;
+  const at = db.attempts[view.id];
+  if (!at) return;
+  const opts = quizById(view.id).questions[at.order[at.cur]].o.length;
+  const k = e.key.toLowerCase();
+  if (/^[1-9]$/.test(k) && +k <= opts) choose(+k - 1);
+  else if ("abcd".includes(k) && k.length === 1 && "abcd".indexOf(k) < opts) choose("abcd".indexOf(k));
+  else if (e.key === "ArrowRight") move(at.cur + 1);
+  else if (e.key === "ArrowLeft") move(at.cur - 1);
+  else if (k === "m") toggleMark();
+});
+
+document.getElementById("homeLink").onclick = () => go({ name: "home" });
+render();
+</script>
