@@ -232,3 +232,74 @@ Bank.gen("maths", () => {
     x: ["That's ten times too large: 1 percentage point is 100bp, not 1,000bp.", "That's ten times too small: 1 percentage point is 100bp.", "That's the relative change in the rate, not the change in basis points."]
   };
 });
+
+Bank.gen("rx", () => {
+  const s = R.step(200, 600, 25), u = R.step(200, 500, 25), d = R.step(100, 300, 25);
+  const v = Math.round((s + u * R.step(0.2, 0.8, 0.05)) / 5) * 5, rec = (v - s) / u;
+  return {
+    q: `A company emerges from restructuring with an enterprise value of ${R.m(v)}. Its claims are senior secured debt of ${R.m(s)}, senior unsecured notes of ${R.m(u)} and subordinated notes of ${R.m(d)}. Under absolute priority, what recovery do the senior unsecured notes get?`,
+    o: [R.pct(rec, 0), R.pct(v / (s + u + d), 0), R.pct(v / (s + u), 0), R.pct(Math.max(0, (v - s - d) / u), 0)],
+    why: `Senior secured is paid first, leaving ${v} − ${s} = ${R.m(v - s)}. That covers ${R.pct(rec, 0)} of the ${R.m(u)} unsecured claim, and the subordinated notes get nothing.`,
+    x: ["That splits value pro rata across every claim, ignoring seniority.", "That treats secured and unsecured debt as ranking equally, ignoring the security.", "That pays the subordinated notes ahead of the unsecured notes, the wrong way round."]
+  };
+});
+
+Bank.gen("cm", () => {
+  const p = R.step(4, 20, 0.5), k = R.pick([2, 3, 4, 5]), sub = +(p * (1 - R.step(0.25, 0.45, 0.05))).toFixed(2);
+  const terp = (k * p + sub) / (k + 1), f = v => "US$" + v.toFixed(2);
+  return {
+    q: `A company's shares trade at ${f(p)}. It launches a 1-for-${k} rights issue at ${f(sub)} per new share. What is the theoretical ex-rights price (TERP)?`,
+    o: [f(terp), f((p + sub) / 2), f(p * k / (k + 1)), f((k * p + sub) / k)],
+    why: `TERP = (${k} × ${f(p)} + ${f(sub)}) ÷ ${k + 1} = ${f(terp)}: the value of ${k} existing shares plus the cash for one new share, spread across ${k + 1} shares.`,
+    x: [`A simple average ignores the ratio: there are ${k} existing shares for every new one.`, "That ignores the cash paid for the new shares, as if they were issued for free.", `That divides by the ${k} existing shares only, leaving out the new share.`]
+  };
+});
+
+Bank.gen("cm", () => {
+  const n = R.pick([2, 3, 4, 5]), c = R.step(0.03, 0.08, 0.005);
+  const y = +(c + R.pick([-1, 1]) * R.step(0.005, 0.02, 0.005)).toFixed(4);
+  const price = (cp, yl) => { let s = 0; for (let t = 1; t <= n; t++) s += cp * 100 / (1 + yl) ** t; return s + 100 / (1 + yl) ** n; };
+  const f = v => v.toFixed(2);
+  return {
+    q: `A ${n}-year bond pays an annual coupon of ${R.pct(c, 2)} and is priced to yield ${R.pct(y, 2)}. What is its price per 100 of face value?`,
+    o: [f(price(c, y)), f(price(y, c)), "100.00", f(100 / (1 + y) ** n + c * 100 * n)],
+    why: `Discount each coupon of ${(c * 100).toFixed(2)} and the final 100 at ${R.pct(y, 2)} to get ${f(price(c, y))}. ${y > c ? "The yield is above the coupon, so the bond trades below par." : "The yield is below the coupon, so the bond trades above par."}`,
+    x: ["The coupon and yield are swapped, which puts the price on the wrong side of par.", "A bond only prices at par when its yield equals its coupon.", "The coupons were added up without being discounted."]
+  };
+});
+
+Bank.gen("bt", () => {
+  const item = R.pick([["A bat and a ball", "bat", "ball"], ["A pen and a cap", "pen", "cap"], ["A notebook and a pencil", "notebook", "pencil"]]);
+  const d = R.step(1, 10, 0.5), small = R.step(0.05, 0.95, 0.05), total = +(d + 2 * small).toFixed(2);
+  const f = v => "US$" + v.toFixed(2);
+  return {
+    q: `${item[0]} cost ${f(total)} together. The ${item[1]} costs ${f(d)} more than the ${item[2]}. How much does the ${item[2]} cost?`,
+    o: [f(small), f(total - d), f(total / 2), f(d / 2)],
+    why: `If the ${item[2]} costs x, the ${item[1]} costs x + ${d.toFixed(2)}. So 2x + ${d.toFixed(2)} = ${total.toFixed(2)} and x = ${f(small)}.`,
+    x: [`That's the intuitive answer, but then the ${item[1]} would cost ${f(total)} and the pair ${f(2 * total - d)}.`, "Splitting the total equally ignores the price difference.", "That's half the difference, not the price."]
+  };
+});
+
+Bank.gen("bt", () => {
+  const h = R.int(1, 11), m = R.pick([5, 10, 15, 20, 25, 35, 40, 45, 50, 55]);
+  const small = raw => Math.min(raw, 360 - raw);
+  const ang = small(Math.abs(30 * h - 5.5 * m)), naive = small(Math.abs(30 * h - 6 * m));
+  const deg = v => (Number.isInteger(v) ? v : v.toFixed(1)) + "°";
+  return {
+    q: `What is the smaller angle between the hour and minute hands of a clock at ${h}:${String(m).padStart(2, "0")}?`,
+    o: [deg(ang), deg(naive), deg(360 - ang), deg(360 - naive)],
+    why: `The minute hand is at ${6 * m}°. The hour hand moves 0.5° a minute, so it's at ${30 * h} + 0.5 × ${m} = ${deg(30 * h + 0.5 * m)}. The gap is ${deg(ang)}.`,
+    x: ["That leaves the hour hand on the hour, but it moves 0.5° every minute.", "That's the larger (reflex) angle, not the smaller one.", "That's the larger angle, and it also ignores the hour hand's movement."]
+  };
+});
+
+Bank.gen("bt", () => {
+  const a = R.pick([2, 3, 4, 5, 6]), b = R.pick([3, 4, 6, 8, 10, 12]);
+  const hm = v => { const t = Math.round(v * 60); return `${Math.floor(t / 60)}h ${String(t % 60).padStart(2, "0")}m`; };
+  return {
+    q: `One analyst can build a model in ${a} hours; another takes ${b} hours. Working together at those rates, how long do they take?`,
+    o: [hm(a * b / (a + b)), hm((a + b) / 2), hm(a + b), hm(Math.min(a, b) / 2)],
+    why: `Work rates add: 1/${a} + 1/${b} = ${a + b}/${a * b} of the model per hour, so together they need ${a * b}/${a + b} hours = ${hm(a * b / (a + b))}.`,
+    x: ["Averaging the two times ignores that they work at the same time.", "Adding the times is how long it takes if they work one after the other.", "Halving the faster time assumes both work as fast as the quicker analyst."]
+  };
+});

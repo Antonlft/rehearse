@@ -6,23 +6,26 @@ const CATEGORIES = [
   { id: "val", name: "Valuation", desc: "Multiples, the EV bridge, DCF and terminal value" },
   { id: "mna", name: "M&A process & documents", desc: "Auctions, LOIs, SPAs, deal protection, accretion/dilution" },
   { id: "lbo", name: "LBO & private equity", desc: "Returns, leverage, fund economics and exits" },
+  { id: "rx", name: "Restructuring", desc: "Priority of claims, Chapter 11, schemes and liability management" },
   { id: "acc", name: "Accounting & statements", desc: "The three statements, working capital and key IFRS rules" },
   { id: "cf", name: "Corporate finance", desc: "Cost of capital, capital structure and payout policy" },
   { id: "credit", name: "Credit & debt", desc: "Covenants, ratings, bonds and seniority" },
+  { id: "cm", name: "ECM & DCM", desc: "IPOs, rights issues, block trades, convertibles and bond issuance" },
   { id: "maths", name: "Quick maths", desc: "CAGR, discounting, perpetuities, breakevens and basis points" },
-  { id: "econ", name: "Economics & markets", desc: "Rates, inflation, FX and equity capital markets" }
+  { id: "bt", name: "Brain teasers", desc: "Probability, logic puzzles and mental arithmetic" },
+  { id: "econ", name: "Economics & markets", desc: "Rates, inflation, FX and the macro cycle" }
 ];
 const catById = id => CATEGORIES.find(c => c.id === id);
 const modeInfo = mode => mode === "mixed"
-  ? { title: "Financial aptitude test", sub: "Finance & accounting · all categories", n: 20, minutes: 20 }
-  : { title: catById(mode).name, sub: "Category practice", n: 10, minutes: 10 };
+  ? { title: "Financial aptitude test", sub: "Finance & accounting", n: 20 }
+  : { title: catById(mode).name, sub: "Category practice", n: 10 };
 
 const store = {
   load() { try { return JSON.parse(localStorage.getItem(STORE_KEY)) || {}; } catch { return {}; } },
   save(d) { try { localStorage.setItem(STORE_KEY, JSON.stringify(d)); } catch {} }
 };
 const db = store.load();
-db.attempts ||= {}; db.history ||= {}; db.totals ||= {}; db.seen ||= {}; db.catStats ||= {};
+db.attempts ||= {}; db.history ||= {}; db.totals ||= {}; db.seen ||= {}; db.catStats ||= {}; db.excluded ||= [];
 const persist = () => store.save(db);
 
 const app = document.getElementById("app");
@@ -39,6 +42,12 @@ const pick = arr => arr[Math.floor(Math.random() * arr.length)];
 const written = cat => Bank.written[cat] || [];
 const gens = cat => Bank.gens[cat] || [];
 const totalWritten = () => CATEGORIES.reduce((s, c) => s + written(c.id).length, 0);
+const selectedCats = () => {
+  const ids = CATEGORIES.map(c => c.id).filter(id => !db.excluded.includes(id));
+  return ids.length ? ids : CATEGORIES.map(c => c.id);
+};
+const selectionLabel = ids => ids.length === CATEGORIES.length ? "all categories" : `${ids.length} of ${CATEGORIES.length} categories`;
+const capacity = cat => gens(cat).length ? Infinity : written(cat).length;
 
 /* Round building */
 function generated(fn) {
@@ -75,23 +84,32 @@ function draw(cat, used) {
   return materialize(generated(fn), cat);
 }
 
-function buildRound(mode) {
-  let slots;
-  if (mode === "mixed") {
-    const ids = CATEGORIES.map(c => c.id);
-    slots = shuffle([...ids, ...ids, ...shuffle(ids).slice(0, 2)]);
-  } else {
-    slots = Array(modeInfo(mode).n).fill(mode);
+// Spread n slots evenly across categories, never asking a category for more unique questions than it has.
+function allocate(cats, n) {
+  const quota = Object.fromEntries(cats.map(c => [c, 0]));
+  let filled = 0;
+  while (filled < n) {
+    let progressed = false;
+    for (const c of shuffle(cats)) {
+      if (filled >= n) break;
+      if (quota[c] < capacity(c)) { quota[c]++; filled++; progressed = true; }
+    }
+    if (!progressed) break;
   }
+  return shuffle(cats.flatMap(c => Array(quota[c]).fill(c)));
+}
+
+function buildRound(mode, cats) {
   const used = new Set();
-  return slots.map(cat => draw(cat, used));
+  return allocate(cats, modeInfo(mode).n).map(cat => draw(cat, used));
 }
 
 function startRound(mode) {
-  const info = modeInfo(mode);
-  const items = buildRound(mode);
-  db.attempts[mode] = { mode, items, answers: Array(items.length).fill(null), marked: Array(items.length).fill(false),
-    cur: 0, start: Date.now(), deadline: Date.now() + info.minutes * 60000 };
+  const cats = mode === "mixed" ? selectedCats() : [mode];
+  const items = buildRound(mode, cats);
+  const sub = mode === "mixed" ? `Finance & accounting · ${selectionLabel(cats)}` : "Category practice";
+  db.attempts[mode] = { mode, sub, items, answers: Array(items.length).fill(null), marked: Array(items.length).fill(false),
+    cur: 0, start: Date.now(), deadline: Date.now() + items.length * 60000 };
   persist();
   reviewFilter = "all";
   go({ name: "quiz", mode });
@@ -112,7 +130,54 @@ function go(v) {
 function render() {
   if (view.name === "quiz") renderQuiz();
   else if (view.name === "results") renderResults();
+  else if (view.name === "setup") renderSetup();
   else renderHome();
+}
+
+/* Round setup */
+function renderSetup() {
+  meta.innerHTML = `<button class="link" id="backHome" type="button">All assessments</button>`;
+  const sel = new Set(selectedCats());
+  app.innerHTML = `
+    <div class="title-row"><div><h1>Financial aptitude test</h1><p>Set up your round</p></div></div>
+    <section class="card setup">
+      <div class="setup-head">
+        <div><h2>Choose your categories</h2><p class="muted">Untick anything that isn't relevant to you. Your choice is remembered for next time.</p></div>
+        <div class="setup-links"><button class="link" id="allBtn" type="button">Select all</button><button class="link" id="noneBtn" type="button">Clear all</button></div>
+      </div>
+      <div class="check-grid">
+        ${CATEGORIES.map(c => `
+          <label class="check" for="cat-${c.id}">
+            <input type="checkbox" id="cat-${c.id}" value="${c.id}" ${sel.has(c.id) ? "checked" : ""}>
+            <span><b>${esc(c.name)}</b><small>${esc(c.desc)}</small></span>
+          </label>`).join("")}
+      </div>
+      <div class="setup-foot">
+        <p id="setupSummary" aria-live="polite"></p>
+        <div class="actions"><button class="btn" id="cancelBtn" type="button">Cancel</button><button class="btn primary lg" id="goBtn" type="button">Start round</button></div>
+      </div>
+    </section>`;
+  const boxes = [...app.querySelectorAll(".check input")];
+  const summary = document.getElementById("setupSummary"), goBtn = document.getElementById("goBtn");
+  const chosen = () => boxes.filter(b => b.checked).map(b => b.value);
+  const sync = () => {
+    const ids = chosen();
+    const n = Math.min(modeInfo("mixed").n, ids.reduce((s, id) => s + capacity(id), 0));
+    summary.textContent = ids.length ? `${n} questions · ${n} minutes · ${selectionLabel(ids)}` : "Select at least one category to start.";
+    goBtn.disabled = !ids.length;
+  };
+  boxes.forEach(b => b.onchange = sync);
+  document.getElementById("allBtn").onclick = () => { boxes.forEach(b => b.checked = true); sync(); };
+  document.getElementById("noneBtn").onclick = () => { boxes.forEach(b => b.checked = false); sync(); };
+  document.getElementById("cancelBtn").onclick = () => go({ name: "home" });
+  document.getElementById("backHome").onclick = () => go({ name: "home" });
+  goBtn.onclick = () => {
+    const ids = chosen();
+    db.excluded = CATEGORIES.map(c => c.id).filter(id => !ids.includes(id));
+    persist();
+    newRound("mixed");
+  };
+  sync();
 }
 
 /* Home */
@@ -152,7 +217,7 @@ function renderHome() {
     <section class="card test-card">
       <div class="test-row">
         <div>
-          <p class="label">Finance & accounting · all ${CATEGORIES.length} categories</p>
+          <p class="label">Finance & accounting · ${selectionLabel(selectedCats())} <button class="link" type="button" data-setup>Choose categories</button></p>
           <h2>Financial aptitude test</h2>
           <ul class="facts">
             <li><b>20</b> questions</li><li><b>20</b> minutes</li><li><b>${seen}</b> of ${totalWritten()} written questions seen so far</li>
@@ -170,7 +235,8 @@ function renderHome() {
       <div class="cat-row cat-head" aria-hidden="true"><span>Category</span><span>Question bank</span><span>Your accuracy</span><span></span></div>
       ${CATEGORIES.map(catRow).join("")}
     </div>`;
-  app.querySelectorAll("[data-new]").forEach(b => b.onclick = () => newRound(b.dataset.new));
+  app.querySelectorAll("[data-new]").forEach(b => b.onclick = () => b.dataset.new === "mixed" ? go({ name: "setup" }) : newRound(b.dataset.new));
+  app.querySelectorAll("[data-setup]").forEach(b => b.onclick = () => go({ name: "setup" }));
   app.querySelectorAll("[data-resume]").forEach(b => b.onclick = () => go({ name: "quiz", mode: b.dataset.resume }));
   app.querySelectorAll("[data-review]").forEach(b => b.onclick = () => {
     const h = db.history[b.dataset.review];
@@ -190,7 +256,7 @@ function renderQuiz() {
   meta.innerHTML = `<span>${answered} of ${n} answered</span><button class="link" id="exitBtn" type="button">Save &amp; exit</button>`;
   app.innerHTML = `
     <div class="title-row">
-      <div><h1>${esc(info.title)}</h1><p>${answered ? "Saved" : esc(info.sub)}</p></div>
+      <div><h1>${esc(info.title)}</h1><p>${answered ? "Saved" : esc(at.sub || info.sub)}</p></div>
       <div class="timer" id="timer" role="timer"><span>Time left</span><strong id="clock">${fmt(at.deadline - Date.now())}</strong></div>
     </div>
     <section class="card question" aria-labelledby="qtext">
@@ -290,7 +356,7 @@ function renderResults() {
         <div class="score-big">${r.correct}<small> / ${r.total}</small></div>
         <div>
           <p class="verdict">${verdict} · ${r.pct}%</p>
-          <p class="muted">${r.timedOut ? "Time ran out · " : ""}Time used ${fmt(r.usedMs)} of ${info.minutes}:00 · ${wrongN} wrong · ${skipN} unanswered</p>
+          <p class="muted">${r.timedOut ? "Time ran out · " : ""}Time used ${fmt(r.usedMs)} of ${fmt(r.total * 60000)} ·${wrongN} wrong · ${skipN} unanswered</p>
         </div>
       </div>
       <div class="result-actions">

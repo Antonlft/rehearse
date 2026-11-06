@@ -102,6 +102,24 @@ main { padding-block: 30px 48px; }
   .cat-act { grid-column: 2; grid-row: 1 / span 3; }
 }
 
+.label .link { margin-left: 8px; font-size: 12px; }
+
+/* Round setup */
+.setup-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px 24px; flex-wrap: wrap; margin-bottom: 16px; }
+.setup-head h2 { font-size: 16px; font-weight: 600; margin-bottom: 2px; }
+.setup-links { display: flex; gap: 16px; padding-top: 3px; }
+.check-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+@media (max-width: 620px) { .check-grid { grid-template-columns: minmax(0, 1fr); } }
+.check { display: flex; gap: 11px; align-items: flex-start; padding: 11px 13px; border: 1px solid var(--rule); border-radius: 5px; cursor: pointer; }
+.check:hover { border-color: var(--rule-strong); }
+.check:has(input:checked) { border-color: var(--navy); background: var(--select); }
+.check input { flex: none; width: 16px; height: 16px; margin: 2px 0 0; accent-color: var(--navy); cursor: pointer; }
+.check span { min-width: 0; display: grid; gap: 1px; }
+.check b { font-size: 13.5px; font-weight: 600; }
+.check small { font-size: 12px; color: var(--muted); line-height: 1.4; }
+.setup-foot { display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; margin-top: 18px; padding-top: 16px; border-top: 1px solid var(--rule); }
+.setup-foot p { font-size: 13px; color: var(--muted); font-variant-numeric: tabular-nums; }
+
 /* Quiz */
 .title-row { display: flex; justify-content: space-between; align-items: flex-end; gap: 16px; margin-bottom: 14px; flex-wrap: wrap; }
 .title-row h1 { font-size: 15px; font-weight: 600; }
