@@ -1,0 +1,13 @@
+{
+  "name": "Rehearse Aptitude",
+  "short_name": "Rehearse",
+  "description": "Timed finance aptitude practice tests with fresh questions every round.",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#1f2b46",
+  "icons": [
+    { "src": "favicon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" }
+  ]
+}

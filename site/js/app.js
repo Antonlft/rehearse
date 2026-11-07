@@ -29,8 +29,9 @@ const groupLabel = ids => {
   const gs = [...new Set(ids.map(id => catById(id).group))];
   return gs.length === 1 ? GROUPS.find(g => g.id === gs[0]).name : "Finance, real estate & hospitality";
 };
-const modeInfo = mode => mode === "mixed"
-  ? { title: "Financial aptitude test", sub: "Finance & accounting", n: 20 }
+const RETRY = "retry";
+const modeInfo = mode => mode === "mixed" ? { title: "Financial aptitude test", sub: "Finance & accounting", n: 20 }
+  : mode === RETRY ? { title: "Mistakes practice", sub: "Questions you got wrong or skipped", n: 0 }
   : { title: catById(mode).name, sub: "Category practice", n: 10 };
 
 const store = {
@@ -39,6 +40,7 @@ const store = {
 };
 const db = store.load();
 db.attempts ||= {}; db.history ||= {}; db.totals ||= {}; db.seen ||= {}; db.catStats ||= {}; db.excluded ||= [];
+db.qStats ||= {}; // written question id -> { n: times answered, wrong: times wrong or skipped, last: "ok" | "wrong" }
 const persist = () => store.save(db);
 
 const app = document.getElementById("app");
@@ -78,16 +80,27 @@ function materialize(src, cat) {
     o: perm.map(i => src.o[i]), a: perm.indexOf(0), x: perm.map(i => i === 0 ? null : src.x[i - 1]) };
 }
 
+const MISSED_WEIGHT = 3;
+const missedLast = q => db.qStats[q.id]?.last === "wrong";
+// Weighted random pick: questions whose last answer was wrong or skipped are MISSED_WEIGHT times as likely.
+function pickWeighted(pool) {
+  const wt = q => missedLast(q) ? MISSED_WEIGHT : 1;
+  let r = Math.random() * pool.reduce((s, q) => s + wt(q), 0);
+  for (const q of pool) if ((r -= wt(q)) < 0) return q;
+  return pool[pool.length - 1];
+}
+
 function draw(cat, used) {
   const w = written(cat), g = gens(cat);
   if (w.length && !(g.length && Math.random() < GEN_SHARE)) {
     const seen = (db.seen[cat] ||= []);
-    let pool = w.filter(q => !seen.includes(q.id) && !used.has(q.id));
-    if (!pool.length) { db.seen[cat] = []; pool = w.filter(q => !used.has(q.id)); }
+    // Unseen questions, plus seen ones you last got wrong, so misses come back before the bank cycles.
+    let pool = w.filter(q => !used.has(q.id) && (!seen.includes(q.id) || missedLast(q)));
+    if (!w.some(q => !seen.includes(q.id) && !used.has(q.id))) { db.seen[cat] = []; pool = w.filter(q => !used.has(q.id)); }
     if (pool.length) {
-      const q = pick(pool);
+      const q = pickWeighted(pool);
       used.add(q.id);
-      db.seen[cat].push(q.id);
+      if (!db.seen[cat].includes(q.id)) db.seen[cat].push(q.id);
       return materialize(q, cat);
     }
   }
@@ -120,10 +133,7 @@ function buildRound(mode, cats) {
   return items;
 }
 
-function startRound(mode) {
-  const cats = mode === "mixed" ? selectedCats() : [mode];
-  const items = buildRound(mode, cats);
-  const sub = mode === "mixed" ? `${groupLabel(cats)} · ${selectionLabel(cats)}` : "Category practice";
+function beginAttempt(mode, items, sub) {
   db.attempts[mode] = { mode, sub, items, answers: Array(items.length).fill(null), marked: Array(items.length).fill(false),
     cur: 0, start: Date.now(), deadline: Date.now() + items.length * 60000 };
   persist();
@@ -131,9 +141,27 @@ function startRound(mode) {
   go({ name: "quiz", mode });
 }
 
+function startRound(mode) {
+  const cats = mode === "mixed" ? selectedCats() : [mode];
+  const sub = mode === "mixed" ? `${groupLabel(cats)} · ${selectionLabel(cats)}` : "Category practice";
+  beginAttempt(mode, buildRound(mode, cats), sub);
+}
+
 function newRound(mode) {
   if (db.attempts[mode]) confirmModal("Start a new round?", "Your round in progress will be discarded.", "Start new round", () => startRound(mode));
   else startRound(mode);
+}
+
+// Re-ask a finished round's missed items. Each item is rebuilt as "correct option first"
+// and run through materialize() again, so the options come back in a new order.
+function startRetry(items) {
+  const go_ = () => beginAttempt(RETRY, shuffle(items).map(it => {
+    const wrong = [0, 1, 2, 3].filter(j => j !== it.a);
+    return materialize({ id: it.id, gen: it.gen, lv: it.lv, q: it.q, why: it.why,
+      o: [it.o[it.a], ...wrong.map(j => it.o[j])], x: wrong.map(j => it.x[j]) }, it.cat);
+  }), `${items.length} question${items.length > 1 ? "s" : ""} you got wrong or skipped`);
+  if (db.attempts[RETRY]) confirmModal("Start a new mistakes practice?", "Your mistakes practice in progress will be discarded.", "Start practice", go_);
+  else go_();
 }
 
 function go(v) {
@@ -233,7 +261,7 @@ function renderHome() {
   app.innerHTML = `
     <div class="page-head">
       <h1>Assessments</h1>
-      <p>Every round draws a new set of questions. Written questions don't repeat until you've seen them all; calculation questions get new numbers each time.</p>
+      <p>Every round draws a new set of questions. Written questions don't repeat until you've seen them all, except ones you got wrong, which come back sooner. Calculation questions get new numbers each time.</p>
     </div>
     <section class="card test-card">
       <div class="test-row">
@@ -251,6 +279,13 @@ function renderHome() {
         ${hist.length ? `<span>Last <b>${hist[hist.length - 1].pct}%</b></span><button class="link" type="button" data-review="mixed">Review last round</button>` : ""}
       </div>` : ""}
     </section>
+    ${db.attempts[RETRY] ? (() => { const at = db.attempts[RETRY], done = at.answers.filter(a => a !== null).length; return `
+    <section class="card test-card retry-card">
+      <div class="test-row">
+        <div><p class="label">In progress</p><h2>Mistakes practice</h2><ul class="facts"><li><b>${at.items.length}</b> questions you got wrong or skipped</li></ul></div>
+        <div class="test-actions"><button class="btn primary" type="button" data-resume="${RETRY}">Resume · ${done}/${at.items.length}</button><button class="btn" type="button" data-discard="${RETRY}">Discard</button></div>
+      </div>
+    </section>`; })() : ""}
     <div class="section-head"><h2>Practise one category</h2><p>10 questions · 10 minutes</p></div>
     <div class="cat-table">
       <div class="cat-row cat-head" aria-hidden="true"><span>Category</span><span>Question bank</span><span>Your accuracy</span><span></span></div>
@@ -259,6 +294,8 @@ function renderHome() {
   app.querySelectorAll("[data-new]").forEach(b => b.onclick = () => b.dataset.new === "mixed" ? go({ name: "setup" }) : newRound(b.dataset.new));
   app.querySelectorAll("[data-setup]").forEach(b => b.onclick = () => go({ name: "setup" }));
   app.querySelectorAll("[data-resume]").forEach(b => b.onclick = () => go({ name: "quiz", mode: b.dataset.resume }));
+  app.querySelectorAll("[data-discard]").forEach(b => b.onclick = () => confirmModal("Discard this practice?", "Your mistakes practice in progress will be deleted.", "Discard",
+    () => { delete db.attempts[b.dataset.discard]; persist(); renderHome(); }));
   app.querySelectorAll("[data-review]").forEach(b => b.onclick = () => {
     const h = db.history[b.dataset.review];
     reviewFilter = "all";
@@ -271,6 +308,10 @@ function renderQuiz() {
   clearInterval(tick);
   const at = db.attempts[view.mode];
   if (!at) return go({ name: "home" });
+  // Coming back to a round whose deadline passed while away: tell the user before scoring it.
+  // A live countdown (view.live) still auto-submits in update() below.
+  if (!view.live && at.deadline - Date.now() <= 0) return renderExpired(at);
+  view.live = true;
   const info = modeInfo(view.mode), n = at.items.length, it = at.items[at.cur];
   const answered = at.answers.filter(a => a !== null).length;
 
@@ -293,6 +334,7 @@ function renderQuiz() {
         <span class="spacer"></span>
         <button class="btn" id="submitBtn" type="button">Submit test</button>
       </div>
+      <p class="shortcuts">Keyboard: <kbd>1</kbd>–<kbd>4</kbd> answer · <kbd>←</kbd> <kbd>→</kbd> previous / next · <kbd>M</kbd> mark for review</p>
     </section>
     <section class="tray" aria-label="Question navigator">
       <p>Go to a question · filled = answered · amber ring = marked for review · outline = current</p>
@@ -323,6 +365,25 @@ function renderQuiz() {
   tick = setInterval(update, 500);
 }
 
+function renderExpired(at) {
+  const info = modeInfo(view.mode), done = at.answers.filter(a => a !== null).length;
+  meta.innerHTML = `<button class="link" id="exitBtn" type="button">All assessments</button>`;
+  app.innerHTML = `
+    <div class="title-row">
+      <div><h1>${esc(info.title)}</h1><p>${esc(at.sub || info.sub)}</p></div>
+      <div class="timer low" role="timer"><span>Time left</span><strong>00:00</strong></div>
+    </div>
+    <section class="card">
+      <p class="prompt">Time ran out while you were away.</p>
+      <p class="muted">You'd answered ${done} of ${at.items.length} questions. Unanswered questions score zero.</p>
+      <div class="actions"><button class="btn primary" id="seeBtn" type="button">See your results</button></div>
+    </section>`;
+  const finish = () => submit(true);
+  document.getElementById("seeBtn").onclick = finish;
+  document.getElementById("exitBtn").onclick = () => go({ name: "home" });
+  confirmModal("Time's up", "Time ran out while you were away. Your round will be scored with the answers you'd saved.", "See your results", finish);
+}
+
 function choose(i) { const at = db.attempts[view.mode]; at.answers[at.cur] = i; persist(); renderQuiz(); }
 function move(pos) { const at = db.attempts[view.mode]; if (pos < 0 || pos >= at.items.length) return; at.cur = pos; persist(); renderQuiz(); }
 function toggleMark() { const at = db.attempts[view.mode]; at.marked[at.cur] = !at.marked[at.cur]; persist(); renderQuiz(); }
@@ -342,8 +403,10 @@ function submit(timedOut) {
   at.items.forEach((it, i) => {
     const ok = at.answers[i] === it.a;
     if (ok) correct++;
-    const st = (db.catStats[it.cat] ||= { n: 0, ok: 0 });
-    st.n++; if (ok) st.ok++;
+    // Retry rounds only re-ask known misses, so they'd skew category accuracy; leave it to normal rounds.
+    if (mode !== RETRY) { const st = (db.catStats[it.cat] ||= { n: 0, ok: 0 }); st.n++; if (ok) st.ok++; }
+    // Per-question record (written questions only; calculations get new numbers each time). Retries count here.
+    if (it.id) { const qs = (db.qStats[it.id] ||= { n: 0, wrong: 0, last: null }); qs.n++; if (!ok) qs.wrong++; qs.last = ok ? "ok" : "wrong"; }
   });
   const pct = Math.round(correct / at.items.length * 100);
   const result = { at: Date.now(), mode, items: at.items, answers: at.answers, marked: at.marked, correct, total: at.items.length, pct,
@@ -381,7 +444,8 @@ function renderResults() {
         </div>
       </div>
       <div class="result-actions">
-        <button class="btn primary lg" id="againBtn" type="button">Generate another round</button>
+        ${view.mode !== RETRY ? `<button class="btn primary lg" id="againBtn" type="button">Generate another round</button>` : ""}
+        ${wrongN + skipN ? `<button class="btn ${view.mode === RETRY ? "primary " : ""}lg" id="retryBtn" type="button">Practise these again · ${wrongN + skipN}</button>` : ""}
         <button class="btn lg" id="homeBtn" type="button">All assessments</button>
       </div>
       <div class="rnav">
@@ -402,8 +466,9 @@ function renderResults() {
       ${shown.length ? shown.map(i => reviewItem(r.items[i], i, r.answers[i], r.marked[i])).join("") : `<div class="card"><p class="muted">Nothing to show for this filter.</p></div>`}
     </div>`;
 
-  const again = () => newRound(view.mode);
-  document.getElementById("againBtn").onclick = again;
+  const againBtn = document.getElementById("againBtn"), retryBtn = document.getElementById("retryBtn");
+  if (againBtn) againBtn.onclick = () => newRound(view.mode);
+  if (retryBtn) retryBtn.onclick = () => startRetry(r.items.filter((_, i) => status(i) !== "ok"));
   document.getElementById("homeBtn").onclick = () => go({ name: "home" });
   document.getElementById("backHome").onclick = () => go({ name: "home" });
   app.querySelectorAll("[data-filter]").forEach(b => b.onclick = () => { reviewFilter = b.dataset.filter; renderResults(); });
@@ -435,7 +500,9 @@ function reviewItem(it, i, ans, marked) {
 }
 
 /* Modal */
+let lastFocus = null;
 function confirmModal(title, body, okLabel, onOk) {
+  if (!modalRoot.innerHTML) lastFocus = document.activeElement;
   modalRoot.innerHTML = `
     <div class="backdrop" id="backdrop">
       <div class="modal" role="dialog" aria-modal="true" aria-labelledby="mTitle">
@@ -449,13 +516,19 @@ function confirmModal(title, body, okLabel, onOk) {
   document.getElementById("mOk").onclick = () => { closeModal(); onOk(); };
   document.getElementById("mOk").focus();
 }
-function closeModal() { modalRoot.innerHTML = ""; }
+function closeModal() {
+  if (!modalRoot.innerHTML) return;
+  modalRoot.innerHTML = "";
+  // Return focus to whatever opened the modal, if it's still on the page.
+  if (lastFocus && lastFocus.isConnected) lastFocus.focus();
+  lastFocus = null;
+}
 
 document.addEventListener("keydown", e => {
   if (e.key === "Escape") return closeModal();
   if (view.name !== "quiz" || modalRoot.innerHTML || e.metaKey || e.ctrlKey || e.altKey) return;
   const at = db.attempts[view.mode];
-  if (!at) return;
+  if (!at || !view.live) return;
   if (/^[1-4]$/.test(e.key)) choose(+e.key - 1);
   else if (e.key === "ArrowRight") move(at.cur + 1);
   else if (e.key === "ArrowLeft") move(at.cur - 1);
@@ -463,5 +536,11 @@ document.addEventListener("keydown", e => {
 });
 
 document.getElementById("homeLink").onclick = () => go({ name: "home" });
+document.getElementById("resetBtn").onclick = () => confirmModal("Reset your progress?",
+  "This deletes your scores, history, rounds in progress and category choices in this browser. It can't be undone.", "Reset progress", () => {
+    clearInterval(tick);
+    try { localStorage.removeItem(STORE_KEY); } catch {}
+    location.reload();
+  });
 render();
 })();
