@@ -536,6 +536,31 @@ document.addEventListener("keydown", e => {
 });
 
 document.getElementById("homeLink").onclick = () => go({ name: "home" });
+
+/* Light/dark toggle. Follows the device until clicked; the choice is then remembered in this browser.
+   Kept under its own key so "Reset my progress" doesn't change the look. */
+const THEME_KEY = "rehearse.theme";
+const darkQuery = matchMedia("(prefers-color-scheme: dark)");
+const themeBtn = document.getElementById("themeBtn");
+const ICON_SUN = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg>`;
+const ICON_MOON = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 14.5A8 8 0 0 1 9.5 4a8 8 0 1 0 10.5 10.5z"/></svg>`;
+const currentTheme = () => document.documentElement.dataset.theme || (darkQuery.matches ? "dark" : "light");
+function syncThemeUI() {
+  const dark = currentTheme() === "dark", target = dark ? "light" : "dark";
+  // The button shows what you'll switch to.
+  themeBtn.innerHTML = `${dark ? ICON_SUN : ICON_MOON}<span>${dark ? "Light mode" : "Dark mode"}</span>`;
+  themeBtn.setAttribute("aria-label", `Switch to ${target} mode`);
+  themeBtn.title = `Switch to ${target} mode`;
+  document.querySelectorAll('meta[name="theme-color"]').forEach(m => m.content = dark ? "#12161f" : "#ffffff");
+}
+themeBtn.onclick = () => {
+  const next = currentTheme() === "dark" ? "light" : "dark";
+  document.documentElement.dataset.theme = next;
+  try { localStorage.setItem(THEME_KEY, next); } catch {}
+  syncThemeUI();
+};
+darkQuery.addEventListener("change", syncThemeUI);
+syncThemeUI();
 document.getElementById("resetBtn").onclick = () => confirmModal("Reset your progress?",
   "This deletes your scores, history, rounds in progress and category choices in this browser. It can't be undone.", "Reset progress", () => {
     clearInterval(tick);
