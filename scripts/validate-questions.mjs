@@ -31,7 +31,7 @@ if (!Bank) { console.error("Bank was not defined by js/bank.js"); process.exit(1
 
 // Every question/generator file must actually be loaded by the page.
 const html = readFileSync(join(SITE, "index.html"), "utf8");
-for (const f of [...questionFiles, ...generatorFiles]) if (!html.includes(`src="${f}"`)) fail(`index.html doesn't load ${f}`);
+for (const f of [...questionFiles, ...generatorFiles]) if (!new RegExp(`src="${f.replace(/\./g, "\\.")}(\\?[^"]*)?"`).test(html)) fail(`index.html doesn't load ${f}`);
 
 // Every category in the bank must exist in app.js.
 const appCats = new Set([...readFileSync(join(SITE, "js/app.js"), "utf8").matchAll(/\{ id: "([a-z]+)"/g)].map(m => m[1]));

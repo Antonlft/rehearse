@@ -33,6 +33,9 @@ jobs:
       url: ${{ steps.deployment.outputs.page_url }}
     steps:
       - uses: actions/checkout@v4
+      - name: Stamp asset links with this commit
+        # Each deploy gets new ?v= URLs, so browsers never mix a cached page with newer scripts or styles.
+        run: sed -i "s/?v=dev\"/?v=${GITHUB_SHA::7}\"/g" site/index.html
       - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v3
         with:

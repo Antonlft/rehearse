@@ -546,6 +546,7 @@ const ICON_SUN = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" str
 const ICON_MOON = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 14.5A8 8 0 0 1 9.5 4a8 8 0 1 0 10.5 10.5z"/></svg>`;
 const currentTheme = () => document.documentElement.dataset.theme || (darkQuery.matches ? "dark" : "light");
 function syncThemeUI() {
+  if (!themeBtn) return;
   const dark = currentTheme() === "dark", target = dark ? "light" : "dark";
   // The button shows what you'll switch to.
   themeBtn.innerHTML = `${dark ? ICON_SUN : ICON_MOON}<span>${dark ? "Light mode" : "Dark mode"}</span>`;
@@ -553,7 +554,7 @@ function syncThemeUI() {
   themeBtn.title = `Switch to ${target} mode`;
   document.querySelectorAll('meta[name="theme-color"]').forEach(m => m.content = dark ? "#12161f" : "#ffffff");
 }
-themeBtn.onclick = () => {
+if (themeBtn) themeBtn.onclick = () => {
   const next = currentTheme() === "dark" ? "light" : "dark";
   document.documentElement.dataset.theme = next;
   try { localStorage.setItem(THEME_KEY, next); } catch {}
@@ -561,7 +562,8 @@ themeBtn.onclick = () => {
 };
 darkQuery.addEventListener("change", syncThemeUI);
 syncThemeUI();
-document.getElementById("resetBtn").onclick = () => confirmModal("Reset your progress?",
+const resetBtn = document.getElementById("resetBtn");
+if (resetBtn) resetBtn.onclick = () => confirmModal("Reset your progress?",
   "This deletes your scores, history, rounds in progress and category choices in this browser. It can't be undone.", "Reset progress", () => {
     clearInterval(tick);
     try { localStorage.removeItem(STORE_KEY); } catch {}
