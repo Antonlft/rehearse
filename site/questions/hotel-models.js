@@ -73,3 +73,18 @@ Bank.add("hom", [
     why: "The operator keeps a margin above rent, so rent is lower than EBITDA, but it's valued like secure income. Which gives the higher value depends on the rent level and the yield gap.",
     x: ["It depends on rent cover and the yield gap; neither structure always wins.", "The fee goes to the operator; the owner's value is based on the hotel's EBITDA.", "Same building, different income and risk, so different values."] }
 ]);
+
+// New-format questions (shown only when "new formats" is on).
+Bank.addFormat("hom", [
+  { id: "hom-grid-01", type: "grid", lv: 1, q: "Which hotel structure does each feature describe?",
+    columns: ["Lease", "Management contract", "Franchise"],
+    rows: [
+      { text: "The owner receives a fixed rent", answer: 0, note: "Fixed rent from an operator-tenant is a lease." },
+      { text: "The operator keeps the trading profit and bears the operating risk", answer: 0, note: "Under a lease, the tenant trades for its own account." },
+      { text: "The operator earns a base fee plus an incentive fee", answer: 1, note: "Base plus incentive fees are the management contract model." },
+      { text: "The owner keeps the hotel's profit or loss after the operator's fees", answer: 1, note: "In a management contract the owner bears the operating risk." },
+      { text: "The owner pays for the brand, standards and reservation system, and runs the hotel itself", answer: 2, note: "Paying for the brand while running the hotel is a franchise." },
+      { text: "Fees are mainly charged on room revenue for use of the brand", answer: 2, note: "Franchise fees are typically a share of room revenue." }
+    ],
+    why: "In a lease the operator pays rent and takes the trading risk. In a management contract the owner keeps the risk and pays the operator fees. In a franchise the owner (or its manager) runs the hotel and pays the brand for its name and systems." }
+]);

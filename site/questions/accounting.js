@@ -68,3 +68,18 @@ Bank.add("acc", [
     why: "For associates, usually 20–50% stakes, the investor books its share of profit in one line and adjusts the investment's carrying value.",
     x: ["Line-by-line consolidation is for subsidiaries the parent controls.", "Under the equity method dividends reduce the carrying value; they aren't revenue.", "Fair value through profit applies to some financial investments, not associates."] }
 ]);
+
+// New-format questions (shown only when "new formats" is on).
+Bank.addFormat("acc", [
+  { id: "acc-grid-01", type: "grid", q: "Classify each cash flow as operating, investing or financing.",
+    columns: ["Operating", "Investing", "Financing"],
+    rows: [
+      { text: "Cash received from customers", answer: 0, note: "Cash from the core business is operating." },
+      { text: "Increase in inventory", answer: 0, note: "Working capital movements sit in operating cash flow." },
+      { text: "Purchase of equipment", answer: 1, note: "Capital expenditure on long-term assets is investing." },
+      { text: "Acquisition of a subsidiary, net of cash acquired", answer: 1, note: "Buying a business is an investing outflow." },
+      { text: "Dividends paid to shareholders", answer: 2, note: "Returns to shareholders are financing. US GAAP requires it; IFRS also allows operating, but most companies choose financing." },
+      { text: "Repayment of a bank loan", answer: 2, note: "Raising or repaying debt principal is financing." }
+    ],
+    why: "Operating cash flow comes from running the business, investing from buying and selling long-term assets and businesses, and financing from dealings with lenders and shareholders." }
+]);

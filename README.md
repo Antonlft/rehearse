@@ -63,9 +63,9 @@ Written questions are added with `Bank.add(categoryId, [...])`:
 
 Calculation questions are added with `Bank.gen(categoryId, () => ({ q, o, why, x, lv }))` and have no `id`.
 
-**Question types.** A question with no `type` is multiple choice. A **typed-answer** question has `type: "numeric"`, a number `answer`, a `tolerance` (how far a typed answer may be off, in the same units), an optional `unit` (`%`, `x` or `US$m`), `dp` (decimal places for showing the answer) and optional `wrongs`: known wrong answers `{ value, note, trap }`. An **ordering** question has `type: "order"` and an `answer` listing 3–8 steps in the right order; it's shown shuffled (never already right), reordered with ▲ ▼, and only the exact sequence counts as right. Fields from one type are rejected on another by the question check.
+**Question types.** A question with no `type` is multiple choice. A **typed-answer** question has `type: "numeric"`, a number `answer`, a `tolerance` (how far a typed answer may be off, in the same units), an optional `unit` (`%`, `x` or `US$m`), `dp` (decimal places for showing the answer) and optional `wrongs`: known wrong answers `{ value, note, trap }`. An **ordering** question has `type: "order"` and an `answer` listing 3–8 steps in the right order; it's shown shuffled (never already right), reordered with ▲ ▼, and only the exact sequence counts as right. A **classification grid** has `type: "grid"`, 2–4 `columns` and 3–8 `rows` of `{ text, answer: <column number>, note }`; rows are shown shuffled, one column is picked per row, and the question is right only if every row is (feedback says "4 of 6 right"). Fields from one type are rejected on another by the question check.
 
-New-format written questions are added with `Bank.addFormat(categoryId, [...])` rather than `Bank.add`, so they only join rounds when new formats are switched on. Their IDs are permanent like any other (`hds-ord-01`, `mna-ord-01`); the multiple-choice `hds-01` and `mna-09` they're based on are unchanged.
+New-format written questions are added with `Bank.addFormat(categoryId, [...])` rather than `Bank.add`, so they only join rounds when new formats are switched on. Their IDs are permanent like any other (`hds-ord-01`, `mna-ord-01`, and the grids `acc-grid-01`, `lbo-grid-01`, `econ-grid-01`, `hom-grid-01`, `pf-grid-01`); the multiple-choice `hds-01` and `mna-09` the ordering questions are based on are unchanged.
 
 **One definition, two formats.** `Bank.calc(categoryId, spec)` defines a calculation once: `make()` (the random inputs), `solve(inputs)`, `wrongs(inputs)` (known wrong answers), `ask`, `why`, `fmt`, `unit`, `tolerance`, `dp`, `prompt`. It registers the multiple-choice version in `Bank.gens` (identical to a hand-written `Bank.gen`) and a typed-answer version in `Bank.numeric`, so the maths is never written twice. WACC and CAGR use it so far.
 
@@ -97,7 +97,7 @@ All progress lives in one `localStorage` key, `rehearse.v3` (the light/dark choi
 | `srsExcluded` | Category IDs where spaced repetition is off |
 | `roundModes` | `{ test, practice }`: `"timed"` (default) or `"learning"`, remembered separately for the main test and one-category practice |
 | `calcPrefs` | Calculator overrides, e.g. `{ "test-timed": true }`. Defaults: off in the timed main test, on everywhere else |
-| `newFormats` | Include new question formats (typed answers and ordering) in rounds. Default `false`, defaulted with `??=`. Off means rounds are exactly as before |
+| `newFormats` | Include new question formats (typed answers, ordering and classification grids) in rounds. Default `false`, defaulted with `??=`. Off means rounds are exactly as before |
 
 **Answer log (`db.log`).** One entry per *answered* question in every submitted round (skipped questions aren't logged):
 
@@ -145,3 +145,4 @@ When it's on for a category, each written-question slot in a round takes a due q
 | 7 | Added `calcPrefs`; rounds where the calculator was allowed, their results and answer log entries carry `calc: true` |
 | 8 | Added `newFormats`. Typed answers are stored as the text typed in a round's `answers[]` (plus `checked[]` in Learning mode); their log entries gain `type: "numeric"`, `given` (the number read) and `cause` |
 | 9 | Ordering questions: a round's `answers[]` can hold an ordering (step numbers in the order chosen); their log entries have `type: "order"` and `given`. No new top-level fields |
+| 10 | Classification grids: `answers[]` can hold one column number (or `null`) per grid row; their log entries have `type: "grid"`, `given` and `rowsRight`. No new top-level fields |

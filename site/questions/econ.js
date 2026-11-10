@@ -48,3 +48,18 @@ Bank.add("econ", [
     why: "Steepening often happens when markets expect stronger growth or inflation, or when short rates are cut.",
     x: ["A parallel move keeps the slope unchanged.", "That's an inversion.", "Steepening is all about yields, and so prices, moving."] }
 ]);
+
+// New-format questions (shown only when "new formats" is on).
+Bank.addFormat("econ", [
+  { id: "econ-grid-01", type: "grid", q: "Is each measure monetary policy or fiscal policy?",
+    columns: ["Monetary", "Fiscal"],
+    rows: [
+      { text: "Cutting the policy interest rate", answer: 0, note: "The central bank sets the policy rate: monetary policy." },
+      { text: "Quantitative easing", answer: 0, note: "Central bank asset purchases are a monetary tool." },
+      { text: "Changing banks' reserve requirements", answer: 0, note: "Reserve requirements are set by the central bank: monetary." },
+      { text: "Raising income tax", answer: 1, note: "Taxation is decided by government: fiscal policy." },
+      { text: "More government infrastructure spending", answer: 1, note: "Government spending is fiscal policy." },
+      { text: "Cutting VAT", answer: 1, note: "A tax change by government is fiscal." }
+    ],
+    why: "Monetary policy is run by the central bank through interest rates, its balance sheet and banking rules. Fiscal policy is the government's taxing and spending." }
+]);

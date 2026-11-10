@@ -73,3 +73,17 @@ Bank.add("pf", [
     why: "LTV moves with valuations and ICR with rates and loan terms. Debt yield is a cleaner test of credit risk.",
     x: ["They're different measures and can't be compared.", "It's a lender preference, not a regulation.", "Debt yield is built on NOI."] }
 ]);
+
+// New-format questions (shown only when "new formats" is on).
+Bank.addFormat("pf", [
+  { id: "pf-grid-01", type: "grid", lv: 1, q: "Is each covenant a leverage test or a cover test?",
+    columns: ["Leverage", "Cover"],
+    rows: [
+      { text: "Loan to value (LTV)", answer: 0, note: "LTV compares debt with the property's value: leverage." },
+      { text: "Net debt ÷ EBITDA", answer: 0, note: "Debt as a multiple of earnings measures leverage." },
+      { text: "Interest cover ratio (ICR)", answer: 1, note: "Income ÷ interest tests whether income covers the interest." },
+      { text: "Debt service coverage ratio (DSCR)", answer: 1, note: "Income ÷ interest and principal is a cover test." },
+      { text: "Rent cover (EBITDAR ÷ rent)", answer: 1, note: "It tests whether profit before rent covers the rent." }
+    ],
+    why: "Leverage tests compare the amount of debt with value or earnings. Cover tests compare income with what has to be paid out of it each period." }
+]);

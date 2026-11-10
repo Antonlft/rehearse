@@ -64,3 +64,19 @@ Bank.add("lbo", [
     why: "Operational levers raise EBITDA itself: pricing, procurement, footprint and add-on acquisitions. They're where most returns come from today.",
     x: ["More leverage is financial engineering.", "A recap redistributes value; it doesn't create it.", "Exit timing is market-driven, not operational."] }
 ]);
+
+// New-format questions (shown only when "new formats" is on).
+Bank.addFormat("lbo", [
+  { id: "lbo-grid-01", type: "grid", q: "In an LBO's sources and uses table, is each item a source or a use of funds?",
+    columns: ["Source", "Use"],
+    rows: [
+      { text: "Senior term loan", answer: 0, note: "New debt raised for the deal is a source." },
+      { text: "Sponsor equity", answer: 0, note: "The sponsor's cheque is a source." },
+      { text: "Management rollover", answer: 0, note: "Managers reinvesting their proceeds funds part of the price, so it's a source." },
+      { text: "High-yield bonds", answer: 0, note: "Bonds issued for the deal are a source." },
+      { text: "Purchase of the target's equity", answer: 1, note: "Paying the sellers is the main use." },
+      { text: "Refinancing the target's existing debt", answer: 1, note: "Existing debt is usually repaid at closing, which uses funds." },
+      { text: "Transaction fees", answer: 1, note: "Advisory and financing fees have to be paid, so they're a use." }
+    ],
+    why: "Sources are where the money comes from (debt, sponsor equity, rollover); uses are what it pays for (the equity price, refinancing, fees). The two sides must be equal." }
+]);

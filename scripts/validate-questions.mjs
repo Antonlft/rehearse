@@ -7,7 +7,8 @@
 //  - every generator, sampled RUNS times with the same 30-try retry the app uses, always yields a valid question
 //  - each question is checked by its `type`: multiple choice (no type, or "mcq"), "numeric" (typed answer: a number
 //    `answer`, a `tolerance` ≥ 0, an optional `unit`, optional known `wrongs`) or "order" (an `answer` list of 3–8
-//    unique steps). Fields belonging to one type (`tolerance`, `unit`, `o`, ...) are rejected on the others.
+//    unique steps) or "grid" (2–4 unique `columns`, 3–8 `rows` of { text, answer: column number, note }).
+//    Fields belonging to one type (`tolerance`, `unit`, `o`, `rows`, ...) are rejected on the others.
 // Exits with code 1 on any violation.
 import { readFileSync, readdirSync } from "node:fs";
 import { join, dirname } from "node:path";
@@ -52,8 +53,9 @@ const checkShape = (where, q) => {
   const type = q.type ?? "mcq";
   if (type === "numeric") return checkNumeric(where, q);
   if (type === "order") return checkOrder(where, q);
-  if (type !== "mcq") return fail(`${where}: unknown type "${type}" (expected mcq, numeric or order)`);
-  notAllowed(where, q, "a multiple-choice", ["answer", "tolerance", "unit", "wrongs", "dp"]);
+  if (type === "grid") return checkGrid(where, q);
+  if (type !== "mcq") return fail(`${where}: unknown type "${type}" (expected mcq, numeric, order or grid)`);
+  notAllowed(where, q, "a multiple-choice", ["answer", "tolerance", "unit", "wrongs", "dp", "columns", "rows"]);
   if (!Array.isArray(q.o) || q.o.length !== 4) fail(`${where}: needs exactly 4 options, has ${q.o?.length}`);
   else {
     if (new Set(q.o).size !== 4) fail(`${where}: options aren't unique: ${JSON.stringify(q.o)}`);
@@ -68,7 +70,7 @@ const checkShape = (where, q) => {
 };
 
 function checkNumeric(where, q) {
-  notAllowed(where, q, "a typed-answer", ["o", "x", "trap"]);
+  notAllowed(where, q, "a typed-answer", ["o", "x", "trap", "columns", "rows"]);
   if (!isNum(q.answer)) fail(`${where}: answer must be a number, got ${JSON.stringify(q.answer)}`);
   if (!isNum(q.tolerance) || q.tolerance < 0) fail(`${where}: tolerance must be a number ≥ 0, got ${JSON.stringify(q.tolerance)}`);
   if (q.dp !== undefined && !(Number.isInteger(q.dp) && q.dp >= 0 && q.dp <= 6)) fail(`${where}: dp must be a whole number from 0 to 6, got ${JSON.stringify(q.dp)}`);
@@ -85,10 +87,26 @@ function checkNumeric(where, q) {
   }
 }
 function checkOrder(where, q) {
-  notAllowed(where, q, "an ordering", ["o", "x", "trap", "tolerance", "unit", "wrongs", "dp"]);
+  notAllowed(where, q, "an ordering", ["o", "x", "trap", "tolerance", "unit", "wrongs", "dp", "columns", "rows"]);
   if (!Array.isArray(q.answer) || q.answer.length < 3 || q.answer.length > 8) return fail(`${where}: answer must list 3–8 steps in the right order, has ${Array.isArray(q.answer) ? q.answer.length : JSON.stringify(q.answer)}`);
   if (q.answer.some(s => typeof s !== "string" || !s.trim())) fail(`${where}: every step must be non-empty text`);
   if (new Set(q.answer).size !== q.answer.length) fail(`${where}: steps must be unique`);
+}
+
+function checkGrid(where, q) {
+  notAllowed(where, q, "a grid", ["o", "x", "trap", "tolerance", "unit", "wrongs", "dp", "answer"]);
+  const cols = q.columns;
+  if (!Array.isArray(cols) || cols.length < 2 || cols.length > 4) return fail(`${where}: columns must list 2–4 choices, has ${Array.isArray(cols) ? cols.length : JSON.stringify(cols)}`);
+  if (cols.some(c => typeof c !== "string" || !c.trim())) fail(`${where}: every column label must be non-empty text`);
+  if (new Set(cols).size !== cols.length) fail(`${where}: column labels must be unique`);
+  if (!Array.isArray(q.rows) || q.rows.length < 3 || q.rows.length > 8) return fail(`${where}: rows must list 3–8 items, has ${Array.isArray(q.rows) ? q.rows.length : JSON.stringify(q.rows)}`);
+  q.rows.forEach((r, i) => {
+    if (!r || typeof r.text !== "string" || !r.text.trim()) fail(`${where}: row ${i + 1} needs text`);
+    if (!Number.isInteger(r?.answer) || r.answer < 0 || r.answer >= cols.length) fail(`${where}: row ${i + 1}'s answer must be a column number from 0 to ${cols.length - 1}, got ${JSON.stringify(r?.answer)}`);
+    if (r?.note !== undefined && (typeof r.note !== "string" || !r.note.trim())) fail(`${where}: row ${i + 1}'s note must be non-empty text`);
+  });
+  if (new Set(q.rows.map(r => r?.text)).size !== q.rows.length) fail(`${where}: row texts must be unique`);
+  if (new Set(q.rows.map(r => r?.answer)).size < 2) fail(`${where}: every row has the same answer, so it isn't really a classification`);
 }
 
 // Written questions, including new-format ones (Bank.formats, used only when new formats are on). IDs are unique across both.
