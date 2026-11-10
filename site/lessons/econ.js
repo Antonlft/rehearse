@@ -4,5 +4,6 @@ Lessons.add("econ", {
   status: "stub",
   method: [],
   example: null, // { question: "...", working: ["Step 1 ...", "Step 2 ..."], answer: "..." }
-  source: null   // { text: "Author, Title (edition), chapter", url: "https://..." }
+  source: null,  // { text: "Author, Title (edition), chapter", url: "https://..." }
+  widget: { type: "yieldCurve" } // interactive "Try it" (see site/js/widgets.js); optional values: { ... } to change starting numbers
 });

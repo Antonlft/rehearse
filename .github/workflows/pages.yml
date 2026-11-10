@@ -26,6 +26,8 @@ jobs:
         run: node scripts/validate-questions.mjs
       - name: Check calculator maths
         run: node scripts/test-calculator.mjs
+      - name: Check lesson widget maths
+        run: node scripts/test-widgets.mjs
 
   deploy:
     needs: validate

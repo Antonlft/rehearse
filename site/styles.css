@@ -438,3 +438,47 @@ main { padding-block: 30px 48px; }
 .lesson-status.reviewed { background: var(--good-bg); color: var(--good); }
 .review-learn { margin-top: 12px; font-size: 13px; }
 .review-learn .link { font-size: 13px; }
+
+/* Lesson widgets ("Try it") */
+.widget { border: 1px solid var(--rule); border-radius: var(--radius); padding: 14px; background: var(--tray); display: grid; gap: 12px; }
+.w-title { font-size: 13.5px; font-weight: 600; }
+.w-inputs { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px 18px; }
+@media (max-width: 620px) { .w-inputs { grid-template-columns: minmax(0, 1fr); } }
+.w-in { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: 2px 10px; font-size: 12.5px; }
+.w-in span { color: var(--muted); }
+.w-in output { font-weight: 600; font-variant-numeric: tabular-nums; text-align: right; }
+.w-in input[type=range] { grid-column: 1 / -1; width: 100%; accent-color: var(--navy); margin: 2px 0; height: 22px; cursor: pointer; }
+.w-out { display: grid; gap: 10px; }
+.w-stats { display: flex; flex-wrap: wrap; gap: 8px; }
+.w-stat { flex: 1 1 130px; padding: 8px 10px; border: 1px solid var(--rule); border-radius: 5px; background: var(--page); display: grid; gap: 2px; }
+.w-stat span { font-size: 11.5px; color: var(--muted); }
+.w-stat b { font-size: 14px; font-weight: 600; font-variant-numeric: tabular-nums; }
+.w-stat.big b { font-size: 18px; color: var(--navy); }
+.w-chart { width: 100%; max-width: 460px; height: auto; display: block; }
+.w-chart .w-lbl { font: 10.5px var(--font); fill: var(--muted); }
+.w-chart .w-val { font: 600 10.5px var(--font); fill: var(--ink); }
+.w-chart .w-val.on { fill: var(--navy-ink); }
+.w-chart .w-bar { fill: var(--rule-strong); }
+.w-chart .w-bar.pos { fill: var(--navy); }
+.w-chart .w-bar.neg { fill: var(--bad); }
+.w-chart .w-bar.total { fill: var(--good); }
+.w-chart .w-axis { stroke: var(--rule-strong); stroke-width: 1; }
+.w-chart .w-ref { stroke: var(--muted); stroke-width: 1; stroke-dasharray: 4 4; }
+.w-chart .w-line { fill: none; stroke: var(--navy); stroke-width: 2; }
+.w-chart .w-dot { fill: var(--bad); stroke: var(--page); stroke-width: 2; }
+.w-chart .w-frame { fill: none; stroke: var(--rule-strong); stroke-dasharray: 3 3; }
+.w-note { font-size: 12.5px; color: var(--muted); }
+.w-3s { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
+@media (max-width: 620px) { .w-3s { grid-template-columns: minmax(0, 1fr); } }
+.w-3s > div { padding: 10px; border: 1px solid var(--rule); border-radius: 5px; background: var(--page); display: grid; gap: 3px; font-size: 12.5px; font-variant-numeric: tabular-nums; }
+.w-3s p { font-size: 11px; font-weight: 600; letter-spacing: 0.05em; text-transform: uppercase; color: var(--muted); }
+.w-table { overflow-x: auto; }
+.w-table table { width: 100%; border-collapse: collapse; font-size: 12.5px; font-variant-numeric: tabular-nums; background: var(--page); }
+.w-table th, .w-table td { padding: 6px 8px; border-bottom: 1px solid var(--rule); text-align: right; }
+.w-table th[scope=row], .w-table thead th:first-child { text-align: left; }
+.w-table thead th { font-size: 11px; color: var(--muted); font-weight: 500; }
+.w-in span { grid-row: 1; grid-column: 1; }
+.w-in output { grid-row: 1; grid-column: 2; }
+.w-in input[type=range] { grid-row: 2; }
+@media (max-width: 620px) { .w-chart .w-lbl, .w-chart .w-val { font-size: 12px; } }
+@media (max-width: 620px) { .w-table th, .w-table td { padding: 6px 4px; } .w-table { font-size: 12px; } }

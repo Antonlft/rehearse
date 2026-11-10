@@ -10,7 +10,8 @@
 //    unique steps) or "grid" (2–4 unique `columns`, 3–8 `rows` of { text, answer: column number, note }).
 //    Fields belonging to one type (`tolerance`, `unit`, `o`, `rows`, ...) are rejected on the others.
 //  - every category has a lesson (site/lessons/<category>.js, loaded by index.html); a "stub" may be empty, but a
-//    "draft" or "reviewed" lesson needs a method, a worked example (question, working, answer) and a source
+//    "draft" or "reviewed" lesson needs a method, a worked example (question, working, answer) and a source;
+//    a lesson's optional widget must be one defined in site/js/widgets.js, with starting values only for its own inputs
 // Exits with code 1 on any violation.
 import { readFileSync, readdirSync } from "node:fs";
 import { join, dirname } from "node:path";
@@ -31,7 +32,7 @@ const load = rel => vm.runInContext(readFileSync(join(SITE, rel), "utf8"), ctx, 
 const questionFiles = readdirSync(join(SITE, "questions")).filter(f => f.endsWith(".js")).sort().map(f => `questions/${f}`);
 const generatorFiles = readdirSync(join(SITE, "js")).filter(f => /^generators.*\.js$/.test(f)).sort().map(f => `js/${f}`);
 const lessonFiles = readdirSync(join(SITE, "lessons")).filter(f => f.endsWith(".js")).sort().map(f => `lessons/${f}`);
-for (const f of ["js/bank.js", ...questionFiles, ...generatorFiles, ...lessonFiles]) {
+for (const f of ["js/bank.js", "js/widgets.js", ...questionFiles, ...generatorFiles, ...lessonFiles]) {
   try { load(f); } catch (e) { fail(`${f}: failed to load: ${e.message}`); }
 }
 const { Bank } = ctx;
@@ -186,6 +187,15 @@ for (const [cat, l] of Object.entries(Lessons)) {
   if (l.source != null) {
     if (!text(l.source.text)) fail(`${where}: source needs text`);
     if (l.source.url != null && l.source.url !== "" && !/^https?:\/\//i.test(l.source.url)) fail(`${where}: source url must start with http:// or https://`);
+  }
+  if (l.widget != null) {
+    const w = ctx.Widgets?.registry?.[l.widget.type];
+    if (!w) fail(`${where}: widget "${l.widget.type}" isn't defined in site/js/widgets.js`);
+    else for (const [k, val] of Object.entries(l.widget.values || {})) {
+      const inp = w.inputs.find(i => i.k === k);
+      if (!inp) fail(`${where}: widget value "${k}" isn't one of its inputs (${w.inputs.map(i => i.k).join(", ")})`);
+      else if (typeof val !== "number" || val < inp.min || val > inp.max) fail(`${where}: widget value ${k} = ${val} is outside ${inp.min}–${inp.max}`);
+    }
   }
   if (l.status !== "stub") {
     if (!Array.isArray(l.method) || !l.method.length) fail(`${where}: a ${l.status} lesson needs a method`);

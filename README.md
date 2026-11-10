@@ -19,6 +19,7 @@ Then open http://localhost:8765/site/ (in Claude Code this is the `quiz-static` 
 ```bash
 node scripts/validate-questions.mjs
 node scripts/test-calculator.mjs
+node scripts/test-widgets.mjs
 ```
 
 It loads every question file, calculation generator and lesson, and checks that each question has 4 unique options, 3 wrong-answer notes, an explanation and a unique ID, and that any `trap` tags are valid. It also checks that no option contains `NaN`/`Infinity`/`undefined`, that every file is loaded by `index.html`, and that every category exists in `app.js`. Each generator is run 50 times. It prints `✓ …` and exits with code 0 when everything passes, or lists each problem and exits with code 1. GitHub runs it before every deploy, and a failure stops the deploy. `test-calculator.mjs` does the same for the built-in calculator and for reading typed answers: it checks about 90 cases against hand-worked answers.
@@ -27,7 +28,7 @@ It loads every question file, calculation generator and lesson, and checks that 
 
 Every push to `main` runs `.github/workflows/pages.yml`:
 
-1. **validate**: runs the question check and the calculator check above.
+1. **validate**: runs the question, calculator and widget checks above.
 2. **deploy**: replaces `?v=dev` on every script and stylesheet link in `site/index.html` with the commit ID, then publishes the `site/` folder to GitHub Pages.
 
 The version stamp makes browsers fetch matching files after each deploy. Any new `<script>` or stylesheet tag in `index.html` must end in `?v=dev`. GitHub Pages lets browsers cache the page itself for up to 10 minutes, so a hard refresh (Cmd + Shift + R) may be needed right after a deploy.
@@ -42,10 +43,12 @@ The version stamp makes browsers fetch matching files after each deploy. Any new
 | `site/questions/*.js` | Written questions, one file per category |
 | `site/js/generators.js`, `generators-hl.js` | Calculation questions that get new numbers every round |
 | `site/js/calculator.js` | The built-in calculator: a small expression parser (no `eval`) and its panel |
+| `site/js/widgets.js` | Interactive "Try it" widgets for the lessons |
 | `site/js/app.js` | Everything else: categories, round building, quiz, results, saving |
 | `site/lessons/*.js` | One lesson (Learn page) per category |
 | `scripts/validate-questions.mjs` | The question check |
 | `scripts/test-calculator.mjs` | The calculator check |
+| `scripts/test-widgets.mjs` | The lesson widget check |
 
 ## Question format
 
@@ -85,11 +88,14 @@ Lessons.add("val", {
     working: ["Step 1 …", "Step 2 …"],
     answer: "The result, with a line on what it means."
   },
-  source: { text: "Author, Title (edition), chapter", url: "https://…" } // url optional
+  source: { text: "Author, Title (edition), chapter", url: "https://…" }, // url optional
+  widget: { type: "evBridge", values: { debt: 500 } } // optional interactive "Try it"; values change its starting numbers
 });
 ```
 
 Text is shown as plain paragraphs and numbered steps (no formatting code needed). The question check requires a lesson for every category; a stub may be empty, but a draft or reviewed lesson must have a method, an example and a source, and a source link must start with `http://` or `https://`. All 18 lessons start as stubs.
+
+**Widgets.** `site/js/widgets.js` defines 18 interactive "Try it" widgets (sliders that recalculate live, with a small chart), one per category: `evBridge`, `wacc`, `compound`, `lboReturns`, `recovery`, `depreciation`, `bondPrice`, `ptbv`, `terp`, `yieldCurve`, `accretion`, `montyHall`, `revpar`, `hotelModels`, `yieldValue`, `rentRoll`, `maxLoan`, `capitalStack`. Each has a pure `compute()` for the maths and a `render()` for the picture. `node scripts/test-widgets.mjs` checks the maths against hand-worked answers (it also runs before every deploy), and the question check rejects a lesson that names a widget that doesn't exist or gives it starting values outside its sliders.
 
 ## Saved data
 

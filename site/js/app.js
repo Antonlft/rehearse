@@ -980,6 +980,7 @@ function renderLesson() {
       ${ex ? `<p class="prompt">${esc(ex.question)}</p>
         ${ex.working && ex.working.length ? `<ol class="lesson-steps">${ex.working.map(w => `<li>${esc(w)}</li>`).join("")}</ol>` : ""}
         <p class="lesson-answer"><b>Answer:</b> ${esc(ex.answer)}</p>` : missing}
+      ${l.widget && Widgets.registry[l.widget.type] ? `<h2>Try it</h2><div id="lessonWidget"></div>` : ""}
       <h2>Source</h2>
       ${src ? `<p>${safeUrl ? `<a href="${esc(safeUrl)}" target="_blank" rel="noopener noreferrer">${esc(src.text)}</a>` : esc(src.text)}</p>` : missing}
     </section>
@@ -989,6 +990,8 @@ function renderLesson() {
     </div>`;
   document.getElementById("backLink").onclick = document.getElementById("backBtn").onclick = () => go(back);
   document.getElementById("practiseBtn").onclick = () => newRound(view.cat);
+  const wEl = document.getElementById("lessonWidget");
+  if (wEl) Widgets.mount(wEl, l.widget.type, l.widget.values || {});
 }
 
 /* Results */

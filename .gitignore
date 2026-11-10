@@ -1,1 +1,4 @@
 .DS_Store
+
+# Paid reference material: never publish (public repo)
+*.pdf
