@@ -36,7 +36,8 @@ const modeInfo = mode => mode === "mixed" ? { title: "Financial aptitude test", 
 
 const store = {
   load() { try { return JSON.parse(localStorage.getItem(STORE_KEY)) || {}; } catch { return {}; } },
-  save(d) { try { localStorage.setItem(STORE_KEY, JSON.stringify(d)); } catch {} }
+  // Returns false if the browser refused to save (e.g. storage full), so persist() can warn once.
+  save(d) { try { localStorage.setItem(STORE_KEY, JSON.stringify(d)); return true; } catch { return false; } }
 };
 const db = store.load();
 db.attempts ||= {}; db.history ||= {}; db.totals ||= {}; db.seen ||= {}; db.catStats ||= {}; db.excluded ||= [];
@@ -47,9 +48,19 @@ db.log ||= [];
 // Schema version: documentation and safety only. Fields are only ever added, so the number only ever goes up.
 //   1: everything live before the answer log (attempts, history, totals, seen, catStats, excluded, qStats)
 //   2: added db.log; rounds in progress also gain spentMs[] and answeredAt[]
-const SCHEMA_VERSION = 2;
+//   3: added db.lastBackupAt and db.backupNudgeDismissedAt (backup download and reminder)
+db.lastBackupAt ||= null;           // when a backup was last downloaded
+db.backupNudgeDismissedAt ||= null; // when the home-page backup reminder was last dismissed
+const SCHEMA_VERSION = 3;
 db.schemaVersion = Math.max(db.schemaVersion || 1, SCHEMA_VERSION);
-const persist = () => store.save(db);
+let saveWarned = false;
+const persist = () => {
+  if (store.save(db) || saveWarned) return;
+  saveWarned = true; // warn once per visit; saving keeps being attempted as normal
+  setTimeout(() => confirmModal("Your progress couldn't be saved",
+    "This browser refused to save your latest progress, usually because its storage is full. Download a backup now so you don't lose anything.",
+    "Download backup", exportBackup, "Close"), 0);
+};
 
 const app = document.getElementById("app");
 const meta = document.getElementById("topMeta");
@@ -287,11 +298,16 @@ function renderHome() {
   const t = db.totals.mixed;
   const seen = CATEGORIES.reduce((s, c) => s + (db.seen[c.id] || []).length, 0);
   const hist = db.history.mixed || [];
+  const reminder = backupReminder();
   app.innerHTML = `
     <div class="page-head">
       <h1>Assessments</h1>
       <p>Every round draws a new set of questions. Written questions don't repeat until you've seen them all, except ones you got wrong, which come back sooner. Calculation questions get new numbers each time.</p>
     </div>
+    ${reminder ? `<div class="nudge" role="status">
+      <p>${esc(reminder)} Your progress is saved only in this browser.</p>
+      <div class="nudge-actions"><button class="link" type="button" data-backup>Download backup</button><button class="link" type="button" data-snooze>Not now</button></div>
+    </div>` : ""}
     <section class="card test-card">
       <div class="test-row">
         <div>
@@ -322,6 +338,8 @@ function renderHome() {
     </div>`;
   app.querySelectorAll("[data-new]").forEach(b => b.onclick = () => b.dataset.new === "mixed" ? go({ name: "setup" }) : newRound(b.dataset.new));
   app.querySelectorAll("[data-setup]").forEach(b => b.onclick = () => go({ name: "setup" }));
+  app.querySelectorAll("[data-backup]").forEach(b => b.onclick = exportBackup);
+  app.querySelectorAll("[data-snooze]").forEach(b => b.onclick = () => { db.backupNudgeDismissedAt = Date.now(); persist(); renderHome(); });
   app.querySelectorAll("[data-resume]").forEach(b => b.onclick = () => go({ name: "quiz", mode: b.dataset.resume }));
   app.querySelectorAll("[data-discard]").forEach(b => b.onclick = () => confirmModal("Discard this practice?", "Your mistakes practice in progress will be deleted.", "Discard",
     () => { delete db.attempts[b.dataset.discard]; persist(); renderHome(); }));
@@ -538,17 +556,19 @@ function reviewItem(it, i, ans, marked) {
 
 /* Modal */
 let lastFocus = null;
-function confirmModal(title, body, okLabel, onOk) {
+// cancelLabel: text for the second button, or null for a message with a single button.
+function confirmModal(title, body, okLabel, onOk, cancelLabel = "Cancel") {
   if (!modalRoot.innerHTML) lastFocus = document.activeElement;
   modalRoot.innerHTML = `
     <div class="backdrop" id="backdrop">
       <div class="modal" role="dialog" aria-modal="true" aria-labelledby="mTitle">
         <h3 id="mTitle">${esc(title)}</h3>
         <p>${esc(body)}</p>
-        <div class="actions end"><button class="btn" id="mCancel" type="button">Cancel</button><button class="btn primary" id="mOk" type="button">${esc(okLabel)}</button></div>
+        <div class="actions end">${cancelLabel === null ? "" : `<button class="btn" id="mCancel" type="button">${esc(cancelLabel)}</button>`}<button class="btn primary" id="mOk" type="button">${esc(okLabel)}</button></div>
       </div>
     </div>`;
-  document.getElementById("mCancel").onclick = closeModal;
+  const cancel = document.getElementById("mCancel");
+  if (cancel) cancel.onclick = closeModal;
   document.getElementById("backdrop").onclick = e => { if (e.target.id === "backdrop") closeModal(); };
   document.getElementById("mOk").onclick = () => { closeModal(); onOk(); };
   document.getElementById("mOk").focus();
@@ -599,6 +619,72 @@ if (themeBtn) themeBtn.onclick = () => {
 };
 darkQuery.addEventListener("change", syncThemeUI);
 syncThemeUI();
+/* Backups: download everything as a JSON file, and load such a file back. */
+const roundsPlayed = d => Object.values(d.totals || {}).reduce((s, t) => s + ((t && t.rounds) || 0), 0);
+const dateLabel = ts => ts ? new Date(ts).toLocaleDateString(undefined, { dateStyle: "medium" }) : "an unknown date";
+
+function exportBackup() {
+  db.lastBackupAt = Date.now();
+  persist();
+  const d = new Date(db.lastBackupAt), pad = n => String(n).padStart(2, "0");
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(new Blob([JSON.stringify(db, null, 2)], { type: "application/json" }));
+  a.download = `rehearse-backup-${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}.json`;
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+  if (view.name === "home") renderHome(); // the reminder disappears once a backup is taken
+}
+
+// Returns a plain-language reason the object isn't a usable backup, or null if it looks right.
+function backupProblem(d) {
+  if (!d || typeof d !== "object" || Array.isArray(d)) return "This file doesn't look like a Rehearse backup.";
+  if (typeof d.schemaVersion !== "number" || d.schemaVersion < 1) return "This file doesn't look like a Rehearse backup: it has no version number.";
+  if (d.schemaVersion > SCHEMA_VERSION) return "This backup was made by a newer version of the site. Refresh the page (Cmd + Shift + R) and try again.";
+  const isObj = v => v && typeof v === "object" && !Array.isArray(v);
+  const missing = ["attempts", "history", "totals", "seen", "catStats"].filter(k => !isObj(d[k]));
+  if (missing.length) return `This file doesn't look like a Rehearse backup: ${missing.join(", ")} ${missing.length > 1 ? "are" : "is"} missing or the wrong shape.`;
+  if ("qStats" in d && !isObj(d.qStats)) return "This backup is damaged: qStats is the wrong shape.";
+  for (const k of ["excluded", "log"]) if (k in d && !Array.isArray(d[k])) return `This backup is damaged: ${k} should be a list.`;
+  return null;
+}
+
+async function importBackup(file) {
+  const fail = msg => confirmModal("Couldn't import this file", `${msg} Your current progress hasn't been changed.`, "OK", () => {}, null);
+  let data;
+  try { data = JSON.parse(await file.text()); }
+  catch { return fail("This file isn't a valid backup file (it can't be read as JSON)."); }
+  const problem = backupProblem(data);
+  if (problem) return fail(problem);
+  confirmModal("Replace your progress with this backup?",
+    `Backup from ${dateLabel(data.lastBackupAt)}: ${roundsPlayed(data)} rounds played, ${(data.log || []).length} answers logged. ` +
+    `In this browser now: ${roundsPlayed(db)} rounds played, ${db.log.length} answers logged. ` +
+    "Importing replaces everything saved in this browser: scores, history, rounds in progress and category choices.",
+    "Replace my progress", () => {
+      clearInterval(tick);
+      try { localStorage.setItem(STORE_KEY, JSON.stringify(data)); }
+      catch { return fail("This browser couldn't store the backup, probably because its storage is full."); }
+      location.reload();
+    });
+}
+
+// Home-page reminder: returns the message to show, or null.
+function backupReminder() {
+  const DAY = 864e5, now = Date.now();
+  if (db.backupNudgeDismissedAt && now - db.backupNudgeDismissedAt < 14 * DAY) return null;
+  if (!db.lastBackupAt) { const n = roundsPlayed(db); return n >= 3 ? `You've played ${n} rounds and haven't downloaded a backup yet.` : null; }
+  const since = new Set(db.log.filter(e => e.at > db.lastBackupAt).map(e => e.at)).size; // one log timestamp per submitted round
+  if (since >= 10) return `You've played ${since} rounds since your last backup.`;
+  if (since >= 1 && now - db.lastBackupAt >= 30 * DAY) return `Your last backup is from ${dateLabel(db.lastBackupAt)}.`;
+  return null;
+}
+
+const exportBtn = document.getElementById("exportBtn"), importBtn = document.getElementById("importBtn"), importFile = document.getElementById("importFile");
+if (exportBtn) exportBtn.onclick = exportBackup;
+if (importBtn && importFile) {
+  importBtn.onclick = () => importFile.click();
+  importFile.onchange = () => { const f = importFile.files[0]; importFile.value = ""; if (f) importBackup(f); };
+}
+
 const resetBtn = document.getElementById("resetBtn");
 if (resetBtn) resetBtn.onclick = () => confirmModal("Reset your progress?",
   "This deletes your scores, history, rounds in progress and category choices in this browser. It can't be undone.", "Reset progress", () => {

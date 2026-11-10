@@ -63,6 +63,8 @@ Calculation questions are added with `Bank.gen(categoryId, () => ({ q, o, why, x
 
 All progress lives in one `localStorage` key, `rehearse.v3` (the light/dark choice is kept separately under `rehearse.theme`). In `app.js` it's loaded into the global `db` object and written back with `persist()`.
 
+**Backups.** The footer's *Download backup* saves the whole `db` object as `rehearse-backup-YYYY-MM-DD.json`. *Import backup* checks the file (valid JSON, has `schemaVersion` no newer than the site's, and has the core sections) and, after you confirm, replaces the saved data and reloads. A file that fails the check is rejected with a message, and nothing is changed. If the browser ever refuses to save (for example because storage is full), the site shows a one-time warning offering a backup.
+
 **Rules for changing it.** Changes are additive only: never delete or rename a field, and never change what an existing field means. Add new fields with a default, like the existing code (`db.newThing ||= []`), so older saves keep working. When you add a new top-level field, bump `SCHEMA_VERSION` in `app.js` and add a line to the history below.
 
 | Field | What it holds |
@@ -76,6 +78,8 @@ All progress lives in one `localStorage` key, `rehearse.v3` (the light/dark choi
 | `excluded` | Category IDs unticked on the setup screen |
 | `qStats` | Per written question ID: times answered, times wrong or skipped, and whether the last answer was right |
 | `log` | Permanent answer log (below). Only ever appended to |
+| `lastBackupAt` | When a backup was last downloaded (or `null`) |
+| `backupNudgeDismissedAt` | When the home-page backup reminder was last dismissed (or `null`) |
 
 **Answer log (`db.log`).** One entry per *answered* question in every submitted round (skipped questions aren't logged):
 
@@ -97,3 +101,4 @@ Rounds in progress also keep `spentMs[]` and `answeredAt[]` per question. Time o
 |---|---|
 | 1 | Everything live before the answer log: `attempts`, `history`, `totals`, `seen`, `catStats`, `excluded`, `qStats` |
 | 2 | Added `log`; rounds in progress gained `spentMs[]` and `answeredAt[]` |
+| 3 | Added `lastBackupAt` and `backupNudgeDismissedAt` |
