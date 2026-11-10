@@ -1,0 +1,99 @@
+# Rehearse
+
+Timed practice tests for finance interviews: https://antonlft.github.io/rehearse/
+
+It's a static website: plain HTML, CSS and JavaScript, with no framework, no build step and no dependencies. Everything a user does is saved in their own browser; there is no server or account.
+
+## Running it locally
+
+From the project folder:
+
+```bash
+python3 -m http.server 8765
+```
+
+Then open http://localhost:8765/site/ (in Claude Code this is the `quiz-static` entry in `.claude/launch.json`).
+
+## Checking the question bank
+
+```bash
+node scripts/validate-questions.mjs
+```
+
+It loads every question file and calculation generator and checks that each question has 4 unique options, 3 wrong-answer notes, an explanation and a unique ID. It also checks that no option contains `NaN`/`Infinity`/`undefined`, that every file is loaded by `index.html`, and that every category exists in `app.js`. Each generator is run 50 times. It prints `✓ …` and exits with code 0 when everything passes, or lists each problem and exits with code 1. GitHub runs it before every deploy, and a failure stops the deploy.
+
+## How it's published
+
+Every push to `main` runs `.github/workflows/pages.yml`:
+
+1. **validate**: runs the question check above.
+2. **deploy**: replaces `?v=dev` on every script and stylesheet link in `site/index.html` with the commit ID, then publishes the `site/` folder to GitHub Pages.
+
+The version stamp makes browsers fetch matching files after each deploy. Any new `<script>` or stylesheet tag in `index.html` must end in `?v=dev`. GitHub Pages lets browsers cache the page itself for up to 10 minutes, so a hard refresh (Cmd + Shift + R) may be needed right after a deploy.
+
+## Project layout
+
+| Path | What it is |
+|---|---|
+| `site/index.html` | The page shell; loads every script in order |
+| `site/styles.css` | All styles. Colours are tokens in `:root`, with a dark set for dark mode |
+| `site/js/bank.js` | `Bank` (where questions are registered) and `R` (number/format helpers) |
+| `site/questions/*.js` | Written questions, one file per category |
+| `site/js/generators.js`, `generators-hl.js` | Calculation questions that get new numbers every round |
+| `site/js/app.js` | Everything else: categories, round building, quiz, results, saving |
+| `scripts/validate-questions.mjs` | The question check |
+
+## Question format
+
+Written questions are added with `Bank.add(categoryId, [...])`:
+
+```js
+{ id: "val-03", lv: 2, q: "Question text",
+  o: ["correct answer", "wrong 1", "wrong 2", "wrong 3"],   // correct answer always first; shuffled when shown
+  why: "Why the correct answer is right",
+  x: ["why wrong 1 is wrong", "why wrong 2 is wrong", "why wrong 3 is wrong"] }
+```
+
+- `id` is permanent. Saved stats and the answer log refer to it, so never rename, renumber or reuse an ID.
+- `lv` (1 basic, 2 intermediate, 3 advanced) is optional. Today only the six hospitality & living categories have it.
+
+Calculation questions are added with `Bank.gen(categoryId, () => ({ q, o, why, x, lv }))` and have no `id`.
+
+## Saved data
+
+All progress lives in one `localStorage` key, `rehearse.v3` (the light/dark choice is kept separately under `rehearse.theme`). In `app.js` it's loaded into the global `db` object and written back with `persist()`.
+
+**Rules for changing it.** Changes are additive only: never delete or rename a field, and never change what an existing field means. Add new fields with a default, like the existing code (`db.newThing ||= []`), so older saves keep working. When you add a new top-level field, bump `SCHEMA_VERSION` in `app.js` and add a line to the history below.
+
+| Field | What it holds |
+|---|---|
+| `schemaVersion` | Version of this format (see history). Only ever goes up |
+| `attempts` | Rounds in progress, by mode (`"mixed"`, a category ID, or `"retry"`) |
+| `history` | Last 5 finished rounds per mode, for the results and review screens |
+| `totals` | Per mode: rounds played, sum of scores, best score |
+| `seen` | Per category: written question IDs already shown in the current cycle |
+| `catStats` | Per category: questions answered and correct (excludes retry rounds) |
+| `excluded` | Category IDs unticked on the setup screen |
+| `qStats` | Per written question ID: times answered, times wrong or skipped, and whether the last answer was right |
+| `log` | Permanent answer log (below). Only ever appended to |
+
+**Answer log (`db.log`).** One entry per *answered* question in every submitted round (skipped questions aren't logged):
+
+```js
+{ qid: "val-03",          // null for calculation questions
+  cat: "val",
+  ok: true,               // answered correctly
+  at: 1794043291081,      // when the round was submitted (ms timestamp)
+  usedMs: 42150,          // time the question was on screen, summed across visits
+  answeredAt: 1794043280000, // when the answer was last chosen (null for answers given before v2)
+  mode: "mixed" }         // "mixed", a category ID, or "retry"
+```
+
+Rounds in progress also keep `spentMs[]` and `answeredAt[]` per question. Time only counts while the question is on screen: it pauses on Save & exit, and time away (including a closed tab) is never counted.
+
+**Version history**
+
+| Version | Change |
+|---|---|
+| 1 | Everything live before the answer log: `attempts`, `history`, `totals`, `seen`, `catStats`, `excluded`, `qStats` |
+| 2 | Added `log`; rounds in progress gained `spentMs[]` and `answeredAt[]` |
