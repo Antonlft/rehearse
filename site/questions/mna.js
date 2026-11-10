@@ -11,7 +11,7 @@ Bank.add("mna", [
     o: ["Stop the target soliciting competing offers before the deal completes", "Stop the buyer reducing the agreed price", "Require the target to keep trading with all existing suppliers", "Prevent the buyer financing the deal with new debt"],
     why: "A no-shop protects the buyer's time and money by stopping the target courting rival bidders, usually with a fiduciary out for superior offers.",
     x: ["Price changes are governed by price adjustment terms, not deal protection.", "Trading between signing and completion is covered by ordinary-course covenants.", "Financing is the buyer's choice; a no-shop restricts the seller."] },
-  { id: "mna-04", q: "In an all-stock acquisition with no synergies, the deal is dilutive to the acquirer's EPS when:",
+  { id: "mna-04", trap: ["wrong-measure", null, "inverted"], q: "In an all-stock acquisition with no synergies, the deal is dilutive to the acquirer's EPS when:",
     o: ["The acquirer's P/E is lower than the P/E it pays for the target", "The acquirer's share price is higher than the target's", "The target has lower revenue than the acquirer", "The acquirer's P/E is higher than the P/E it pays for the target"],
     why: "Each new low-P/E share issued brings in less profit than the earnings it dilutes, so EPS falls.",
     x: ["The share price level doesn't matter; earnings per dollar of value (P/E) does.", "Relative size changes how big the effect is, not its direction.", "That's the accretive case: highly valued shares buying cheaper earnings."] },
