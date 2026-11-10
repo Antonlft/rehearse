@@ -90,7 +90,14 @@ db.roundModes.test ||= "timed";
 db.roundModes.practice ||= "timed";
 const LEARNING_MS = 100 * 365 * 864e5; // Learning rounds keep a deadline, just 100 years away (Infinity can't be saved as JSON)
 const learningFor = mode => mode === RETRY ? false : db.roundModes[mode === "mixed" ? "test" : "practice"] === "learning";
-const SCHEMA_VERSION = 6;
+//   7: added db.calcPrefs; rounds in progress, results and answer log entries carry calc: true when the calculator was allowed
+// Is the calculator allowed? Default: off in the timed main test (like a real interview), on everywhere else.
+// Overrides are remembered per entry point and mode, e.g. { "test-timed": true }; only overrides are stored.
+db.calcPrefs ||= {};
+const calcKey = (entry, learning) => `${entry}-${learning ? "learning" : "timed"}`;
+const calcPref = (entry, learning) => db.calcPrefs[calcKey(entry, learning)] ?? (calcKey(entry, learning) !== "test-timed");
+const calcFor = mode => mode === RETRY ? calcPref("practice", false) : calcPref(mode === "mixed" ? "test" : "practice", learningFor(mode));
+const SCHEMA_VERSION = 7;
 db.schemaVersion = Math.max(db.schemaVersion || 1, SCHEMA_VERSION);
 let saveWarned = false;
 const persist = () => {
@@ -207,9 +214,9 @@ function buildRound(mode, cats) {
   return items;
 }
 
-function beginAttempt(mode, items, sub, learning = false) {
+function beginAttempt(mode, items, sub, learning = false, calc = false) {
   db.attempts[mode] = { mode, sub, items, answers: Array(items.length).fill(null), marked: Array(items.length).fill(false),
-    cur: 0, start: Date.now(), deadline: Date.now() + (learning ? LEARNING_MS : items.length * 60000), ...(learning ? { learning: true } : {}) };
+    cur: 0, start: Date.now(), deadline: Date.now() + (learning ? LEARNING_MS : items.length * 60000), ...(learning ? { learning: true } : {}), ...(calc ? { calc: true } : {}) };
   persist();
   reviewFilter = "all";
   go({ name: "quiz", mode });
@@ -218,7 +225,7 @@ function beginAttempt(mode, items, sub, learning = false) {
 function startRound(mode) {
   const cats = mode === "mixed" ? selectedCats() : [mode], learning = learningFor(mode);
   const sub = (mode === "mixed" ? `${groupLabel(cats)} · ${selectionLabel(cats)}` : "Category practice") + (learning ? " · Learning mode" : "");
-  beginAttempt(mode, buildRound(mode, cats), sub, learning);
+  beginAttempt(mode, buildRound(mode, cats), sub, learning, calcFor(mode));
 }
 
 function newRound(mode) {
@@ -234,7 +241,7 @@ function startRetry(items) {
     return materialize({ id: it.id, gen: it.gen, lv: it.lv, q: it.q, why: it.why,
       o: [it.o[it.a], ...wrong.map(j => it.o[j])], x: wrong.map(j => it.x[j]),
       ...(it.trap ? { trap: wrong.map(j => it.trap[j]) } : {}) }, it.cat);
-  }), `${items.length} question${items.length > 1 ? "s" : ""} you got wrong or skipped`);
+  }), `${items.length} question${items.length > 1 ? "s" : ""} you got wrong or skipped`, false, calcFor(RETRY));
   if (db.attempts[RETRY]) confirmModal("Start a new mistakes practice?", "Your mistakes practice in progress will be discarded.", "Start practice", go_);
   else go_();
 }
@@ -259,6 +266,7 @@ function endVisit(at) {
 }
 
 function go(v) {
+  if (v.name !== "quiz") CalcUI.hide(); // the calculator only lives on the quiz screen
   // Leaving a live round (Save & exit, logo, etc.): stop its clock so time away isn't counted.
   if (view.name === "quiz" && view.live && db.attempts[view.mode]) { endVisit(db.attempts[view.mode]); persist(); }
   view = v;
@@ -308,6 +316,7 @@ function renderSetup() {
             </label>`).join("")}
         </div>
       </fieldset>
+      <label class="calc-allow" for="calcAllow"><input type="checkbox" id="calcAllow" ${calcPref("test", db.roundModes.test === "learning") ? "checked" : ""}><span>Allow the calculator in this round <small>Off by default in the timed test, on in Learning mode</small></span></label>
       <div class="setup-foot">
         <p id="setupSummary" aria-live="polite"></p>
         <div class="actions"><button class="btn" id="cancelBtn" type="button">Cancel</button><button class="btn primary lg" id="goBtn" type="button">Start round</button></div>
@@ -320,11 +329,18 @@ function renderSetup() {
     const ids = chosen();
     const n = Math.min(modeInfo("mixed").n, ids.reduce((s, id) => s + capacity(id), 0));
     const time = db.roundModes.test === "learning" ? "no time limit" : `${n} minutes`;
-    summary.textContent = ids.length ? `${n} questions · ${time} · ${selectionLabel(ids)}` : "Select at least one category to start.";
+    const calc = calcPref("test", db.roundModes.test === "learning") ? "calculator on" : "no calculator";
+    summary.textContent = ids.length ? `${n} questions · ${time} · ${calc} · ${selectionLabel(ids)}` : "Select at least one category to start.";
     goBtn.disabled = !ids.length;
   };
   boxes.forEach(b => b.onchange = sync);
-  app.querySelectorAll('input[name="roundMode"]').forEach(r => r.onchange = () => { db.roundModes.test = r.value; persist(); sync(); });
+  const calcAllow = document.getElementById("calcAllow");
+  app.querySelectorAll('input[name="roundMode"]').forEach(r => r.onchange = () => {
+    db.roundModes.test = r.value; persist();
+    calcAllow.checked = calcPref("test", r.value === "learning"); // each mode has its own calculator setting
+    sync();
+  });
+  calcAllow.onchange = () => { db.calcPrefs[calcKey("test", db.roundModes.test === "learning")] = calcAllow.checked; persist(); sync(); };
   document.getElementById("allBtn").onclick = () => { boxes.forEach(b => b.checked = true); sync(); };
   document.getElementById("noneBtn").onclick = () => { boxes.forEach(b => b.checked = false); sync(); };
   app.querySelectorAll("[data-only]").forEach(l => l.onclick = () => { boxes.forEach(b => b.checked = b.dataset.group === l.dataset.only); sync(); });
@@ -409,6 +425,7 @@ function renderHome() {
         <div class="seg" role="group" aria-label="Practice mode">
           ${[["timed", "Timed"], ["learning", "Learning"]].map(([v, l]) => `<button type="button" data-practice-mode="${v}" aria-pressed="${db.roundModes.practice === v}">${l}</button>`).join("")}
         </div>
+        <label class="switch small"><input type="checkbox" role="switch" id="practiceCalc" ${calcPref("practice", db.roundModes.practice === "learning") ? "checked" : ""}><span>Calculator</span></label>
       </div>
     </div>
     <div class="cat-table">
@@ -421,6 +438,11 @@ function renderHome() {
   app.querySelectorAll("[data-setup]").forEach(b => b.onclick = () => go({ name: "setup" }));
   app.querySelectorAll("[data-backup]").forEach(b => b.onclick = exportBackup);
   app.querySelectorAll("[data-report]").forEach(b => b.onclick = () => go({ name: "report", back: { name: "home" } }));
+  const practiceCalc = document.getElementById("practiceCalc");
+  practiceCalc.onchange = () => {
+    db.calcPrefs[calcKey("practice", db.roundModes.practice === "learning")] = practiceCalc.checked;
+    persist(); renderHome(); document.getElementById("practiceCalc").focus();
+  };
   app.querySelectorAll("[data-practice-mode]").forEach(b => b.onclick = () => {
     db.roundModes.practice = b.dataset.practiceMode; persist(); renderHome();
     document.querySelector(`[data-practice-mode="${b.dataset.practiceMode}"]`).focus();
@@ -512,6 +534,7 @@ function renderQuiz() {
         <button class="btn" id="prevBtn" type="button" ${at.cur === 0 ? "disabled" : ""}>Previous</button>
         <button class="btn primary" id="nextBtn" type="button" ${at.cur === n - 1 ? "disabled" : ""}>Next</button>
         <button class="btn mark ${at.marked[at.cur] ? "on" : ""}" id="markBtn" type="button" aria-pressed="${at.marked[at.cur]}">${at.marked[at.cur] ? "Marked for review" : "Mark for review"}</button>
+        ${at.calc ? `<button class="btn" id="calcBtn" type="button" aria-controls="calcPanel" aria-expanded="${CalcUI.isOpen()}">Calculator</button>` : ""}
         <span class="spacer"></span>
         <button class="btn" id="submitBtn" type="button">Submit test</button>
       </div>
@@ -532,6 +555,10 @@ function renderQuiz() {
   document.getElementById("prevBtn").onclick = () => move(at.cur - 1);
   document.getElementById("nextBtn").onclick = () => move(at.cur + 1);
   document.getElementById("markBtn").onclick = toggleMark;
+  // Calculator: only in rounds that allow it (decided when the round started).
+  const calcBtn = document.getElementById("calcBtn");
+  if (calcBtn) calcBtn.onclick = () => { CalcUI.toggle(); calcBtn.setAttribute("aria-expanded", CalcUI.isOpen()); };
+  else CalcUI.hide();
   document.getElementById("submitBtn").onclick = askSubmit;
   document.getElementById("exitBtn").onclick = () => go({ name: "home" });
 
@@ -603,6 +630,7 @@ function submit(timedOut) {
       const trap = !ok && it.trap ? it.trap[at.answers[i]] : null;
       if (trap) entry.trap = trap;
       if (at.learning) entry.learning = true;
+      if (at.calc) entry.calc = true;
       db.log.push(entry);
     }
     // Retry rounds only re-ask known misses, so they'd skew category accuracy; leave it to normal rounds.
@@ -614,7 +642,7 @@ function submit(timedOut) {
   });
   const pct = Math.round(correct / at.items.length * 100);
   const result = { at: submittedAt, mode, items: at.items, answers: at.answers, marked: at.marked, correct, total: at.items.length, pct,
-    usedMs: Math.min(Date.now(), at.deadline) - at.start, timedOut, ...(at.learning ? { learning: true } : {}) };
+    usedMs: Math.min(Date.now(), at.deadline) - at.start, timedOut, ...(at.learning ? { learning: true } : {}), ...(at.calc ? { calc: true } : {}) };
   db.history[mode] = [...(db.history[mode] || []), result].slice(-5);
   const t = (db.totals[mode] ||= { rounds: 0, sum: 0, best: 0 });
   t.rounds++; t.sum += pct; t.best = Math.max(t.best, pct);
@@ -834,6 +862,7 @@ function closeModal() {
 }
 
 document.addEventListener("keydown", e => {
+  if (e.target.closest?.(".calc")) return; // typing or tapping in the calculator never triggers quiz shortcuts
   if (e.key === "Escape") return closeModal();
   if (view.name !== "quiz" || modalRoot.innerHTML || e.metaKey || e.ctrlKey || e.altKey) return;
   const at = db.attempts[view.mode];
@@ -944,5 +973,6 @@ if (resetBtn) resetBtn.onclick = () => confirmModal("Reset your progress?",
     try { localStorage.removeItem(STORE_KEY); } catch {}
     location.reload();
   });
+CalcUI.onClose(() => document.getElementById("calcBtn")?.setAttribute("aria-expanded", "false"));
 render();
 })();

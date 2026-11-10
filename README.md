@@ -18,15 +18,16 @@ Then open http://localhost:8765/site/ (in Claude Code this is the `quiz-static` 
 
 ```bash
 node scripts/validate-questions.mjs
+node scripts/test-calculator.mjs
 ```
 
-It loads every question file and calculation generator and checks that each question has 4 unique options, 3 wrong-answer notes, an explanation and a unique ID, and that any `trap` tags are valid. It also checks that no option contains `NaN`/`Infinity`/`undefined`, that every file is loaded by `index.html`, and that every category exists in `app.js`. Each generator is run 50 times. It prints `✓ …` and exits with code 0 when everything passes, or lists each problem and exits with code 1. GitHub runs it before every deploy, and a failure stops the deploy.
+It loads every question file and calculation generator and checks that each question has 4 unique options, 3 wrong-answer notes, an explanation and a unique ID, and that any `trap` tags are valid. It also checks that no option contains `NaN`/`Infinity`/`undefined`, that every file is loaded by `index.html`, and that every category exists in `app.js`. Each generator is run 50 times. It prints `✓ …` and exits with code 0 when everything passes, or lists each problem and exits with code 1. GitHub runs it before every deploy, and a failure stops the deploy. `test-calculator.mjs` does the same for the built-in calculator: it checks about 60 expressions against hand-worked answers.
 
 ## How it's published
 
 Every push to `main` runs `.github/workflows/pages.yml`:
 
-1. **validate**: runs the question check above.
+1. **validate**: runs the question check and the calculator check above.
 2. **deploy**: replaces `?v=dev` on every script and stylesheet link in `site/index.html` with the commit ID, then publishes the `site/` folder to GitHub Pages.
 
 The version stamp makes browsers fetch matching files after each deploy. Any new `<script>` or stylesheet tag in `index.html` must end in `?v=dev`. GitHub Pages lets browsers cache the page itself for up to 10 minutes, so a hard refresh (Cmd + Shift + R) may be needed right after a deploy.
@@ -40,8 +41,10 @@ The version stamp makes browsers fetch matching files after each deploy. Any new
 | `site/js/bank.js` | `Bank` (where questions are registered) and `R` (number/format helpers) |
 | `site/questions/*.js` | Written questions, one file per category |
 | `site/js/generators.js`, `generators-hl.js` | Calculation questions that get new numbers every round |
+| `site/js/calculator.js` | The built-in calculator: a small expression parser (no `eval`) and its panel |
 | `site/js/app.js` | Everything else: categories, round building, quiz, results, saving |
 | `scripts/validate-questions.mjs` | The question check |
+| `scripts/test-calculator.mjs` | The calculator check |
 
 ## Question format
 
@@ -85,6 +88,7 @@ All progress lives in one `localStorage` key, `rehearse.v3` (the light/dark choi
 | `srsEnabled` | Spaced repetition on or off (default on). Defaulted with `??=`, because `\|\|=` would turn a stored `false` back on |
 | `srsExcluded` | Category IDs where spaced repetition is off |
 | `roundModes` | `{ test, practice }`: `"timed"` (default) or `"learning"`, remembered separately for the main test and one-category practice |
+| `calcPrefs` | Calculator overrides, e.g. `{ "test-timed": true }`. Defaults: off in the timed main test, on everywhere else |
 
 **Answer log (`db.log`).** One entry per *answered* question in every submitted round (skipped questions aren't logged):
 
@@ -117,6 +121,8 @@ When it's on for a category, each written-question slot in a round takes a due q
 
 **Timed test vs Learning mode.** Chosen on the setup screen (main test) and next to "Practise one category" (category practice); mistakes practice is always timed. A Learning round keeps a `deadline`, set 100 years ahead, because `Infinity` can't be saved as JSON. It shows "No time limit" instead of a countdown. Each answer locks once chosen and the explanation appears straight away. Learning answers count toward accuracy, the weak spots report and spaced repetition like any other, and their log entries carry `learning: true`, so they can be told apart later.
 
+**Calculator.** Whether it's allowed is decided when a round starts (`calc: true` on the round) and can't change mid-round. It supports + − × ÷, brackets, ^, % (divides by 100), √, ∛, ln, exp, log, π, Ans, one memory slot and a fraction ↔ decimal display. Powers group right to left and a minus sign applies after powers (−2^2 = −4). Keys typed in the calculator never reach the quiz shortcuts.
+
 **Version history**
 
 | Version | Change |
@@ -127,3 +133,4 @@ When it's on for a category, each written-question slot in a round takes a due q
 | 4 | Answer log entries gained `i`, `timePressure` and `trap`; the log can hold `kind: "cause"` notes |
 | 5 | Added `schedule`, `srsEnabled` and `srsExcluded` (spaced repetition) |
 | 6 | Added `roundModes`; Learning rounds, their results and their answer log entries carry `learning: true` |
+| 7 | Added `calcPrefs`; rounds where the calculator was allowed, their results and answer log entries carry `calc: true` |

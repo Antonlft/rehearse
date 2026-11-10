@@ -339,3 +339,33 @@ main { padding-block: 30px 48px; }
 .feedback.no .feedback-title { color: var(--bad); }
 .feedback:focus { outline: none; }
 .feedback:focus-visible { outline: 2px solid var(--navy); outline-offset: 2px; }
+
+/* Calculator */
+.calc { position: fixed; z-index: 15; right: max(16px, env(safe-area-inset-right, 0px)); bottom: 16px; width: 288px; background: var(--page); border: 1px solid var(--rule-strong); border-radius: var(--radius); box-shadow: 0 12px 40px var(--shadow); padding: 12px; display: grid; gap: 8px; }
+.calc[hidden] { display: none; }
+.calc-head { display: flex; align-items: center; gap: 8px; font-size: 13px; }
+.calc-head b { font-weight: 600; }
+.calc-head .link { margin-left: auto; }
+.calc-mem { font-size: 11px; font-weight: 600; color: var(--amber); }
+.calc-expr { width: 100%; padding: 8px 10px; border: 1px solid var(--rule-strong); border-radius: 5px; background: var(--tray); color: var(--ink); font: 500 16px/1.3 var(--font-mono); text-align: right; }
+.calc-expr:focus { outline: 2px solid var(--navy); outline-offset: 1px; }
+.calc-out { min-height: 22px; text-align: right; font: 600 17px/1.3 var(--font-mono); font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
+.calc-out.err { color: var(--bad); font: 500 12px/1.6 var(--font); }
+.calc-keys { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 5px; }
+.calc-keys button { height: 36px; border: 1px solid var(--rule); border-radius: 5px; background: var(--page); color: var(--ink); font-size: 14px; cursor: pointer; touch-action: manipulation; }
+.calc-keys button:hover { border-color: var(--rule-strong); }
+.calc-keys button:active { background: var(--select); }
+.calc-keys button.eq { grid-column: span 2; background: var(--navy); border-color: var(--navy); color: var(--navy-ink); font-weight: 600; }
+@media (max-width: 640px) {
+  .calc { left: 0; right: 0; bottom: 0; width: auto; border-radius: var(--radius) var(--radius) 0 0; border-width: 1px 0 0; padding: 12px max(12px, env(safe-area-inset-left, 0px)) max(12px, env(safe-area-inset-bottom, 0px)); }
+  .calc-keys button { height: 42px; font-size: 15px; }
+  body.calc-open main { padding-bottom: 420px; } /* room to scroll the question above the keypad */
+}
+.calc-allow { display: flex; gap: 11px; align-items: flex-start; margin-top: 14px; font-size: 13.5px; cursor: pointer; }
+.calc-allow input { flex: none; width: 16px; height: 16px; margin: 2px 0 0; accent-color: var(--navy); cursor: pointer; }
+.calc-allow span { display: grid; gap: 1px; }
+.calc-allow small { font-size: 12px; color: var(--muted); }
+.switch.small { font-size: 12px; gap: 6px; }
+.switch.small input { width: 30px; height: 17px; }
+.switch.small input::after { width: 13px; height: 13px; }
+.switch.small input:checked::after { transform: translateX(13px); }

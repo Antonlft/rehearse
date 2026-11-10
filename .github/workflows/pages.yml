@@ -24,6 +24,8 @@ jobs:
           node-version: 20
       - name: Check question bank
         run: node scripts/validate-questions.mjs
+      - name: Check calculator maths
+        run: node scripts/test-calculator.mjs
 
   deploy:
     needs: validate
