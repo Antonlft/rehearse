@@ -102,7 +102,9 @@ const calcFor = mode => mode === RETRY ? calcPref("practice", false) : calcPref(
 // New question formats (typed answers; ordering later) are opt-in, so rounds stay exactly as before unless switched on.
 db.newFormats ??= false; // ??= like srsEnabled: "off" is stored as false
 const NUMERIC_SHARE = 0.5; // with new formats on, half the calculation slots in categories that have them are typed
-const SCHEMA_VERSION = 8;
+//   9: ordering questions: a round's answers[] can hold an ordering (step numbers in the order chosen), and
+//      their answer log entries have type: "order" and given (that ordering). No new top-level fields.
+const SCHEMA_VERSION = 9;
 db.schemaVersion = Math.max(db.schemaVersion || 1, SCHEMA_VERSION);
 let saveWarned = false;
 const persist = () => {
@@ -132,7 +134,9 @@ const selectedCats = () => {
   return ids.length ? ids : CATEGORIES.map(c => c.id);
 };
 const selectionLabel = ids => ids.length === CATEGORIES.length ? "all categories" : `${ids.length} of ${CATEGORIES.length} categories`;
-const capacity = cat => gens(cat).length ? Infinity : written(cat).length;
+// New-format written questions (e.g. ordering) join a category's pool only when new formats are on.
+const formatQs = cat => db.newFormats ? (Bank.formats[cat] || []) : [];
+const capacity = cat => gens(cat).length ? Infinity : written(cat).length + formatQs(cat).length;
 
 /* Round building */
 function generated(fn) {
@@ -144,7 +148,16 @@ function generated(fn) {
   return { ...g, gen: true };
 }
 
+// A random starting order for an ordering question that is never already the right one.
+function orderStart(n) {
+  let p;
+  do p = shuffle([...Array(n).keys()]); while (p.every((v, k) => v === k));
+  return p;
+}
+
 function materialize(src, cat) {
+  if (src.type === "order")
+    return { cat, id: src.id, gen: false, lv: src.lv || null, type: "order", q: src.q, why: src.why, answer: src.answer, start: orderStart(src.answer.length) };
   const perm = shuffle([0, 1, 2, 3]);
   const item = { cat, id: src.id || null, gen: !!src.gen, lv: src.lv || null, q: src.q, why: src.why,
     o: perm.map(i => src.o[i]), a: perm.indexOf(0), x: perm.map(i => i === 0 ? null : src.x[i - 1]) };
@@ -165,10 +178,15 @@ const isBlank = a => a === null || a === undefined || a === "";
 function grade(it, ans) {
   if (isBlank(ans)) return { ok: false, blank: true };
   if (it.type === "numeric") return Typed.grade(it, ans); // { ok, value, cause, trap, note, unreadable }
+  if (it.type === "order") { // only the exact sequence is right; placed = steps in the right position
+    const placed = Array.isArray(ans) ? ans.filter((v, k) => v === k).length : 0;
+    return { ok: Array.isArray(ans) && placed === it.answer.length, placed };
+  }
   return { ok: ans === it.a };
 }
 // Learning mode reveals an answer once it's final: multiple choice on click, typed answers on "Check".
-const isRevealed = (at, i) => !!at.learning && !isBlank(at.answers[i]) && (at.items[i].type !== "numeric" || !!(at.checked && at.checked[i]));
+const needsCheck = it => it.type === "numeric" || it.type === "order";
+const isRevealed = (at, i) => !!at.learning && !isBlank(at.answers[i]) && (!needsCheck(at.items[i]) || !!(at.checked && at.checked[i]));
 const causeText = g => g.unreadable ? "Your answer couldn't be read as a number."
   : g.note ? g.note
   : g.cause === "calculation-slip" ? "You were close (within 10%), so this looks like a calculation slip."
@@ -185,7 +203,7 @@ function pickWeighted(pool) {
 }
 
 function draw(cat, used) {
-  const w = written(cat), g = gens(cat);
+  const w = db.newFormats ? [...written(cat), ...formatQs(cat)] : written(cat), g = gens(cat);
   if (w.length && !(g.length && Math.random() < GEN_SHARE)) {
     // Spaced repetition: a question that's due comes first (most overdue first, ties broken at random).
     // When it's off for this category, this block is skipped and everything below runs exactly as before.
@@ -272,6 +290,7 @@ function newRound(mode) {
 function startRetry(items) {
   const go_ = () => beginAttempt(RETRY, shuffle(items).map(it => {
     if (it.type === "numeric") return { ...it }; // typed answers have no options to reshuffle
+    if (it.type === "order") return { ...it, start: orderStart(it.answer.length) }; // a fresh starting order
     const wrong = [0, 1, 2, 3].filter(j => j !== it.a);
     return materialize({ id: it.id, gen: it.gen, lv: it.lv, q: it.q, why: it.why,
       o: [it.o[it.a], ...wrong.map(j => it.o[j])], x: wrong.map(j => it.x[j]),
@@ -352,7 +371,7 @@ function renderSetup() {
         </div>
       </fieldset>
       <label class="calc-allow" for="calcAllow"><input type="checkbox" id="calcAllow" ${calcPref("test", db.roundModes.test === "learning") ? "checked" : ""}><span>Allow the calculator in this round <small>Off by default in the timed test, on in Learning mode</small></span></label>
-      <label class="calc-allow" for="formatsAllow"><input type="checkbox" id="formatsAllow" ${db.newFormats ? "checked" : ""}><span>Include new question formats <small>Some calculations ask you to type the answer instead of choosing it. Applies to all rounds.</small></span></label>
+      <label class="calc-allow" for="formatsAllow"><input type="checkbox" id="formatsAllow" ${db.newFormats ? "checked" : ""}><span>Include new question formats <small>Typed answers for some calculations, and putting process steps in order. Applies to all rounds.</small></span></label>
       <div class="setup-foot">
         <p id="setupSummary" aria-live="polite"></p>
         <div class="actions"><button class="btn" id="cancelBtn" type="button">Cancel</button><button class="btn primary lg" id="goBtn" type="button">Start round</button></div>
@@ -463,7 +482,7 @@ function renderHome() {
           ${[["timed", "Timed"], ["learning", "Learning"]].map(([v, l]) => `<button type="button" data-practice-mode="${v}" aria-pressed="${db.roundModes.practice === v}">${l}</button>`).join("")}
         </div>
         <label class="switch small"><input type="checkbox" role="switch" id="practiceCalc" ${calcPref("practice", db.roundModes.practice === "learning") ? "checked" : ""}><span>Calculator</span></label>
-        <label class="switch small" title="Some calculations ask you to type the answer"><input type="checkbox" role="switch" id="practiceFormats" ${db.newFormats ? "checked" : ""}><span>Typed answers</span></label>
+        <label class="switch small" title="Typed answers for some calculations, and ordering questions"><input type="checkbox" role="switch" id="practiceFormats" ${db.newFormats ? "checked" : ""}><span>New formats</span></label>
       </div>
     </div>
     <div class="cat-table">
@@ -561,7 +580,7 @@ function renderQuiz() {
     <section class="card question" aria-labelledby="qtext">
       <p class="label">${esc(catById(it.cat).name)} · Question ${at.cur + 1} of ${n}${it.lv ? ` · ${LEVELS[it.lv]}` : ""}</p>
       <p class="prompt" id="qtext">${esc(it.q)}</p>
-      ${it.type === "numeric" ? typedArea(at, it, ans, revealed) : `
+      ${it.type === "numeric" ? typedArea(at, it, ans, revealed) : it.type === "order" ? orderArea(at, it, ans, revealed) : `
       <div class="options" role="radiogroup" aria-labelledby="qtext">
         ${it.o.map((o, i) => `<button type="button" class="opt${optClass(i)}" role="radio" aria-checked="${ans === i}" data-opt="${i}" ${revealed ? "disabled" : ""}><span class="radio"></span><span>${esc(o)}</span></button>`).join("")}
       </div>
@@ -596,6 +615,7 @@ function renderQuiz() {
   document.getElementById("nextBtn").onclick = () => move(at.cur + 1);
   document.getElementById("markBtn").onclick = toggleMark;
   if (it.type === "numeric" && !revealed) wireTyped(at, it);
+  if (it.type === "order" && !revealed) wireOrder(at, it);
   // Calculator: only in rounds that allow it (decided when the round started).
   const calcBtn = document.getElementById("calcBtn");
   if (calcBtn) calcBtn.onclick = () => { CalcUI.toggle(); calcBtn.setAttribute("aria-expanded", CalcUI.isOpen()); };
@@ -666,6 +686,49 @@ function wireTyped(at, it) {
   if (btn) btn.onclick = check;
 }
 
+/* Ordering questions on the quiz screen: ▲ ▼ buttons move a step; the first move (or "Use this order") answers it. */
+function orderArea(at, it, ans, revealed) {
+  const arr = isBlank(ans) ? it.start : ans, n = arr.length, g = revealed ? grade(it, ans) : null;
+  return `<ol class="order-list" aria-label="Steps in your order">
+      ${arr.map((step, pos) => `<li class="order-item${revealed ? (step === pos ? " right" : " wrong") : ""}">
+        <span class="order-num" aria-hidden="true">${pos + 1}</span><span class="order-text">${esc(it.answer[step])}</span>
+        ${revealed ? `<span class="order-mark" aria-label="${step === pos ? "right place" : "wrong place"}">${step === pos ? "✓" : "✗"}</span>` : `<span class="order-moves">
+          <button type="button" class="order-btn" data-move="${pos}" data-dir="-1" aria-label="Move up: ${esc(it.answer[step])}" ${pos === 0 ? "disabled" : ""}>▲</button>
+          <button type="button" class="order-btn" data-move="${pos}" data-dir="1" aria-label="Move down: ${esc(it.answer[step])}" ${pos === n - 1 ? "disabled" : ""}>▼</button>
+        </span>`}
+      </li>`).join("")}
+    </ol>
+    ${revealed ? `<div class="feedback ${g.ok ? "ok" : "no"}" id="feedback" role="status" tabindex="-1">
+      <p class="feedback-title">${g.ok ? "Correct order" : `Not quite: ${g.placed} of ${n} steps are in the right place.`}</p>
+      ${g.ok ? "" : `<p>The right order is:</p><ol class="order-correct">${it.answer.map(a => `<li>${esc(a)}</li>`).join("")}</ol>`}
+      <p>${esc(it.why)}</p>
+    </div>` : `<div class="order-foot">
+      <p class="typed-hint" id="orderHint">${isBlank(ans) ? "Use ▲ ▼ to put the steps in order. Not answered yet." : "Your order is saved."}</p>
+      ${isBlank(ans) ? `<button class="btn" id="orderKeep" type="button">Use this order</button>` : ""}
+      ${at.learning ? `<button class="btn primary" id="checkBtn" type="button">Check</button>` : ""}
+    </div>`}`;
+}
+function wireOrder(at, it) {
+  const i = at.cur;
+  const commit = arr => { ensureTiming(at); at.answers[i] = arr; at.answeredAt[i] = Date.now(); persist(); renderQuiz(); };
+  app.querySelectorAll("[data-move]").forEach(b => b.onclick = () => {
+    const pos = +b.dataset.move, dir = +b.dataset.dir, arr = (isBlank(at.answers[i]) ? it.start : at.answers[i]).slice();
+    [arr[pos], arr[pos + dir]] = [arr[pos + dir], arr[pos]];
+    commit(arr);
+    // Keep focus on the step that moved, so it can be moved again with the keyboard.
+    const to = pos + dir, same = app.querySelector(`[data-move="${to}"][data-dir="${dir}"]`);
+    (same && !same.disabled ? same : app.querySelector(`[data-move="${to}"][data-dir="${-dir}"]`))?.focus();
+  });
+  const keep = document.getElementById("orderKeep");
+  if (keep) keep.onclick = () => commit(it.start.slice());
+  const check = document.getElementById("checkBtn");
+  if (check) check.onclick = () => {
+    if (isBlank(at.answers[i])) { ensureTiming(at); at.answers[i] = it.start.slice(); at.answeredAt[i] = Date.now(); }
+    (at.checked ||= [])[i] = true; persist(); renderQuiz();
+    document.getElementById("feedback")?.focus({ preventScroll: true });
+  };
+}
+
 function renderExpired(at) {
   const info = modeInfo(view.mode), done = at.answers.filter(a => !isBlank(a)).length;
   at.viewStart = null; at.viewIdx = null; // a visit left open while away isn't time spent on the question
@@ -688,7 +751,7 @@ function renderExpired(at) {
 
 function choose(i) {
   const at = db.attempts[view.mode];
-  if (at.items[at.cur].type === "numeric") return; // typed questions are answered in their text box, not with 1–4
+  if (at.items[at.cur].type) return; // typed and ordering questions aren't answered with 1–4
   if (at.learning && at.answers[at.cur] !== null) return; // Learning mode: the answer locks once it's revealed
   ensureTiming(at); at.answers[at.cur] = i; at.answeredAt[at.cur] = Date.now(); persist(); renderQuiz();
   if (at.learning) document.getElementById("feedback")?.focus({ preventScroll: true });
@@ -722,6 +785,7 @@ function submit(timedOut) {
         timePressure: at.answeredAt[i] != null && at.answeredAt[i] >= pressureFrom };
       const trap = it.type === "numeric" ? g.trap : !ok && it.trap ? it.trap[at.answers[i]] : null;
       if (it.type === "numeric") { entry.type = "numeric"; entry.given = g.value; if (!ok && g.cause) entry.cause = g.cause; }
+      if (it.type === "order") { entry.type = "order"; entry.given = at.answers[i].slice(); }
       if (trap) entry.trap = trap;
       if (at.learning) entry.learning = true;
       if (at.calc) entry.calc = true;
@@ -927,10 +991,14 @@ function reviewItem(it, i, ans, marked, misread) {
   return `
     <article class="card item" id="r-${i}">
       <div class="item-top">
-        <p class="label">${esc(catById(it.cat).name)} · Question ${i + 1}${it.lv ? ` · ${LEVELS[it.lv]}` : ""}${it.gen ? " · Calculation" : ""}${it.type === "numeric" ? " · Typed answer" : ""}</p>
+        <p class="label">${esc(catById(it.cat).name)} · Question ${i + 1}${it.lv ? ` · ${LEVELS[it.lv]}` : ""}${it.gen ? " · Calculation" : ""}${it.type === "numeric" ? " · Typed answer" : it.type === "order" ? " · Ordering" : ""}</p>
         <span class="pills">${misreadBtn}<span class="pill ${st[0]}">${st[1]}</span>${marked ? `<span class="pill flagged">Marked</span>` : ""}</span>
       </div>
       <p class="prompt">${esc(it.q)}</p>
+      ${it.type === "order" ? `
+      ${isBlank(ans) ? "" : `<p class="label">Your order</p><ol class="order-list review">${ans.map((step, pos) => `<li class="order-item ${step === pos ? "right" : "wrong"}"><span class="order-num" aria-hidden="true">${pos + 1}</span><span class="order-text">${esc(it.answer[step])}</span><span class="order-mark" aria-label="${step === pos ? "right place" : "wrong place"}">${step === pos ? "✓" : "✗"}</span></li>`).join("")}</ol>`}
+      ${g.ok ? "" : `<p class="label">The right order</p><ol class="order-correct">${it.answer.map(a => `<li>${esc(a)}</li>`).join("")}</ol>`}
+      <p class="note-block">${esc(it.why)}</p>` : `
       <ul class="ans">
         ${it.type === "numeric" ? `
           <li class="right"><span class="mark" aria-hidden="true">✓</span><div><span>${esc(Typed.show(it.answer, it.unit, it.dp))}${g.ok ? ` <em>(your answer: ${esc(ans)})</em>` : ""}</span><span class="note">${esc(it.why)}</span></div></li>
@@ -940,7 +1008,7 @@ function reviewItem(it, i, ans, marked, misread) {
           const note = j === it.a ? it.why : it.x[j];
           return `<li class="${cls}"><span class="mark" aria-hidden="true">${j === it.a ? "✓" : j === ans ? "✗" : ""}</span><div><span>${esc(o)}${j === ans ? " <em>(your answer)</em>" : ""}</span>${note ? `<span class="note">${esc(note)}</span>` : ""}</div></li>`;
         }).join("")}
-      </ul>
+      </ul>`}
     </article>`;
 }
 

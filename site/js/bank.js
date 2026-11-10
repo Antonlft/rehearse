@@ -2,7 +2,9 @@ window.Bank = {
   written: {},
   gens: {},
   numeric: {}, // typed-answer calculation questions, only used when "new formats" is switched on
+  formats: {}, // written questions in new formats (e.g. ordering), only used when "new formats" is switched on
   add(cat, list) { (this.written[cat] ||= []).push(...list); },
+  addFormat(cat, list) { (this.formats[cat] ||= []).push(...list); },
   gen(cat, fn) { (this.gens[cat] ||= []).push(fn); },
   /* One definition, two formats. spec = {
        make()      → inputs (all randomness happens here),

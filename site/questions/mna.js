@@ -68,3 +68,10 @@ Bank.add("mna", [
     why: "In a tender offer holders choose individually whether to tender; a merger is approved by a shareholder vote and binds everyone.",
     x: ["Shareholders decide individually, so they are very much involved.", "Tender offers are mainly for listed companies with dispersed shareholders.", "Consideration can be cash, shares or a mix."] }
 ]);
+
+// New-format questions (shown only when "new formats" is on). New IDs: the multiple-choice mna-09 above stays as it is.
+Bank.addFormat("mna", [
+  { id: "mna-ord-01", type: "order", q: "Put the stages of a two-stage sell-side M&A auction in order, first to last.",
+    answer: ["Teaser and NDA", "Information memorandum", "Indicative bids", "Data room and management meetings", "Binding bids", "Signing the purchase agreement"],
+    why: "Sellers reveal more as the field narrows. Only a shortlist gets data room and management access before binding offers, and the purchase agreement is signed once a binding bid is accepted." }
+]);

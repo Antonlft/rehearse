@@ -40,7 +40,7 @@ for (const f of [...questionFiles, ...generatorFiles]) if (!new RegExp(`src="${f
 
 // Every category in the bank must exist in app.js.
 const appCats = new Set([...readFileSync(join(SITE, "js/app.js"), "utf8").matchAll(/\{ id: "([a-z]+)"/g)].map(m => m[1]));
-for (const cat of new Set([...Object.keys(Bank.written), ...Object.keys(Bank.gens), ...Object.keys(Bank.numeric || {})])) if (!appCats.has(cat)) fail(`category "${cat}" isn't defined in app.js CATEGORIES`);
+for (const cat of new Set([...Object.keys(Bank.written), ...Object.keys(Bank.gens), ...Object.keys(Bank.numeric || {}), ...Object.keys(Bank.formats || {})])) if (!appCats.has(cat)) fail(`category "${cat}" isn't defined in app.js CATEGORIES`);
 
 const UNITS = ["%", "x", "US$m"];
 const isNum = v => typeof v === "number" && Number.isFinite(v);
@@ -91,10 +91,11 @@ function checkOrder(where, q) {
   if (new Set(q.answer).size !== q.answer.length) fail(`${where}: steps must be unique`);
 }
 
-// Written questions
+// Written questions, including new-format ones (Bank.formats, used only when new formats are on). IDs are unique across both.
 const ids = new Map();
-let written = 0;
-for (const [cat, list] of Object.entries(Bank.written)) {
+let written = 0, formatQuestions = 0;
+const writtenLists = [...Object.entries(Bank.written), ...Object.entries(Bank.formats || {}).map(([cat, list]) => { formatQuestions += list.length; return [cat, list]; })];
+for (const [cat, list] of writtenLists) {
   for (const q of list) {
     written++;
     const where = `${cat}/${q.id ?? "(no id)"}`;
@@ -149,4 +150,4 @@ if (errors.length) {
   for (const e of errors) console.error("  - " + e);
   process.exit(1);
 }
-console.log(`✓ ${written} written questions, ${gens} generators and ${typed} typed-answer generators (${RUNS} samples each) passed.`);
+console.log(`✓ ${written - formatQuestions} written questions, ${formatQuestions} new-format questions, ${gens} generators and ${typed} typed-answer generators (${RUNS} samples each) passed.`);

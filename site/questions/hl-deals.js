@@ -73,3 +73,11 @@ Bank.add("hds", [
     why: "TUPE protects employees when a business transfers. The buyer inherits contracts and many liabilities, so employment due diligence matters.",
     x: ["TUPE prevents automatic dismissal because of the transfer.", "Employment moves with the business.", "Transfer happens by law, not by reapplication."] }
 ]);
+
+// New-format questions (shown only when "new formats" is on). New IDs: the multiple-choice hds-01 above stays as it is.
+Bank.addFormat("hds", [
+  { id: "hds-ord-01", type: "order", lv: 1, q: "Put the steps of a two-stage sell-side process in order, first to last.",
+    answer: ["Teaser sent to potential buyers", "NDA signed", "Information memorandum (IM) shared", "First-round (indicative) bids",
+      "Data room and due diligence", "Final (binding) bids", "SPA negotiated and signed"],
+    why: "The process widens interest first, then narrows the field and deepens the information at each stage. The teaser is anonymous, nothing confidential is shared before an NDA, the IM supports first-round bids, and only a shortlist gets data room access before binding bids and the SPA." }
+]);
