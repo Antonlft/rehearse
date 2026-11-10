@@ -81,6 +81,9 @@ All progress lives in one `localStorage` key, `rehearse.v3` (the light/dark choi
 | `log` | Permanent answer log (below). Only ever appended to |
 | `lastBackupAt` | When a backup was last downloaded (or `null`) |
 | `backupNudgeDismissedAt` | When the home-page backup reminder was last dismissed (or `null`) |
+| `schedule` | Spaced repetition, per written question ID: `{ dueAt, intervalDays, lastOk }` (below) |
+| `srsEnabled` | Spaced repetition on or off (default on). Defaulted with `??=`, because `\|\|=` would turn a stored `false` back on |
+| `srsExcluded` | Category IDs where spaced repetition is off |
 
 **Answer log (`db.log`).** One entry per *answered* question in every submitted round (skipped questions aren't logged):
 
@@ -103,6 +106,14 @@ The **weak spots report** (results page box, plus a full page linked from it and
 
 Rounds in progress also keep `spentMs[]` and `answeredAt[]` per question. Time only counts while the question is on screen: it pauses on Save & exit, and time away (including a closed tab) is never counted.
 
+**Spaced repetition (`db.schedule`).** Built by replaying the answer log the first time a save without it loads, then updated at every submit. Only written questions are scheduled; calculation questions change every time.
+
+- Wrong answer: due tomorrow, interval reset to 1 day.
+- Right answer: interval doubles (first time: 2 days), capped at 60 days. A right answer given before the question is due leaves the schedule as it is.
+- "Due" means from local midnight of that day.
+
+When it's on for a category, each written-question slot in a round takes a due question first (most overdue first). With nothing due, or when it's off globally or for that category, question picking is exactly what it was before spaced repetition existed. Switching it off never changes the schedule; it only stops it being used. Controls are on the home page, below the category table.
+
 **Version history**
 
 | Version | Change |
@@ -111,3 +122,4 @@ Rounds in progress also keep `spentMs[]` and `answeredAt[]` per question. Time o
 | 2 | Added `log`; rounds in progress gained `spentMs[]` and `answeredAt[]` |
 | 3 | Added `lastBackupAt` and `backupNudgeDismissedAt` |
 | 4 | Answer log entries gained `i`, `timePressure` and `trap`; the log can hold `kind: "cause"` notes |
+| 5 | Added `schedule`, `srsEnabled` and `srsExcluded` (spaced repetition) |

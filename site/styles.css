@@ -294,3 +294,17 @@ main { padding-block: 30px 48px; }
 .report-table thead th { border-top: 0; background: var(--tray); font-size: 11px; font-weight: 500; letter-spacing: 0.06em; text-transform: uppercase; color: var(--muted); }
 .report-table tbody th { font-weight: 500; white-space: normal; min-width: 150px; }
 .pills { align-items: center; flex-wrap: wrap; }
+
+/* Spaced repetition panel */
+.srs { margin-top: 34px; }
+.srs-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px 20px; margin-bottom: 10px; }
+.srs-head h2 { font-size: 15px; font-weight: 600; margin-bottom: 3px; }
+.srs-head p { font-size: 13px; max-width: 60ch; }
+.srs-head b { color: var(--ink); }
+.srs-cats { margin-top: 12px; }
+.switch { flex: none; display: inline-flex; align-items: center; gap: 8px; font-size: 13px; font-weight: 500; cursor: pointer; }
+.switch input { appearance: none; -webkit-appearance: none; margin: 0; width: 36px; height: 20px; border-radius: 999px; background: var(--rule-strong); position: relative; cursor: pointer; transition: background .15s; }
+.switch input::after { content: ""; position: absolute; top: 2px; left: 2px; width: 16px; height: 16px; border-radius: 50%; background: var(--page); transition: transform .15s; }
+.switch input:checked { background: var(--navy); }
+.switch input:checked::after { transform: translateX(16px); }
+@media (prefers-reduced-motion: reduce) { .switch input, .switch input::after { transition: none; } }

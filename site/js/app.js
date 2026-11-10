@@ -53,9 +53,36 @@ db.log ||= [];
 //   3: added db.lastBackupAt and db.backupNudgeDismissedAt (backup download and reminder)
 //   4: answer entries in db.log gain i, timePressure and (for tagged wrong options) trap;
 //      db.log can also hold notes { kind: "cause", cause: "misread" | null, ref: <round's submit time>, i, at }
+//   5: added db.schedule, db.srsEnabled and db.srsExcluded (spaced repetition)
 db.lastBackupAt ||= null;           // when a backup was last downloaded
 db.backupNudgeDismissedAt ||= null; // when the home-page backup reminder was last dismissed
-const SCHEMA_VERSION = 4;
+
+/* Spaced repetition: when each written question is next due.
+   Wrong answer: due tomorrow, interval reset to 1 day. Right answer: interval doubles (first time: 2 days), up to 60 days.
+   A right answer given before the question is due doesn't double the interval, so practising the same question
+   several times in a day can't push it weeks away. "Due" means from local midnight of that day.
+   The schedule is always kept up to date; switching spaced repetition off only stops draw() from using it. */
+const SRS_MAX_DAYS = 60;
+const startOfDay = (ts, plusDays = 0) => { const d = new Date(ts); d.setHours(0, 0, 0, 0); d.setDate(d.getDate() + plusDays); return d.getTime(); };
+function scheduleAnswer(s, qid, ok, at) {
+  const cur = s[qid];
+  if (!ok) s[qid] = { dueAt: startOfDay(at, 1), intervalDays: 1, lastOk: false };
+  else if (!cur) s[qid] = { dueAt: startOfDay(at, 2), intervalDays: 2, lastOk: true };
+  else if (at < cur.dueAt) cur.lastOk = true; // right, but not due yet: keep the schedule
+  else { const n = Math.min(SRS_MAX_DAYS, cur.intervalDays * 2); s[qid] = { dueAt: startOfDay(at, n), intervalDays: n, lastOk: true }; }
+}
+// Rebuild the whole schedule by replaying the answer log in order (written questions only).
+function buildSchedule(log) {
+  const s = {};
+  for (const e of log) if (!e.kind && e.qid) scheduleAnswer(s, e.qid, e.ok, e.at);
+  return s;
+}
+db.schedule ||= buildSchedule(db.log); // question id -> { dueAt, intervalDays, lastOk }
+// ??= rather than ||=: "off" is stored as false, and ||= would switch it back on at every page load.
+db.srsEnabled ??= true;
+db.srsExcluded ||= []; // category ids where spaced repetition is off
+const srsOn = cat => db.srsEnabled && !db.srsExcluded.includes(cat);
+const SCHEMA_VERSION = 5;
 db.schemaVersion = Math.max(db.schemaVersion || 1, SCHEMA_VERSION);
 let saveWarned = false;
 const persist = () => {
@@ -119,6 +146,19 @@ function pickWeighted(pool) {
 function draw(cat, used) {
   const w = written(cat), g = gens(cat);
   if (w.length && !(g.length && Math.random() < GEN_SHARE)) {
+    // Spaced repetition: a question that's due comes first (most overdue first, ties broken at random).
+    // When it's off for this category, this block is skipped and everything below runs exactly as before.
+    if (srsOn(cat)) {
+      const now = Date.now();
+      const due = w.filter(q => !used.has(q.id) && db.schedule[q.id] && db.schedule[q.id].dueAt <= now);
+      if (due.length) {
+        const q = shuffle(due).reduce((a, b) => db.schedule[b.id].dueAt < db.schedule[a.id].dueAt ? b : a);
+        used.add(q.id);
+        const seenList = (db.seen[cat] ||= []);
+        if (!seenList.includes(q.id)) seenList.push(q.id);
+        return materialize(q, cat);
+      }
+    }
     const seen = (db.seen[cat] ||= []);
     // Unseen questions, plus seen ones you last got wrong, so misses come back before the bank cycles.
     let pool = w.filter(q => !used.has(q.id) && (!seen.includes(q.id) || missedLast(q)));
@@ -345,7 +385,9 @@ function renderHome() {
     <div class="cat-table">
       <div class="cat-row cat-head" aria-hidden="true"><span>Category</span><span>Question bank</span><span>Your accuracy</span><span></span></div>
       ${GROUPS.map(g => `<div class="cat-group">${esc(g.name)}</div>` + CATEGORIES.filter(c => c.group === g.id).map(catRow).join("")).join("")}
-    </div>`;
+    </div>
+    ${srsPanel()}`;
+  wireSrsPanel();
   app.querySelectorAll("[data-new]").forEach(b => b.onclick = () => b.dataset.new === "mixed" ? go({ name: "setup" }) : newRound(b.dataset.new));
   app.querySelectorAll("[data-setup]").forEach(b => b.onclick = () => go({ name: "setup" }));
   app.querySelectorAll("[data-backup]").forEach(b => b.onclick = exportBackup);
@@ -358,6 +400,42 @@ function renderHome() {
     const h = db.history[b.dataset.review];
     reviewFilter = "all";
     go({ name: "results", mode: b.dataset.review, result: h[h.length - 1] });
+  });
+}
+
+/* Spaced repetition panel (home page) */
+let srsCatsOpen = false;
+const dueCount = cat => written(cat).filter(q => db.schedule[q.id] && db.schedule[q.id].dueAt <= Date.now()).length;
+function srsPanel() {
+  const due = CATEGORIES.filter(c => srsOn(c.id)).reduce((s, c) => s + dueCount(c.id), 0);
+  const off = CATEGORIES.filter(c => db.srsExcluded.includes(c.id)).length;
+  const status = !db.srsEnabled
+    ? "Off. Rounds pick questions as they always have. Your schedule is still kept up to date, so you can switch it back on at any time."
+    : !Object.keys(db.schedule).length
+      ? "Questions get scheduled as you answer them: wrong ones come back the next day, right ones after 2, 4, 8… days."
+      : `${due ? `<b>${due}</b> question${due > 1 ? "s" : ""} due for review` : "Nothing due right now"}${off ? ` · off for ${off} categor${off > 1 ? "ies" : "y"}` : ""}. Due questions come first in your rounds: wrong answers come back the next day, right ones after 2, 4, 8… days.`;
+  return `<section class="card srs" id="srs">
+      <div class="srs-head">
+        <div><h2>Spaced repetition</h2><p class="muted">${status}</p></div>
+        <label class="switch"><input type="checkbox" role="switch" id="srsToggle" ${db.srsEnabled ? "checked" : ""}><span>${db.srsEnabled ? "On" : "Off"}</span></label>
+      </div>
+      <button class="link" type="button" id="srsCatsBtn" aria-expanded="${srsCatsOpen}" aria-controls="srsCats">${srsCatsOpen ? "Hide categories" : "Choose categories"}</button>
+      <div class="check-grid srs-cats" id="srsCats" ${srsCatsOpen ? "" : "hidden"}>
+        ${CATEGORIES.filter(c => written(c.id).length).map(c => { const n = dueCount(c.id); return `
+          <label class="check" for="srs-${c.id}">
+            <input type="checkbox" id="srs-${c.id}" value="${c.id}" ${db.srsExcluded.includes(c.id) ? "" : "checked"}>
+            <span><b>${esc(c.name)}</b><small>${n ? `${n} due` : "Nothing due"}</small></span>
+          </label>`; }).join("")}
+      </div>
+    </section>`;
+}
+function wireSrsPanel() {
+  const refresh = () => { document.getElementById("srs").outerHTML = srsPanel(); wireSrsPanel(); };
+  document.getElementById("srsToggle").onchange = e => { db.srsEnabled = e.target.checked; persist(); refresh(); document.getElementById("srsToggle").focus(); };
+  document.getElementById("srsCatsBtn").onclick = () => { srsCatsOpen = !srsCatsOpen; refresh(); document.getElementById("srsCatsBtn").focus(); };
+  document.querySelectorAll("#srsCats input").forEach(b => b.onchange = () => {
+    db.srsExcluded = b.checked ? db.srsExcluded.filter(id => id !== b.value) : [...db.srsExcluded, b.value];
+    persist(); refresh(); document.getElementById("srs-" + b.value).focus();
   });
 }
 
@@ -482,6 +560,8 @@ function submit(timedOut) {
     if (mode !== RETRY) { const st = (db.catStats[it.cat] ||= { n: 0, ok: 0 }); st.n++; if (ok) st.ok++; }
     // Per-question record (written questions only; calculations get new numbers each time). Retries count here.
     if (it.id) { const qs = (db.qStats[it.id] ||= { n: 0, wrong: 0, last: null }); qs.n++; if (!ok) qs.wrong++; qs.last = ok ? "ok" : "wrong"; }
+    // Spaced repetition schedule follows the answer log (answered written questions), whether or not it's switched on.
+    if (it.id && at.answers[i] !== null) scheduleAnswer(db.schedule, it.id, ok, submittedAt);
   });
   const pct = Math.round(correct / at.items.length * 100);
   const result = { at: submittedAt, mode, items: at.items, answers: at.answers, marked: at.marked, correct, total: at.items.length, pct,
