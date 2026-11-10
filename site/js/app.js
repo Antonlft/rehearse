@@ -82,7 +82,15 @@ db.schedule ||= buildSchedule(db.log); // question id -> { dueAt, intervalDays, 
 db.srsEnabled ??= true;
 db.srsExcluded ||= []; // category ids where spaced repetition is off
 const srsOn = cat => db.srsEnabled && !db.srsExcluded.includes(cat);
-const SCHEMA_VERSION = 5;
+//   6: added db.roundModes; rounds in progress, results and answer log entries from Learning rounds carry learning: true
+// Timed test (default, the original behaviour) or Learning (no time limit, answer shown after each question).
+// Remembered separately for the main test and for one-category practice. Mistakes practice is always timed.
+db.roundModes ||= {};
+db.roundModes.test ||= "timed";
+db.roundModes.practice ||= "timed";
+const LEARNING_MS = 100 * 365 * 864e5; // Learning rounds keep a deadline, just 100 years away (Infinity can't be saved as JSON)
+const learningFor = mode => mode === RETRY ? false : db.roundModes[mode === "mixed" ? "test" : "practice"] === "learning";
+const SCHEMA_VERSION = 6;
 db.schemaVersion = Math.max(db.schemaVersion || 1, SCHEMA_VERSION);
 let saveWarned = false;
 const persist = () => {
@@ -199,18 +207,18 @@ function buildRound(mode, cats) {
   return items;
 }
 
-function beginAttempt(mode, items, sub) {
+function beginAttempt(mode, items, sub, learning = false) {
   db.attempts[mode] = { mode, sub, items, answers: Array(items.length).fill(null), marked: Array(items.length).fill(false),
-    cur: 0, start: Date.now(), deadline: Date.now() + items.length * 60000 };
+    cur: 0, start: Date.now(), deadline: Date.now() + (learning ? LEARNING_MS : items.length * 60000), ...(learning ? { learning: true } : {}) };
   persist();
   reviewFilter = "all";
   go({ name: "quiz", mode });
 }
 
 function startRound(mode) {
-  const cats = mode === "mixed" ? selectedCats() : [mode];
-  const sub = mode === "mixed" ? `${groupLabel(cats)} · ${selectionLabel(cats)}` : "Category practice";
-  beginAttempt(mode, buildRound(mode, cats), sub);
+  const cats = mode === "mixed" ? selectedCats() : [mode], learning = learningFor(mode);
+  const sub = (mode === "mixed" ? `${groupLabel(cats)} · ${selectionLabel(cats)}` : "Category practice") + (learning ? " · Learning mode" : "");
+  beginAttempt(mode, buildRound(mode, cats), sub, learning);
 }
 
 function newRound(mode) {
@@ -289,6 +297,17 @@ function renderSetup() {
               </label>`).join("")}
           </div>
         </div>`).join("")}
+      <fieldset class="mode-choice">
+        <legend>How do you want to practise?</legend>
+        <div class="mode-grid">
+          ${[["timed", "Timed test", "1 minute per question. Answers and explanations at the end."],
+             ["learning", "Learning", "No time limit. See the answer and explanation after each question."]].map(([v, t, d]) => `
+            <label class="mode-card" for="mode-${v}">
+              <input type="radio" name="roundMode" id="mode-${v}" value="${v}" ${db.roundModes.test === v ? "checked" : ""}>
+              <span><b>${t}</b><small>${d}</small></span>
+            </label>`).join("")}
+        </div>
+      </fieldset>
       <div class="setup-foot">
         <p id="setupSummary" aria-live="polite"></p>
         <div class="actions"><button class="btn" id="cancelBtn" type="button">Cancel</button><button class="btn primary lg" id="goBtn" type="button">Start round</button></div>
@@ -300,10 +319,12 @@ function renderSetup() {
   const sync = () => {
     const ids = chosen();
     const n = Math.min(modeInfo("mixed").n, ids.reduce((s, id) => s + capacity(id), 0));
-    summary.textContent = ids.length ? `${n} questions · ${n} minutes · ${selectionLabel(ids)}` : "Select at least one category to start.";
+    const time = db.roundModes.test === "learning" ? "no time limit" : `${n} minutes`;
+    summary.textContent = ids.length ? `${n} questions · ${time} · ${selectionLabel(ids)}` : "Select at least one category to start.";
     goBtn.disabled = !ids.length;
   };
   boxes.forEach(b => b.onchange = sync);
+  app.querySelectorAll('input[name="roundMode"]').forEach(r => r.onchange = () => { db.roundModes.test = r.value; persist(); sync(); });
   document.getElementById("allBtn").onclick = () => { boxes.forEach(b => b.checked = true); sync(); };
   document.getElementById("noneBtn").onclick = () => { boxes.forEach(b => b.checked = false); sync(); };
   app.querySelectorAll("[data-only]").forEach(l => l.onclick = () => { boxes.forEach(b => b.checked = b.dataset.group === l.dataset.only); sync(); });
@@ -363,7 +384,7 @@ function renderHome() {
           <p class="label">${esc(groupLabel(selectedCats()))} · ${selectionLabel(selectedCats())} <button class="link" type="button" data-setup>Choose categories</button></p>
           <h2>Financial aptitude test</h2>
           <ul class="facts">
-            <li><b>20</b> questions</li><li><b>20</b> minutes</li><li><b>${seen}</b> of ${totalWritten()} written questions seen so far</li>
+            <li><b>20</b> questions</li><li>${db.roundModes.test === "learning" ? "Learning mode, no time limit" : "<b>20</b> minutes"}</li><li><b>${seen}</b> of ${totalWritten()} written questions seen so far</li>
           </ul>
         </div>
         <div class="test-actions">${actionButtons("mixed", "Start round", true)}</div>
@@ -381,7 +402,15 @@ function renderHome() {
       </div>
     </section>`; })() : ""}
     ${db.log.some(isAnswer) ? `<p class="report-link"><button class="link" type="button" data-report>See your weak spots</button></p>` : ""}
-    <div class="section-head"><h2>Practise one category</h2><p>10 questions · 10 minutes</p></div>
+    <div class="section-head">
+      <h2>Practise one category</h2>
+      <div class="section-tools">
+        <p>10 questions · ${db.roundModes.practice === "learning" ? "no time limit" : "10 minutes"}</p>
+        <div class="seg" role="group" aria-label="Practice mode">
+          ${[["timed", "Timed"], ["learning", "Learning"]].map(([v, l]) => `<button type="button" data-practice-mode="${v}" aria-pressed="${db.roundModes.practice === v}">${l}</button>`).join("")}
+        </div>
+      </div>
+    </div>
     <div class="cat-table">
       <div class="cat-row cat-head" aria-hidden="true"><span>Category</span><span>Question bank</span><span>Your accuracy</span><span></span></div>
       ${GROUPS.map(g => `<div class="cat-group">${esc(g.name)}</div>` + CATEGORIES.filter(c => c.group === g.id).map(catRow).join("")).join("")}
@@ -392,6 +421,10 @@ function renderHome() {
   app.querySelectorAll("[data-setup]").forEach(b => b.onclick = () => go({ name: "setup" }));
   app.querySelectorAll("[data-backup]").forEach(b => b.onclick = exportBackup);
   app.querySelectorAll("[data-report]").forEach(b => b.onclick = () => go({ name: "report", back: { name: "home" } }));
+  app.querySelectorAll("[data-practice-mode]").forEach(b => b.onclick = () => {
+    db.roundModes.practice = b.dataset.practiceMode; persist(); renderHome();
+    document.querySelector(`[data-practice-mode="${b.dataset.practiceMode}"]`).focus();
+  });
   app.querySelectorAll("[data-snooze]").forEach(b => b.onclick = () => { db.backupNudgeDismissedAt = Date.now(); persist(); renderHome(); });
   app.querySelectorAll("[data-resume]").forEach(b => b.onclick = () => go({ name: "quiz", mode: b.dataset.resume }));
   app.querySelectorAll("[data-discard]").forEach(b => b.onclick = () => confirmModal("Discard this practice?", "Your mistakes practice in progress will be deleted.", "Discard",
@@ -453,19 +486,28 @@ function renderQuiz() {
   view.live = true;
   const info = modeInfo(view.mode), n = at.items.length, it = at.items[at.cur];
   const answered = at.answers.filter(a => a !== null).length;
+  // Learning mode: once a question is answered it locks and shows the answer and explanation.
+  const ans = at.answers[at.cur], revealed = !!at.learning && ans !== null;
+  const optClass = i => !revealed ? "" : i === it.a ? " reveal-right" : i === ans ? " reveal-wrong" : "";
 
   meta.innerHTML = `<span>${answered} of ${n} answered</span><button class="link" id="exitBtn" type="button">Save &amp; exit</button>`;
   app.innerHTML = `
     <div class="title-row">
       <div><h1>${esc(info.title)}</h1><p>${answered ? "Saved" : esc(at.sub || info.sub)}</p></div>
-      <div class="timer" id="timer" role="timer"><span>Time left</span><strong id="clock">${fmt(at.deadline - Date.now())}</strong></div>
+      ${at.learning ? `<div class="timer untimed"><span>Learning mode</span><strong>No time limit</strong></div>`
+        : `<div class="timer" id="timer" role="timer"><span>Time left</span><strong id="clock">${fmt(at.deadline - Date.now())}</strong></div>`}
     </div>
     <section class="card question" aria-labelledby="qtext">
       <p class="label">${esc(catById(it.cat).name)} · Question ${at.cur + 1} of ${n}${it.lv ? ` · ${LEVELS[it.lv]}` : ""}</p>
       <p class="prompt" id="qtext">${esc(it.q)}</p>
       <div class="options" role="radiogroup" aria-labelledby="qtext">
-        ${it.o.map((o, i) => `<button type="button" class="opt" role="radio" aria-checked="${at.answers[at.cur] === i}" data-opt="${i}"><span class="radio"></span><span>${esc(o)}</span></button>`).join("")}
+        ${it.o.map((o, i) => `<button type="button" class="opt${optClass(i)}" role="radio" aria-checked="${ans === i}" data-opt="${i}" ${revealed ? "disabled" : ""}><span class="radio"></span><span>${esc(o)}</span></button>`).join("")}
       </div>
+      ${revealed ? `<div class="feedback ${ans === it.a ? "ok" : "no"}" id="feedback" role="status" tabindex="-1">
+        <p class="feedback-title">${ans === it.a ? "Correct" : `Not quite. The answer is: ${esc(it.o[it.a])}`}</p>
+        ${ans !== it.a && it.x[ans] ? `<p>${esc(it.x[ans])}</p>` : ""}
+        <p>${esc(it.why)}</p>
+      </div>` : ""}
       <div class="actions">
         <button class="btn" id="prevBtn" type="button" ${at.cur === 0 ? "disabled" : ""}>Previous</button>
         <button class="btn primary" id="nextBtn" type="button" ${at.cur === n - 1 ? "disabled" : ""}>Next</button>
@@ -493,6 +535,7 @@ function renderQuiz() {
   document.getElementById("submitBtn").onclick = askSubmit;
   document.getElementById("exitBtn").onclick = () => go({ name: "home" });
 
+  if (at.learning) return; // no countdown in Learning mode
   const update = () => {
     const left = at.deadline - Date.now(), clock = document.getElementById("clock");
     if (!clock) return;
@@ -524,7 +567,12 @@ function renderExpired(at) {
   confirmModal("Time's up", "Time ran out while you were away. Your round will be scored with the answers you'd saved.", "See your results", finish);
 }
 
-function choose(i) { const at = db.attempts[view.mode]; ensureTiming(at); at.answers[at.cur] = i; at.answeredAt[at.cur] = Date.now(); persist(); renderQuiz(); }
+function choose(i) {
+  const at = db.attempts[view.mode];
+  if (at.learning && at.answers[at.cur] !== null) return; // Learning mode: the answer locks once it's revealed
+  ensureTiming(at); at.answers[at.cur] = i; at.answeredAt[at.cur] = Date.now(); persist(); renderQuiz();
+  if (at.learning) document.getElementById("feedback")?.focus({ preventScroll: true });
+}
 function move(pos) { const at = db.attempts[view.mode]; if (pos < 0 || pos >= at.items.length) return; endVisit(at); at.cur = pos; startVisit(at); persist(); renderQuiz(); }
 function toggleMark() { const at = db.attempts[view.mode]; at.marked[at.cur] = !at.marked[at.cur]; persist(); renderQuiz(); }
 
@@ -554,6 +602,7 @@ function submit(timedOut) {
         timePressure: at.answeredAt[i] != null && at.answeredAt[i] >= pressureFrom };
       const trap = !ok && it.trap ? it.trap[at.answers[i]] : null;
       if (trap) entry.trap = trap;
+      if (at.learning) entry.learning = true;
       db.log.push(entry);
     }
     // Retry rounds only re-ask known misses, so they'd skew category accuracy; leave it to normal rounds.
@@ -565,7 +614,7 @@ function submit(timedOut) {
   });
   const pct = Math.round(correct / at.items.length * 100);
   const result = { at: submittedAt, mode, items: at.items, answers: at.answers, marked: at.marked, correct, total: at.items.length, pct,
-    usedMs: Math.min(Date.now(), at.deadline) - at.start, timedOut };
+    usedMs: Math.min(Date.now(), at.deadline) - at.start, timedOut, ...(at.learning ? { learning: true } : {}) };
   db.history[mode] = [...(db.history[mode] || []), result].slice(-5);
   const t = (db.totals[mode] ||= { rounds: 0, sum: 0, best: 0 });
   t.rounds++; t.sum += pct; t.best = Math.max(t.best, pct);
@@ -684,7 +733,7 @@ function renderResults() {
         <div class="score-big">${r.correct}<small> / ${r.total}</small></div>
         <div>
           <p class="verdict">${verdict} · ${r.pct}%</p>
-          <p class="muted">${r.timedOut ? "Time ran out · " : ""}Time used ${fmt(r.usedMs)} of ${fmt(r.total * 60000)} · ${wrongN} wrong · ${skipN} unanswered</p>
+          <p class="muted">${r.learning ? `Learning mode · time spent ${fmt(r.usedMs)}` : `${r.timedOut ? "Time ran out · " : ""}Time used ${fmt(r.usedMs)} of ${fmt(r.total * 60000)}`} · ${wrongN} wrong · ${skipN} unanswered</p>
         </div>
       </div>
       <div class="result-actions">

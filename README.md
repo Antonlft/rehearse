@@ -84,6 +84,7 @@ All progress lives in one `localStorage` key, `rehearse.v3` (the light/dark choi
 | `schedule` | Spaced repetition, per written question ID: `{ dueAt, intervalDays, lastOk }` (below) |
 | `srsEnabled` | Spaced repetition on or off (default on). Defaulted with `??=`, because `\|\|=` would turn a stored `false` back on |
 | `srsExcluded` | Category IDs where spaced repetition is off |
+| `roundModes` | `{ test, practice }`: `"timed"` (default) or `"learning"`, remembered separately for the main test and one-category practice |
 
 **Answer log (`db.log`).** One entry per *answered* question in every submitted round (skipped questions aren't logged):
 
@@ -114,6 +115,8 @@ Rounds in progress also keep `spentMs[]` and `answeredAt[]` per question. Time o
 
 When it's on for a category, each written-question slot in a round takes a due question first (most overdue first). With nothing due, or when it's off globally or for that category, question picking is exactly what it was before spaced repetition existed. Switching it off never changes the schedule; it only stops it being used. Controls are on the home page, below the category table.
 
+**Timed test vs Learning mode.** Chosen on the setup screen (main test) and next to "Practise one category" (category practice); mistakes practice is always timed. A Learning round keeps a `deadline`, set 100 years ahead, because `Infinity` can't be saved as JSON. It shows "No time limit" instead of a countdown. Each answer locks once chosen and the explanation appears straight away. Learning answers count toward accuracy, the weak spots report and spaced repetition like any other, and their log entries carry `learning: true`, so they can be told apart later.
+
 **Version history**
 
 | Version | Change |
@@ -123,3 +126,4 @@ When it's on for a category, each written-question slot in a round takes a due q
 | 3 | Added `lastBackupAt` and `backupNudgeDismissedAt` |
 | 4 | Answer log entries gained `i`, `timePressure` and `trap`; the log can hold `kind: "cause"` notes |
 | 5 | Added `schedule`, `srsEnabled` and `srsExcluded` (spaced repetition) |
+| 6 | Added `roundModes`; Learning rounds, their results and their answer log entries carry `learning: true` |

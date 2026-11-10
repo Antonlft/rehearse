@@ -308,3 +308,34 @@ main { padding-block: 30px 48px; }
 .switch input:checked { background: var(--navy); }
 .switch input:checked::after { transform: translateX(16px); }
 @media (prefers-reduced-motion: reduce) { .switch input, .switch input::after { transition: none; } }
+
+/* Timed test vs Learning mode */
+.mode-choice { border: 0; margin: 20px 0 0; padding: 18px 0 0; border-top: 1px solid var(--rule); }
+.mode-choice legend { padding: 0; margin-bottom: 8px; font-size: 11px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: var(--muted); }
+.mode-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+@media (max-width: 620px) { .mode-grid { grid-template-columns: minmax(0, 1fr); } }
+.mode-card { display: flex; gap: 11px; align-items: flex-start; padding: 11px 13px; border: 1px solid var(--rule); border-radius: 5px; cursor: pointer; }
+.mode-card:hover { border-color: var(--rule-strong); }
+.mode-card:has(input:checked) { border-color: var(--navy); background: var(--select); }
+.mode-card input { flex: none; width: 16px; height: 16px; margin: 2px 0 0; accent-color: var(--navy); cursor: pointer; }
+.mode-card span { display: grid; gap: 1px; }
+.mode-card b { font-size: 13.5px; font-weight: 600; }
+.mode-card small { font-size: 12px; color: var(--muted); line-height: 1.4; }
+.section-tools { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+.seg { display: inline-flex; border: 1px solid var(--rule-strong); border-radius: 999px; padding: 2px; }
+.seg button { border: 0; background: none; padding: 3px 12px; border-radius: 999px; font-size: 12px; font-weight: 500; color: var(--muted); cursor: pointer; }
+.seg button[aria-pressed="true"] { background: var(--navy); color: var(--navy-ink); }
+.timer.untimed strong { font-size: 15px; }
+.opt:disabled { cursor: default; color: var(--ink); }
+.opt:disabled:hover { border-color: var(--rule); }
+.opt.reveal-right, .opt.reveal-right:hover { border-color: var(--good); background: var(--good-bg); }
+.opt.reveal-right .radio { border-color: var(--good); }
+.opt.reveal-wrong, .opt.reveal-wrong:hover { border-color: var(--bad); background: var(--bad-bg); }
+.opt.reveal-wrong .radio { border-color: var(--bad); }
+.opt.reveal-wrong .radio::after { background: var(--bad); }
+.feedback { margin-top: 12px; padding: 12px 14px; border-radius: 5px; border: 1px solid var(--good-line); background: var(--good-bg); display: grid; gap: 6px; font-size: 13.5px; }
+.feedback.no { border-color: var(--bad-line); background: var(--bad-bg); }
+.feedback-title { font-weight: 600; color: var(--good); }
+.feedback.no .feedback-title { color: var(--bad); }
+.feedback:focus { outline: none; }
+.feedback:focus-visible { outline: 2px solid var(--navy); outline-offset: 2px; }
