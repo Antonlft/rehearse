@@ -43,15 +43,19 @@ const db = store.load();
 db.attempts ||= {}; db.history ||= {}; db.totals ||= {}; db.seen ||= {}; db.catStats ||= {}; db.excluded ||= [];
 db.qStats ||= {}; // written question id -> { n: times answered, wrong: times wrong or skipped, last: "ok" | "wrong" }
 // Permanent answer log: one entry per answered question in every submitted round. Only ever appended to, never edited or trimmed.
-// Entry: { qid (null for calculation questions), cat, ok, at (submit time), usedMs (time on screen), answeredAt (last answer click), mode }
+// Answer entry: { qid (null for calculation questions), cat, ok, at (submit time), usedMs (time on screen), answeredAt (last answer click),
+//   mode, i (position in the round), timePressure, trap (mistake type, wrong tagged answers only) }. Older entries lack the last three.
+// Note entry: { kind: "cause", cause, ref, i, at } — added after submit (e.g. "I read it wrong"); the latest note for (ref, i) wins.
 db.log ||= [];
 // Schema version: documentation and safety only. Fields are only ever added, so the number only ever goes up.
 //   1: everything live before the answer log (attempts, history, totals, seen, catStats, excluded, qStats)
 //   2: added db.log; rounds in progress also gain spentMs[] and answeredAt[]
 //   3: added db.lastBackupAt and db.backupNudgeDismissedAt (backup download and reminder)
+//   4: answer entries in db.log gain i, timePressure and (for tagged wrong options) trap;
+//      db.log can also hold notes { kind: "cause", cause: "misread" | null, ref: <round's submit time>, i, at }
 db.lastBackupAt ||= null;           // when a backup was last downloaded
 db.backupNudgeDismissedAt ||= null; // when the home-page backup reminder was last dismissed
-const SCHEMA_VERSION = 3;
+const SCHEMA_VERSION = 4;
 db.schemaVersion = Math.max(db.schemaVersion || 1, SCHEMA_VERSION);
 let saveWarned = false;
 const persist = () => {
@@ -95,8 +99,11 @@ function generated(fn) {
 
 function materialize(src, cat) {
   const perm = shuffle([0, 1, 2, 3]);
-  return { cat, id: src.id || null, gen: !!src.gen, lv: src.lv || null, q: src.q, why: src.why,
+  const item = { cat, id: src.id || null, gen: !!src.gen, lv: src.lv || null, q: src.q, why: src.why,
     o: perm.map(i => src.o[i]), a: perm.indexOf(0), x: perm.map(i => i === 0 ? null : src.x[i - 1]) };
+  // Mistake-type tags travel with the wrong options through the shuffle (only when the question has them).
+  if (src.trap) item.trap = perm.map(i => i === 0 ? null : src.trap[i - 1] || null);
+  return item;
 }
 
 const MISSED_WEIGHT = 3;
@@ -177,7 +184,8 @@ function startRetry(items) {
   const go_ = () => beginAttempt(RETRY, shuffle(items).map(it => {
     const wrong = [0, 1, 2, 3].filter(j => j !== it.a);
     return materialize({ id: it.id, gen: it.gen, lv: it.lv, q: it.q, why: it.why,
-      o: [it.o[it.a], ...wrong.map(j => it.o[j])], x: wrong.map(j => it.x[j]) }, it.cat);
+      o: [it.o[it.a], ...wrong.map(j => it.o[j])], x: wrong.map(j => it.x[j]),
+      ...(it.trap ? { trap: wrong.map(j => it.trap[j]) } : {}) }, it.cat);
   }), `${items.length} question${items.length > 1 ? "s" : ""} you got wrong or skipped`);
   if (db.attempts[RETRY]) confirmModal("Start a new mistakes practice?", "Your mistakes practice in progress will be discarded.", "Start practice", go_);
   else go_();
@@ -215,6 +223,7 @@ function render() {
   if (view.name === "quiz") renderQuiz();
   else if (view.name === "results") renderResults();
   else if (view.name === "setup") renderSetup();
+  else if (view.name === "report") renderReport();
   else renderHome();
 }
 
@@ -331,6 +340,7 @@ function renderHome() {
         <div class="test-actions"><button class="btn primary" type="button" data-resume="${RETRY}">Resume · ${done}/${at.items.length}</button><button class="btn" type="button" data-discard="${RETRY}">Discard</button></div>
       </div>
     </section>`; })() : ""}
+    ${db.log.some(isAnswer) ? `<p class="report-link"><button class="link" type="button" data-report>See your weak spots</button></p>` : ""}
     <div class="section-head"><h2>Practise one category</h2><p>10 questions · 10 minutes</p></div>
     <div class="cat-table">
       <div class="cat-row cat-head" aria-hidden="true"><span>Category</span><span>Question bank</span><span>Your accuracy</span><span></span></div>
@@ -339,6 +349,7 @@ function renderHome() {
   app.querySelectorAll("[data-new]").forEach(b => b.onclick = () => b.dataset.new === "mixed" ? go({ name: "setup" }) : newRound(b.dataset.new));
   app.querySelectorAll("[data-setup]").forEach(b => b.onclick = () => go({ name: "setup" }));
   app.querySelectorAll("[data-backup]").forEach(b => b.onclick = exportBackup);
+  app.querySelectorAll("[data-report]").forEach(b => b.onclick = () => go({ name: "report", back: { name: "home" } }));
   app.querySelectorAll("[data-snooze]").forEach(b => b.onclick = () => { db.backupNudgeDismissedAt = Date.now(); persist(); renderHome(); });
   app.querySelectorAll("[data-resume]").forEach(b => b.onclick = () => go({ name: "quiz", mode: b.dataset.resume }));
   app.querySelectorAll("[data-discard]").forEach(b => b.onclick = () => confirmModal("Discard this practice?", "Your mistakes practice in progress will be deleted.", "Discard",
@@ -452,19 +463,28 @@ function submit(timedOut) {
   const mode = view.mode, at = db.attempts[mode];
   endVisit(at);
   const submittedAt = Date.now();
+  // "Under time pressure" = answer last chosen in the final 10% of the round's time.
+  const pressureFrom = at.deadline - (at.deadline - at.start) * 0.1;
   let correct = 0;
   at.items.forEach((it, i) => {
     const ok = at.answers[i] === it.a;
     if (ok) correct++;
     // Answer log: answered questions only (skips aren't logged). Calculation questions are logged with qid null.
-    if (at.answers[i] !== null) db.log.push({ qid: it.id || null, cat: it.cat, ok, at: submittedAt, usedMs: at.spentMs[i], answeredAt: at.answeredAt[i], mode });
+    // i = position in the round, so later notes (e.g. "I read it wrong") can point at this entry via (at, i).
+    if (at.answers[i] !== null) {
+      const entry = { qid: it.id || null, cat: it.cat, ok, at: submittedAt, usedMs: at.spentMs[i], answeredAt: at.answeredAt[i], mode, i,
+        timePressure: at.answeredAt[i] != null && at.answeredAt[i] >= pressureFrom };
+      const trap = !ok && it.trap ? it.trap[at.answers[i]] : null;
+      if (trap) entry.trap = trap;
+      db.log.push(entry);
+    }
     // Retry rounds only re-ask known misses, so they'd skew category accuracy; leave it to normal rounds.
     if (mode !== RETRY) { const st = (db.catStats[it.cat] ||= { n: 0, ok: 0 }); st.n++; if (ok) st.ok++; }
     // Per-question record (written questions only; calculations get new numbers each time). Retries count here.
     if (it.id) { const qs = (db.qStats[it.id] ||= { n: 0, wrong: 0, last: null }); qs.n++; if (!ok) qs.wrong++; qs.last = ok ? "ok" : "wrong"; }
   });
   const pct = Math.round(correct / at.items.length * 100);
-  const result = { at: Date.now(), mode, items: at.items, answers: at.answers, marked: at.marked, correct, total: at.items.length, pct,
+  const result = { at: submittedAt, mode, items: at.items, answers: at.answers, marked: at.marked, correct, total: at.items.length, pct,
     usedMs: Math.min(Date.now(), at.deadline) - at.start, timedOut };
   db.history[mode] = [...(db.history[mode] || []), result].slice(-5);
   const t = (db.totals[mode] ||= { rounds: 0, sum: 0, best: 0 });
@@ -473,6 +493,91 @@ function submit(timedOut) {
   persist();
   reviewFilter = "all";
   go({ name: "results", mode, result });
+}
+
+/* Diagnosis: everything below reads db.log. Notes are appended, never edited. */
+const isAnswer = e => !e.kind;
+const noteKey = (ref, i) => ref + ":" + i;
+function causeNotes() { // latest "cause" note per answer, keyed by (round submit time, position)
+  const m = new Map();
+  for (const e of db.log) if (e.kind === "cause") m.set(noteKey(e.ref, e.i), e.cause);
+  return m;
+}
+function addCause(ref, i, cause) { db.log.push({ kind: "cause", cause, ref, i, at: Date.now() }); persist(); }
+
+const REPORT_WINDOW = 400; // the report looks at your most recent answers, so it reflects current form
+const pctOf = (ok, n) => n ? Math.round(ok / n * 100) : null;
+function diagnose() {
+  const notes = causeNotes();
+  const answers = db.log.filter(isAnswer).slice(-REPORT_WINDOW);
+  const cats = {}, cat = id => (cats[id] ||= { n: 0, ok: 0, tpN: 0, tpOk: 0, tpWrong: 0, misread: 0 });
+  const all = { n: 0, ok: 0 }, tp = { n: 0, ok: 0 }, calm = { n: 0, ok: 0 }, traps = {};
+  let tagged = 0, misreads = 0;
+  for (const e of answers) {
+    // Mistakes practice re-asks known misses, so it's left out of accuracy (as in category accuracy on the home page).
+    if (e.mode !== RETRY) {
+      const c = cat(e.cat);
+      c.n++; all.n++; if (e.ok) { c.ok++; all.ok++; }
+      if (e.timePressure === true) { c.tpN++; tp.n++; if (e.ok) { c.tpOk++; tp.ok++; } else c.tpWrong++; }
+      else if (e.timePressure === false) { calm.n++; if (e.ok) calm.ok++; }
+    }
+    if (!e.ok && e.trap) { tagged++; traps[e.trap] = (traps[e.trap] || 0) + 1; }
+    if (!e.ok && e.i != null && notes.get(noteKey(e.at, e.i)) === "misread") { misreads++; cat(e.cat).misread++; }
+  }
+  const name = id => catById(id)?.name || id;
+  const found = []; // [severity, sentence]
+  const tpAcc = pctOf(tp.ok, tp.n), calmAcc = pctOf(calm.ok, calm.n);
+  if (tp.n >= 5 && calm.n >= 10 && calmAcc - tpAcc >= 15) {
+    const worst = Object.entries(cats).filter(([, c]) => c.tpWrong >= 2).sort((a, b) => b[1].tpWrong - a[1].tpWrong)[0];
+    found.push([calmAcc - tpAcc, `Under time pressure (the last 10% of a round) you get ${tpAcc}% right, against ${calmAcc}% otherwise.${worst ? ` It shows most in ${name(worst[0])}.` : ""}`]);
+  }
+  const overall = pctOf(all.ok, all.n);
+  const weakest = Object.entries(cats).filter(([, c]) => c.n >= 10).map(([id, c]) => [id, c, pctOf(c.ok, c.n)]).sort((a, b) => a[2] - b[2])[0];
+  if (weakest && overall - weakest[2] >= 10)
+    found.push([overall - weakest[2], `Your weakest category is ${name(weakest[0])}: ${weakest[2]}% right over ${weakest[1].n} answers, against ${overall}% overall.`]);
+  const topTrap = Object.entries(traps).sort((a, b) => b[1] - a[1])[0];
+  if (tagged >= 5 && topTrap && topTrap[1] / tagged >= 0.3)
+    found.push([topTrap[1] / tagged * 50, `Your most common slip is ${TRAPS[topTrap[0]] || topTrap[0]}: ${topTrap[1]} of your ${tagged} tagged mistakes.`]);
+  if (misreads >= 3) {
+    const most = Object.entries(cats).filter(([, c]) => c.misread >= 2).sort((a, b) => b[1].misread - a[1].misread)[0];
+    found.push([misreads * 5, `You've marked ${misreads} wrong answers as misread.${most ? ` Most were in ${name(most[0])}.` : ""} Take a second to reread the question before the options.`]);
+  }
+  const insights = found.sort((a, b) => b[0] - a[0]).slice(0, 3).map(f => f[1]);
+  const empty = answers.length < 10
+    ? `Patterns appear once you've answered a few more questions (${answers.length} logged so far).`
+    : `No clear weak spots in your last ${answers.length} answers. This updates after every round.`;
+  return { insights, empty, cats, traps, tagged, answers: answers.length, tp, calm };
+}
+
+function insightsBox(withLink) {
+  const d = diagnose();
+  return `<section class="card insights" id="insights">
+      <div class="insights-head"><h2>Your recurring issues</h2>${withLink ? `<button class="link" type="button" data-report>See full report</button>` : ""}</div>
+      ${d.insights.length ? `<ul>${d.insights.map(t => `<li>${esc(t)}</li>`).join("")}</ul>` : `<p class="muted">${esc(d.empty)}</p>`}
+    </section>`;
+}
+
+function renderReport() {
+  const d = diagnose(), back = view.back || { name: "home" };
+  meta.innerHTML = `<button class="link" id="backLink" type="button">Back</button>`;
+  const rows = Object.entries(d.cats).filter(([, c]) => c.n).sort((a, b) => a[1].ok / a[1].n - b[1].ok / b[1].n);
+  const traps = Object.entries(d.traps).sort((a, b) => b[1] - a[1]);
+  app.innerHTML = `
+    <div class="title-row"><div><h1>Your weak spots</h1><p>Based on your last ${d.answers} answers · mistakes practice isn't counted in accuracy</p></div></div>
+    ${insightsBox(false)}
+    <div class="section-head"><h2>By category</h2><p>Worst first</p></div>
+    ${rows.length ? `<div class="table-wrap"><table class="report-table">
+      <thead><tr><th scope="col">Category</th><th scope="col">Answers</th><th scope="col">Right</th><th scope="col">Under time pressure</th><th scope="col">Misread</th></tr></thead>
+      <tbody>${rows.map(([id, c]) => `<tr><th scope="row">${esc(catById(id)?.name || id)}</th><td>${c.n}</td><td>${pctOf(c.ok, c.n)}%</td>
+        <td>${c.tpN ? `${pctOf(c.tpOk, c.tpN)}% <span class="muted">of ${c.tpN}</span>` : `<span class="muted">–</span>`}</td><td>${c.misread || `<span class="muted">–</span>`}</td></tr>`).join("")}</tbody>
+    </table></div>` : `<div class="card"><p class="muted">Play a round to see your results by category.</p></div>`}
+    <div class="section-head"><h2>Mistake types</h2><p>${d.tagged ? `${d.tagged} tagged mistakes` : ""}</p></div>
+    ${traps.length ? `<div class="table-wrap"><table class="report-table">
+      <thead><tr><th scope="col">Mistake</th><th scope="col">Times</th></tr></thead>
+      <tbody>${traps.map(([k, v]) => `<tr><th scope="row">${esc(TRAPS[k] ? TRAPS[k][0].toUpperCase() + TRAPS[k].slice(1) : k)}</th><td>${v}</td></tr>`).join("")}</tbody>
+    </table></div>` : `<div class="card"><p class="muted">Mistake types will show here once the questions' wrong answers are tagged with the kind of slip they represent.</p></div>`}
+    <div class="result-actions"><button class="btn lg" id="backBtn" type="button">Back</button></div>`;
+  document.getElementById("backLink").onclick = document.getElementById("backBtn").onclick = () => go(back);
 }
 
 /* Results */
@@ -486,6 +591,10 @@ function renderResults() {
   const markN = r.marked.filter(Boolean).length;
   const verdict = r.pct >= 85 ? "Strong result" : r.pct >= 70 ? "Solid pass" : r.pct >= 50 ? "Borderline: worth another round" : "Needs more rehearsal";
   const shown = r.items.map((it, i) => i).filter(i => reviewFilter === "wrong" ? status(i) !== "ok" : reviewFilter === "marked" ? r.marked[i] : true);
+  // "I read it wrong" is offered on wrong answers whose log entry can be pointed at (rounds submitted since this feature).
+  const notes = causeNotes();
+  const logged = new Set(db.log.filter(e => isAnswer(e) && e.at === r.at && e.i != null).map(e => e.i));
+  const misread = i => notes.get(noteKey(r.at, i)) === "misread";
 
   meta.innerHTML = `<button class="link" id="backHome" type="button">All assessments</button>`;
   app.innerHTML = `
@@ -514,11 +623,12 @@ function renderResults() {
           <li class="cat"><span>${esc(catById(c).name)}</span><span class="bar"><i style="width:${v.ok / v.n * 100}%"></i></span><b>${v.ok}/${v.n}</b></li>`).join("")}
       </ul>
     </section>
+    ${db.log.some(isAnswer) ? insightsBox(true) : ""}
     <div class="filters" role="group" aria-label="Filter answers">
       ${[["all", `All ${r.total}`], ["wrong", `Wrong or skipped ${wrongN + skipN}`], ["marked", `Marked ${markN}`]].map(([k, l]) => `<button type="button" class="filter" data-filter="${k}" aria-pressed="${reviewFilter === k}">${l}</button>`).join("")}
     </div>
     <div class="review">
-      ${shown.length ? shown.map(i => reviewItem(r.items[i], i, r.answers[i], r.marked[i])).join("") : `<div class="card"><p class="muted">Nothing to show for this filter.</p></div>`}
+      ${shown.length ? shown.map(i => reviewItem(r.items[i], i, r.answers[i], r.marked[i], logged.has(i) ? misread(i) : null)).join("") :`<div class="card"><p class="muted">Nothing to show for this filter.</p></div>`}
     </div>`;
 
   const againBtn = document.getElementById("againBtn"), retryBtn = document.getElementById("retryBtn");
@@ -527,6 +637,16 @@ function renderResults() {
   document.getElementById("homeBtn").onclick = () => go({ name: "home" });
   document.getElementById("backHome").onclick = () => go({ name: "home" });
   app.querySelectorAll("[data-filter]").forEach(b => b.onclick = () => { reviewFilter = b.dataset.filter; renderResults(); });
+  const wireReport = () => app.querySelectorAll("[data-report]").forEach(b => b.onclick = () => go({ name: "report", back: view }));
+  wireReport();
+  app.querySelectorAll("[data-misread]").forEach(b => b.onclick = () => {
+    const i = +b.dataset.misread, on = !misread(i);
+    addCause(r.at, i, on ? "misread" : null);
+    notes.set(noteKey(r.at, i), on ? "misread" : null);
+    b.setAttribute("aria-pressed", on); b.textContent = on ? "Marked as misread · undo" : "I read the question wrong";
+    const box = document.getElementById("insights"); // refresh the summary in place, without moving the page
+    if (box) { box.outerHTML = insightsBox(true); wireReport(); }
+  });
   app.querySelectorAll("[data-jump]").forEach(b => b.onclick = () => {
     const id = "r-" + b.dataset.jump;
     if (!document.getElementById(id)) { reviewFilter = "all"; renderResults(); }
@@ -535,13 +655,16 @@ function renderResults() {
   });
 }
 
-function reviewItem(it, i, ans, marked) {
+// misread: true/false when the "I read it wrong" button applies (logged wrong answer), null otherwise.
+function reviewItem(it, i, ans, marked, misread) {
   const st = ans === null ? ["skip", "Unanswered"] : ans === it.a ? ["ok", "Correct"] : ["no", "Incorrect"];
+  const misreadBtn = st[0] === "no" && misread !== null
+    ? `<button type="button" class="misread" data-misread="${i}" aria-pressed="${misread}">${misread ? "Marked as misread · undo" : "I read the question wrong"}</button>` : "";
   return `
     <article class="card item" id="r-${i}">
       <div class="item-top">
         <p class="label">${esc(catById(it.cat).name)} · Question ${i + 1}${it.lv ? ` · ${LEVELS[it.lv]}` : ""}${it.gen ? " · Calculation" : ""}</p>
-        <span class="pills"><span class="pill ${st[0]}">${st[1]}</span>${marked ? `<span class="pill flagged">Marked</span>` : ""}</span>
+        <span class="pills">${misreadBtn}<span class="pill ${st[0]}">${st[1]}</span>${marked ? `<span class="pill flagged">Marked</span>` : ""}</span>
       </div>
       <p class="prompt">${esc(it.q)}</p>
       <ul class="ans">
@@ -672,7 +795,7 @@ function backupReminder() {
   const DAY = 864e5, now = Date.now();
   if (db.backupNudgeDismissedAt && now - db.backupNudgeDismissedAt < 14 * DAY) return null;
   if (!db.lastBackupAt) { const n = roundsPlayed(db); return n >= 3 ? `You've played ${n} rounds and haven't downloaded a backup yet.` : null; }
-  const since = new Set(db.log.filter(e => e.at > db.lastBackupAt).map(e => e.at)).size; // one log timestamp per submitted round
+  const since = new Set(db.log.filter(e => !e.kind && e.at > db.lastBackupAt).map(e => e.at)).size; // one log timestamp per submitted round
   if (since >= 10) return `You've played ${since} rounds since your last backup.`;
   if (since >= 1 && now - db.lastBackupAt >= 30 * DAY) return `Your last backup is from ${dateLabel(db.lastBackupAt)}.`;
   return null;

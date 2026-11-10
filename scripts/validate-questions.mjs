@@ -2,6 +2,7 @@
 // Loads site/js/bank.js, every site/questions/*.js and site/js/generators*.js into a sandbox, then checks:
 //  - every written question has an id (unique), text, an explanation, exactly 4 unique options and exactly 3 notes
 //  - no option contains NaN / Infinity / undefined
+//  - an optional `trap` list (mistake type per wrong option) has exactly 3 entries, each null or a type from TRAPS in bank.js
 //  - every category used by the bank exists in app.js, and every question file is loaded by index.html
 //  - every generator, sampled RUNS times with the same 30-try retry the app uses, always yields a valid question
 // Exits with code 1 on any violation.
@@ -27,6 +28,7 @@ for (const f of ["js/bank.js", ...questionFiles, ...generatorFiles]) {
   try { load(f); } catch (e) { fail(`${f}: failed to load: ${e.message}`); }
 }
 const { Bank } = ctx;
+const TRAPS = ctx.TRAPS || {};
 if (!Bank) { console.error("Bank was not defined by js/bank.js"); process.exit(1); }
 
 // Every question/generator file must actually be loaded by the page.
@@ -48,6 +50,10 @@ const checkShape = (where, q) => {
   if (!Array.isArray(q.x) || q.x.length !== 3) fail(`${where}: needs exactly 3 notes in x, has ${q.x?.length}`);
   else if (q.x.some(s => typeof s !== "string" || !s.trim())) fail(`${where}: a note in x is empty`);
   if (q.lv !== undefined && ![1, 2, 3].includes(q.lv)) fail(`${where}: lv must be 1, 2 or 3, got ${q.lv}`);
+  if (q.trap !== undefined) {
+    if (!Array.isArray(q.trap) || q.trap.length !== 3) fail(`${where}: trap needs exactly 3 entries (one per wrong option), has ${q.trap?.length}`);
+    else q.trap.forEach((t, i) => { if (t !== null && !Object.hasOwn(TRAPS, t)) fail(`${where}: trap ${i + 1} "${t}" isn't a known mistake type (${Object.keys(TRAPS).join(", ")})`); });
+  }
 };
 
 // Written questions

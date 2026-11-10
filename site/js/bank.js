@@ -5,6 +5,17 @@ window.Bank = {
   gen(cat, fn) { (this.gens[cat] ||= []).push(fn); }
 };
 
+// Mistake types a wrong option can be tagged with (question field `trap`: one entry per wrong option, or null).
+// The labels finish the sentence "Your most common slip is ...". Add new types here; never rename an existing key.
+window.TRAPS = {
+  "inverted": "flipping a ratio upside down or swapping two things",
+  "missed-step": "leaving out a step or a component",
+  "wrong-measure": "using a related but wrong measure or formula",
+  "sign": "getting a sign or direction wrong",
+  "units": "a units or scale slip",
+  "concept": "misunderstanding the concept itself"
+};
+
 window.R = {
   int: (a, b) => a + Math.floor(Math.random() * (b - a + 1)),
   step(a, b, s) {

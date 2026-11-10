@@ -20,7 +20,7 @@ Then open http://localhost:8765/site/ (in Claude Code this is the `quiz-static` 
 node scripts/validate-questions.mjs
 ```
 
-It loads every question file and calculation generator and checks that each question has 4 unique options, 3 wrong-answer notes, an explanation and a unique ID. It also checks that no option contains `NaN`/`Infinity`/`undefined`, that every file is loaded by `index.html`, and that every category exists in `app.js`. Each generator is run 50 times. It prints `✓ …` and exits with code 0 when everything passes, or lists each problem and exits with code 1. GitHub runs it before every deploy, and a failure stops the deploy.
+It loads every question file and calculation generator and checks that each question has 4 unique options, 3 wrong-answer notes, an explanation and a unique ID, and that any `trap` tags are valid. It also checks that no option contains `NaN`/`Infinity`/`undefined`, that every file is loaded by `index.html`, and that every category exists in `app.js`. Each generator is run 50 times. It prints `✓ …` and exits with code 0 when everything passes, or lists each problem and exits with code 1. GitHub runs it before every deploy, and a failure stops the deploy.
 
 ## How it's published
 
@@ -56,6 +56,7 @@ Written questions are added with `Bank.add(categoryId, [...])`:
 
 - `id` is permanent. Saved stats and the answer log refer to it, so never rename, renumber or reuse an ID.
 - `lv` (1 basic, 2 intermediate, 3 advanced) is optional. Today only the six hospitality & living categories have it.
+- `trap` is optional: a list of 3 mistake types, one per wrong option in the same order as `x` (or `null` for an untagged option). The allowed types are `TRAPS` in `site/js/bank.js`: `inverted`, `missed-step`, `wrong-measure`, `sign`, `units`, `concept`. When you pick a tagged wrong option, its type is logged and counted in the weak spots report.
 
 Calculation questions are added with `Bank.gen(categoryId, () => ({ q, o, why, x, lv }))` and have no `id`.
 
@@ -90,8 +91,15 @@ All progress lives in one `localStorage` key, `rehearse.v3` (the light/dark choi
   at: 1794043291081,      // when the round was submitted (ms timestamp)
   usedMs: 42150,          // time the question was on screen, summed across visits
   answeredAt: 1794043280000, // when the answer was last chosen (null for answers given before v2)
-  mode: "mixed" }         // "mixed", a category ID, or "retry"
+  mode: "mixed",          // "mixed", a category ID, or "retry"
+  i: 4,                   // position in the round (from v4)
+  timePressure: false,    // answer last chosen in the final 10% of the round's time (from v4)
+  trap: "inverted" }      // mistake type of the wrong option chosen, only if that option is tagged (from v4)
 ```
+
+The log can also hold **notes** added after a round, such as the review screen's "I read the question wrong" button. They're appended like everything else, never edited: `{ kind: "cause", cause: "misread", ref: <the round's submit time>, i, at }`. Undoing adds `cause: null`, and the latest note for a given `ref` and `i` wins. Anything reading answers should skip entries that have a `kind`.
+
+The **weak spots report** (results page box, plus a full page linked from it and from the home page) is worked out from the most recent 400 answers in the log. Mistakes practice rounds are left out of accuracy figures. A pattern only shows once there's enough data behind it.
 
 Rounds in progress also keep `spentMs[]` and `answeredAt[]` per question. Time only counts while the question is on screen: it pauses on Save & exit, and time away (including a closed tab) is never counted.
 
@@ -102,3 +110,4 @@ Rounds in progress also keep `spentMs[]` and `answeredAt[]` per question. Time o
 | 1 | Everything live before the answer log: `attempts`, `history`, `totals`, `seen`, `catStats`, `excluded`, `qStats` |
 | 2 | Added `log`; rounds in progress gained `spentMs[]` and `answeredAt[]` |
 | 3 | Added `lastBackupAt` and `backupNudgeDismissedAt` |
+| 4 | Answer log entries gained `i`, `timePressure` and `trap`; the log can hold `kind: "cause"` notes |
