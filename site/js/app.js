@@ -41,6 +41,14 @@ const store = {
 const db = store.load();
 db.attempts ||= {}; db.history ||= {}; db.totals ||= {}; db.seen ||= {}; db.catStats ||= {}; db.excluded ||= [];
 db.qStats ||= {}; // written question id -> { n: times answered, wrong: times wrong or skipped, last: "ok" | "wrong" }
+// Permanent answer log: one entry per answered question in every submitted round. Only ever appended to, never edited or trimmed.
+// Entry: { qid (null for calculation questions), cat, ok, at (submit time), usedMs (time on screen), answeredAt (last answer click), mode }
+db.log ||= [];
+// Schema version: documentation and safety only. Fields are only ever added, so the number only ever goes up.
+//   1: everything live before the answer log (attempts, history, totals, seen, catStats, excluded, qStats)
+//   2: added db.log; rounds in progress also gain spentMs[] and answeredAt[]
+const SCHEMA_VERSION = 2;
+db.schemaVersion = Math.max(db.schemaVersion || 1, SCHEMA_VERSION);
 const persist = () => store.save(db);
 
 const app = document.getElementById("app");
@@ -164,7 +172,28 @@ function startRetry(items) {
   else go_();
 }
 
+/* Time per question, for the round in progress.
+   at.spentMs[i]    total time question i has been on screen (added up across visits)
+   at.answeredAt[i] when question i's answer was last chosen
+   at.viewStart / at.viewIdx: the visit currently being timed (null when nothing is on screen).
+   Rounds started before this existed get the arrays on first use. */
+function ensureTiming(at) {
+  at.spentMs ||= Array(at.items.length).fill(0);
+  at.answeredAt ||= Array(at.items.length).fill(null);
+}
+function startVisit(at) { ensureTiming(at); at.viewStart = Date.now(); at.viewIdx = at.cur; }
+function endVisit(at) {
+  ensureTiming(at);
+  if (at.viewStart != null && at.viewIdx != null) {
+    const end = Math.min(Date.now(), at.deadline); // nothing counts after time runs out
+    at.spentMs[at.viewIdx] += Math.max(0, end - at.viewStart);
+  }
+  at.viewStart = null; at.viewIdx = null;
+}
+
 function go(v) {
+  // Leaving a live round (Save & exit, logo, etc.): stop its clock so time away isn't counted.
+  if (view.name === "quiz" && view.live && db.attempts[view.mode]) { endVisit(db.attempts[view.mode]); persist(); }
   view = v;
   clearInterval(tick);
   closeModal();
@@ -311,6 +340,9 @@ function renderQuiz() {
   // Coming back to a round whose deadline passed while away: tell the user before scoring it.
   // A live countdown (view.live) still auto-submits in update() below.
   if (!view.live && at.deadline - Date.now() <= 0) return renderExpired(at);
+  // Entering the round: start timing the current question from now. A visit left open by a closed tab is
+  // discarded rather than counted, so time spent away from the site never shows up as time on a question.
+  if (!view.live) startVisit(at);
   view.live = true;
   const info = modeInfo(view.mode), n = at.items.length, it = at.items[at.cur];
   const answered = at.answers.filter(a => a !== null).length;
@@ -367,6 +399,7 @@ function renderQuiz() {
 
 function renderExpired(at) {
   const info = modeInfo(view.mode), done = at.answers.filter(a => a !== null).length;
+  at.viewStart = null; at.viewIdx = null; // a visit left open while away isn't time spent on the question
   meta.innerHTML = `<button class="link" id="exitBtn" type="button">All assessments</button>`;
   app.innerHTML = `
     <div class="title-row">
@@ -384,8 +417,8 @@ function renderExpired(at) {
   confirmModal("Time's up", "Time ran out while you were away. Your round will be scored with the answers you'd saved.", "See your results", finish);
 }
 
-function choose(i) { const at = db.attempts[view.mode]; at.answers[at.cur] = i; persist(); renderQuiz(); }
-function move(pos) { const at = db.attempts[view.mode]; if (pos < 0 || pos >= at.items.length) return; at.cur = pos; persist(); renderQuiz(); }
+function choose(i) { const at = db.attempts[view.mode]; ensureTiming(at); at.answers[at.cur] = i; at.answeredAt[at.cur] = Date.now(); persist(); renderQuiz(); }
+function move(pos) { const at = db.attempts[view.mode]; if (pos < 0 || pos >= at.items.length) return; endVisit(at); at.cur = pos; startVisit(at); persist(); renderQuiz(); }
 function toggleMark() { const at = db.attempts[view.mode]; at.marked[at.cur] = !at.marked[at.cur]; persist(); renderQuiz(); }
 
 function askSubmit() {
@@ -399,10 +432,14 @@ function askSubmit() {
 
 function submit(timedOut) {
   const mode = view.mode, at = db.attempts[mode];
+  endVisit(at);
+  const submittedAt = Date.now();
   let correct = 0;
   at.items.forEach((it, i) => {
     const ok = at.answers[i] === it.a;
     if (ok) correct++;
+    // Answer log: answered questions only (skips aren't logged). Calculation questions are logged with qid null.
+    if (at.answers[i] !== null) db.log.push({ qid: it.id || null, cat: it.cat, ok, at: submittedAt, usedMs: at.spentMs[i], answeredAt: at.answeredAt[i], mode });
     // Retry rounds only re-ask known misses, so they'd skew category accuracy; leave it to normal rounds.
     if (mode !== RETRY) { const st = (db.catStats[it.cat] ||= { n: 0, ok: 0 }); st.n++; if (ok) st.ok++; }
     // Per-question record (written questions only; calculations get new numbers each time). Retries count here.
