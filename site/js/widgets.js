@@ -103,7 +103,7 @@
   define("compound", {
     title: "Compounding and the rule of 72",
     inputs: [
-      { k: "r", label: "Annual growth rate", min: 0.01, max: 0.25, step: 0.005, value: 0.08, fmt: v => pct(v, 1) },
+      { k: "r", label: "Annual growth rate", min: 0.01, max: 0.25, step: 0.0005, value: 0.08, fmt: v => pct(v, 2) },
       { k: "n", label: "Years", min: 1, max: 30, step: 1, value: 10, fmt: v => num(v, 0) }
     ],
     compute: v => ({ multiple: (1 + v.r) ** v.n, rule72: 0.72 / v.r, exact: Math.log(2) / Math.log(1 + v.r), simple: 1 + v.r * v.n }),
@@ -119,7 +119,7 @@
       { k: "e0", label: "Entry EBITDA", min: 20, max: 300, step: 5, value: 100, fmt: usd },
       { k: "m0", label: "Entry multiple", min: 5, max: 15, step: 0.5, value: 10, fmt: v => mult(v) },
       { k: "lev", label: "Debt at entry (x EBITDA)", min: 0, max: 7, step: 0.5, value: 5, fmt: v => mult(v) },
-      { k: "g", label: "EBITDA growth a year", min: -0.05, max: 0.15, step: 0.01, value: 0.05, fmt: v => pct(v, 0) },
+      { k: "g", label: "EBITDA growth a year", min: -0.05, max: 0.15, step: 0.0001, value: 0.05, fmt: v => pct(v, 1) },
       { k: "m1", label: "Exit multiple", min: 5, max: 15, step: 0.5, value: 10, fmt: v => mult(v) },
       { k: "repay", label: "Debt repaid by exit", min: 0, max: 1, step: 0.05, value: 0.4, fmt: v => pct(v, 0) },
       { k: "n", label: "Years held", min: 2, max: 8, step: 1, value: 5, fmt: v => num(v, 0) }
@@ -224,8 +224,8 @@
   define("yieldCurve", {
     title: "Shapes of the yield curve",
     inputs: [
-      { k: "s", label: "3-month yield", min: 0, max: 0.08, step: 0.0025, value: 0.02, fmt: v => pct(v, 2) },
-      { k: "l", label: "10-year yield", min: 0, max: 0.08, step: 0.0025, value: 0.04, fmt: v => pct(v, 2) }
+      { k: "s", label: "3-month yield", min: 0, max: 0.08, step: 0.0005, value: 0.02, fmt: v => pct(v, 2) },
+      { k: "l", label: "10-year yield", min: 0, max: 0.08, step: 0.0005, value: 0.04, fmt: v => pct(v, 2) }
     ],
     compute: v => { const spread = v.l - v.s; return { spread, shape: spread > 0.0025 ? "normal" : spread < -0.0025 ? "inverted" : "flat" }; },
     render: (v, r) => {
@@ -271,7 +271,7 @@
     title: "Occupancy × ADR = RevPAR",
     inputs: [
       { k: "occ", label: "Occupancy", min: 0.3, max: 1, step: 0.01, value: 0.78, fmt: v => pct(v, 0) },
-      { k: "adr", label: "ADR (average daily rate)", min: 50, max: 500, step: 5, value: 180, fmt: usd0 },
+      { k: "adr", label: "ADR (average daily rate)", min: 50, max: 500, step: 1, value: 180, fmt: usd0 },
       { k: "rooms", label: "Rooms", min: 20, max: 600, step: 10, value: 200, fmt: v => num(v, 0) }
     ],
     compute: v => ({ revpar: v.occ * v.adr, annual: v.occ * v.adr * v.rooms * 365 / 1e6 }),
@@ -345,7 +345,7 @@
     title: "How much will the lender lend?",
     inputs: [
       { k: "value", label: "Property value", min: 20, max: 500, step: 5, value: 100, fmt: usd },
-      { k: "noi", label: "NOI", min: 1, max: 40, step: 0.25, value: 6.5, fmt: v => usd(v, 2) },
+      { k: "noi", label: "NOI", min: 1, max: 40, step: 0.05, value: 6.5, fmt: v => usd(v, 2) },
       { k: "rate", label: "All-in interest rate", min: 0.02, max: 0.10, step: 0.0025, value: 0.06, fmt: v => pct(v, 2) },
       { k: "ltv", label: "Maximum LTV", min: 0.3, max: 0.8, step: 0.05, value: 0.6, fmt: v => pct(v, 0) },
       { k: "icr", label: "Minimum ICR", min: 1, max: 3, step: 0.05, value: 1.75, fmt: v => mult(v, 2) },

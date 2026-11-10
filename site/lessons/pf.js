@@ -1,9 +1,34 @@
-// Lesson: Property finance & rates. Fill in the fields below, then change status to "draft" (or "reviewed" once checked).
-// method: paragraphs explaining the method. example: a worked problem. source: where it comes from (url optional).
+// Lesson: Property finance & rates. Status "draft": written by Claude, to be reviewed; change to "reviewed" once checked.
+// Fields: method (paragraphs), example (question, working steps, answer), source (text, optional url), widget (interactive "Try it").
 Lessons.add("pf", {
-  status: "stub",
-  method: [],
-  example: null, // { question: "...", working: ["Step 1 ...", "Step 2 ..."], answer: "..." }
-  source: null,  // { text: "Author, Title (edition), chapter", url: "https://..." }
-  widget: { type: "maxLoan" } // interactive "Try it" (see site/js/widgets.js); optional values: { ... } to change starting numbers
+  "status": "draft",
+  "method": [
+    "Property lenders size a loan using several tests and lend the lowest result. Loan-to-value (LTV) caps the loan against the property's value; interest cover (ICR = NOI ÷ interest) and debt service cover (DSCR, which includes principal repayments) check that income covers the payments; debt yield (NOI ÷ loan) shows the lender's return on income if it had to take the property.",
+    "Floating-rate loans are priced at a benchmark (SOFR in the US, SONIA in the UK) plus a margin; swaps or caps fix or limit the cost. Leverage is positive when the property's yield is above the cost of debt and negative when it's below. Higher rates both shrink the loan the ICR test allows and push yields up, and so values down."
+  ],
+  "example": {
+    "question": "A property worth US$80m earns NOI of US$4.8m. The lender allows 65% LTV, a minimum ICR of 1.6x and a minimum 8% debt yield, at a 6.5% interest rate. What's the maximum loan?",
+    "working": [
+      "LTV test: 65% × 80 = US$52.0m",
+      "ICR test: 4.8 ÷ 1.6 = US$3.0m of interest; ÷ 6.5% = US$46.2m",
+      "Debt yield test: 4.8 ÷ 8% = US$60.0m",
+      "The lowest is US$46.2m, so the ICR test binds"
+    ],
+    "answer": "US$46.2m (about 58% LTV): at today's rates it's the income, not the value, that limits the loan."
+  },
+  "source": {
+    "text": "Bank of England, SONIA interest rate benchmark (and the Federal Reserve Bank of New York for SOFR); Brueggeman & Fisher, Real Estate Finance and Investments (McGraw-Hill)",
+    "url": "https://www.bankofengland.co.uk/markets/sonia-benchmark"
+  },
+  "widget": {
+    "type": "maxLoan",
+    "values": {
+      "value": 80,
+      "noi": 4.8,
+      "rate": 0.065,
+      "ltv": 0.65,
+      "icr": 1.6,
+      "dy": 0.08
+    }
+  }
 });

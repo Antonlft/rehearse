@@ -195,6 +195,7 @@ for (const [cat, l] of Object.entries(Lessons)) {
       const inp = w.inputs.find(i => i.k === k);
       if (!inp) fail(`${where}: widget value "${k}" isn't one of its inputs (${w.inputs.map(i => i.k).join(", ")})`);
       else if (typeof val !== "number" || val < inp.min || val > inp.max) fail(`${where}: widget value ${k} = ${val} is outside ${inp.min}–${inp.max}`);
+      else if (Math.abs((val - inp.min) / inp.step - Math.round((val - inp.min) / inp.step)) > 1e-6) fail(`${where}: widget value ${k} = ${val} isn't on the slider's ${inp.step} steps, so the slider would show a different number`);
     }
   }
   if (l.status !== "stub") {
