@@ -343,6 +343,7 @@ function render() {
   else if (view.name === "results") renderResults();
   else if (view.name === "setup") renderSetup();
   else if (view.name === "report") renderReport();
+  else if (view.name === "lesson") renderLesson();
   else renderHome();
 }
 
@@ -436,7 +437,7 @@ function catRow(c) {
   const acc = st && st.n ? Math.round(st.ok / st.n * 100) : null;
   return `
     <div class="cat-row">
-      <div class="cat-name"><h3>${esc(c.name)}</h3><p>${esc(c.desc)}</p></div>
+      <div class="cat-name"><h3>${esc(c.name)}</h3><p>${esc(c.desc)}</p><button class="link learn-link" type="button" data-learn="${c.id}">Learn${Lessons.all[c.id]?.status && Lessons.all[c.id].status !== "stub" ? "" : " (coming soon)"}</button></div>
       <div class="cat-bank">${bank}</div>
       <div class="cat-acc">${acc === null ? `<span class="muted">Not attempted</span>`
         : `<span><b>${acc}%</b> <span class="muted">· ${st.ok}/${st.n}</span></span><span class="bar"><i style="width:${acc}%"></i></span>`}</div>
@@ -504,6 +505,7 @@ function renderHome() {
   app.querySelectorAll("[data-setup]").forEach(b => b.onclick = () => go({ name: "setup" }));
   app.querySelectorAll("[data-backup]").forEach(b => b.onclick = exportBackup);
   app.querySelectorAll("[data-report]").forEach(b => b.onclick = () => go({ name: "report", back: { name: "home" } }));
+  app.querySelectorAll("[data-learn]").forEach(b => b.onclick = () => go({ name: "lesson", cat: b.dataset.learn, back: { name: "home" } }));
   document.getElementById("practiceFormats").onchange = e => { db.newFormats = e.target.checked; persist(); renderHome(); document.getElementById("practiceFormats").focus(); };
   const practiceCalc = document.getElementById("practiceCalc");
   practiceCalc.onchange = () => {
@@ -957,6 +959,37 @@ function renderReport() {
   document.getElementById("backLink").onclick = document.getElementById("backBtn").onclick = () => go(back);
 }
 
+/* Lessons: one page per category (content in site/lessons/<category>.js) */
+const LESSON_STATUS = { stub: "Not written yet", draft: "Draft", reviewed: "Reviewed" };
+function renderLesson() {
+  const c = catById(view.cat), l = Lessons.all[view.cat] || { status: "stub" }, back = view.back || { name: "home" };
+  const missing = `<p class="muted">This lesson hasn't been written yet.</p>`;
+  const src = l.source, safeUrl = src && /^https?:\/\//i.test(src.url || "") ? src.url : null; // only plain web links
+  const ex = l.example;
+  meta.innerHTML = `<button class="link" id="backLink" type="button">Back</button>`;
+  app.innerHTML = `
+    <div class="title-row">
+      <div><h1>${esc(c.name)}</h1><p>Learn · ${esc(c.desc)}</p></div>
+      <span class="pill lesson-status ${esc(l.status)}">${esc(LESSON_STATUS[l.status] || l.status)}</span>
+    </div>
+    <section class="card lesson">
+      <h2>Method</h2>
+      ${l.method && l.method.length ? l.method.map(p => `<p>${esc(p)}</p>`).join("") : missing}
+      <h2>Worked example</h2>
+      ${ex ? `<p class="prompt">${esc(ex.question)}</p>
+        ${ex.working && ex.working.length ? `<ol class="lesson-steps">${ex.working.map(w => `<li>${esc(w)}</li>`).join("")}</ol>` : ""}
+        <p class="lesson-answer"><b>Answer:</b> ${esc(ex.answer)}</p>` : missing}
+      <h2>Source</h2>
+      ${src ? `<p>${safeUrl ? `<a href="${esc(safeUrl)}" target="_blank" rel="noopener noreferrer">${esc(src.text)}</a>` : esc(src.text)}</p>` : missing}
+    </section>
+    <div class="result-actions">
+      <button class="btn primary lg" id="practiseBtn" type="button">Practise this category</button>
+      <button class="btn lg" id="backBtn" type="button">Back</button>
+    </div>`;
+  document.getElementById("backLink").onclick = document.getElementById("backBtn").onclick = () => go(back);
+  document.getElementById("practiseBtn").onclick = () => newRound(view.cat);
+}
+
 /* Results */
 function renderResults() {
   const r = view.result, info = modeInfo(view.mode);
@@ -1014,6 +1047,13 @@ function renderResults() {
   document.getElementById("homeBtn").onclick = () => go({ name: "home" });
   document.getElementById("backHome").onclick = () => go({ name: "home" });
   app.querySelectorAll("[data-filter]").forEach(b => b.onclick = () => { reviewFilter = b.dataset.filter; renderResults(); });
+  app.querySelectorAll("[data-learn]").forEach(b => b.onclick = () =>
+    go({ name: "lesson", cat: b.dataset.learn, back: { ...view, scrollTo: "r-" + b.dataset.from } }));
+  if (view.scrollTo) { // back from a lesson: return to the question you came from
+    const target = document.getElementById(view.scrollTo);
+    delete view.scrollTo;
+    if (target) { target.scrollIntoView({ block: "start" }); target.querySelector("[data-learn]")?.focus({ preventScroll: true }); }
+  }
   const wireReport = () => app.querySelectorAll("[data-report]").forEach(b => b.onclick = () => go({ name: "report", back: view }));
   wireReport();
   app.querySelectorAll("[data-misread]").forEach(b => b.onclick = () => {
@@ -1034,6 +1074,7 @@ function renderResults() {
 
 // misread: true/false when the "I read it wrong" button applies (logged wrong answer), null otherwise.
 function reviewItem(it, i, ans, marked, misread) {
+  const learnLink = () => `<p class="review-learn"><button class="link" type="button" data-learn="${it.cat}" data-from="${i}">Review the method: ${esc(catById(it.cat).name)}</button></p>`;
   const g = grade(it, ans);
   const st = isBlank(ans) ? ["skip", "Unanswered"] : g.ok ? ["ok", "Correct"] : ["no", "Incorrect"];
   const misreadBtn = st[0] === "no" && misread !== null
@@ -1065,6 +1106,7 @@ function reviewItem(it, i, ans, marked, misread) {
           return `<li class="${cls}"><span class="mark" aria-hidden="true">${j === it.a ? "✓" : j === ans ? "✗" : ""}</span><div><span>${esc(o)}${j === ans ? " <em>(your answer)</em>" : ""}</span>${note ? `<span class="note">${esc(note)}</span>` : ""}</div></li>`;
         }).join("")}
       </ul>`}
+      ${st[0] !== "ok" ? learnLink() : ""}
     </article>`;
 }
 

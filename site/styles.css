@@ -422,3 +422,19 @@ main { padding-block: 30px 48px; }
   .grid-choices { justify-content: flex-start; }
   .grid-choice { padding: 8px 12px; font-size: 13px; }
 }
+
+/* Lessons */
+.learn-link { margin-top: 3px; font-size: 12px; }
+.lesson h2 { font-size: 13px; font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase; color: var(--muted); margin: 22px 0 8px; }
+.lesson h2:first-child { margin-top: 0; }
+.lesson p { max-width: 68ch; margin-bottom: 8px; }
+.lesson .prompt { margin-bottom: 8px; }
+.lesson-steps { margin: 0 0 10px; padding-left: 22px; display: grid; gap: 4px; max-width: 68ch; }
+.lesson-answer { padding: 10px 12px; border-radius: 5px; background: var(--select); }
+.lesson a { color: var(--navy); text-underline-offset: 3px; }
+.lesson-status { align-self: flex-start; white-space: nowrap; }
+.lesson-status.stub { background: var(--tray); color: var(--muted); }
+.lesson-status.draft { background: var(--amber-bg); color: var(--amber); }
+.lesson-status.reviewed { background: var(--good-bg); color: var(--good); }
+.review-learn { margin-top: 12px; font-size: 13px; }
+.review-learn .link { font-size: 13px; }

@@ -21,7 +21,7 @@ node scripts/validate-questions.mjs
 node scripts/test-calculator.mjs
 ```
 
-It loads every question file and calculation generator and checks that each question has 4 unique options, 3 wrong-answer notes, an explanation and a unique ID, and that any `trap` tags are valid. It also checks that no option contains `NaN`/`Infinity`/`undefined`, that every file is loaded by `index.html`, and that every category exists in `app.js`. Each generator is run 50 times. It prints `✓ …` and exits with code 0 when everything passes, or lists each problem and exits with code 1. GitHub runs it before every deploy, and a failure stops the deploy. `test-calculator.mjs` does the same for the built-in calculator and for reading typed answers: it checks about 90 cases against hand-worked answers.
+It loads every question file, calculation generator and lesson, and checks that each question has 4 unique options, 3 wrong-answer notes, an explanation and a unique ID, and that any `trap` tags are valid. It also checks that no option contains `NaN`/`Infinity`/`undefined`, that every file is loaded by `index.html`, and that every category exists in `app.js`. Each generator is run 50 times. It prints `✓ …` and exits with code 0 when everything passes, or lists each problem and exits with code 1. GitHub runs it before every deploy, and a failure stops the deploy. `test-calculator.mjs` does the same for the built-in calculator and for reading typed answers: it checks about 90 cases against hand-worked answers.
 
 ## How it's published
 
@@ -43,6 +43,7 @@ The version stamp makes browsers fetch matching files after each deploy. Any new
 | `site/js/generators.js`, `generators-hl.js` | Calculation questions that get new numbers every round |
 | `site/js/calculator.js` | The built-in calculator: a small expression parser (no `eval`) and its panel |
 | `site/js/app.js` | Everything else: categories, round building, quiz, results, saving |
+| `site/lessons/*.js` | One lesson (Learn page) per category |
 | `scripts/validate-questions.mjs` | The question check |
 | `scripts/test-calculator.mjs` | The calculator check |
 
@@ -70,6 +71,25 @@ New-format written questions are added with `Bank.addFormat(categoryId, [...])` 
 **One definition, two formats.** `Bank.calc(categoryId, spec)` defines a calculation once: `make()` (the random inputs), `solve(inputs)`, `wrongs(inputs)` (known wrong answers), `ask`, `why`, `fmt`, `unit`, `tolerance`, `dp`, `prompt`. It registers the multiple-choice version in `Bank.gens` (identical to a hand-written `Bank.gen`) and a typed-answer version in `Bank.numeric`, so the maths is never written twice. WACC and CAGR use it so far.
 
 **Reading typed answers** (`Typed` in `bank.js`). Spaces, thousands commas, fractions (`3/4`), `%`, a trailing `x`, and `US$`/`$`/`m`/`bn`/`k` are understood. A bare number is read both ways where that's ambiguous, and the closer reading counts: on a % question `12.5`, `12.5%`, `12.5 %` and `0.125` all mean 12.5%; on a US$m question `1.2`, `1.2m` and `1,200,000` all mean US$1.2m. A wrong answer within 10% of the right one is logged as `cause: "calculation-slip"`, anything further off as `"concept-gap"`; matching a known wrong answer also logs its mistake type.
+
+## Lessons (Learn pages)
+
+Each category has a lesson in `site/lessons/<category>.js`, reachable from "Learn" on the home page and from "Review the method" on every wrong or unanswered question in the results (Back returns to that question). The template:
+
+```js
+Lessons.add("val", {
+  status: "draft",            // "stub" (not written yet) → "draft" → "reviewed"
+  method: ["A paragraph explaining the method.", "Another paragraph."],
+  example: {
+    question: "A worked problem.",
+    working: ["Step 1 …", "Step 2 …"],
+    answer: "The result, with a line on what it means."
+  },
+  source: { text: "Author, Title (edition), chapter", url: "https://…" } // url optional
+});
+```
+
+Text is shown as plain paragraphs and numbered steps (no formatting code needed). The question check requires a lesson for every category; a stub may be empty, but a draft or reviewed lesson must have a method, an example and a source, and a source link must start with `http://` or `https://`. All 18 lessons start as stubs.
 
 ## Saved data
 

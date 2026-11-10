@@ -9,6 +9,8 @@
 //    `answer`, a `tolerance` ≥ 0, an optional `unit`, optional known `wrongs`) or "order" (an `answer` list of 3–8
 //    unique steps) or "grid" (2–4 unique `columns`, 3–8 `rows` of { text, answer: column number, note }).
 //    Fields belonging to one type (`tolerance`, `unit`, `o`, `rows`, ...) are rejected on the others.
+//  - every category has a lesson (site/lessons/<category>.js, loaded by index.html); a "stub" may be empty, but a
+//    "draft" or "reviewed" lesson needs a method, a worked example (question, working, answer) and a source
 // Exits with code 1 on any violation.
 import { readFileSync, readdirSync } from "node:fs";
 import { join, dirname } from "node:path";
@@ -28,7 +30,8 @@ const load = rel => vm.runInContext(readFileSync(join(SITE, rel), "utf8"), ctx, 
 
 const questionFiles = readdirSync(join(SITE, "questions")).filter(f => f.endsWith(".js")).sort().map(f => `questions/${f}`);
 const generatorFiles = readdirSync(join(SITE, "js")).filter(f => /^generators.*\.js$/.test(f)).sort().map(f => `js/${f}`);
-for (const f of ["js/bank.js", ...questionFiles, ...generatorFiles]) {
+const lessonFiles = readdirSync(join(SITE, "lessons")).filter(f => f.endsWith(".js")).sort().map(f => `lessons/${f}`);
+for (const f of ["js/bank.js", ...questionFiles, ...generatorFiles, ...lessonFiles]) {
   try { load(f); } catch (e) { fail(`${f}: failed to load: ${e.message}`); }
 }
 const { Bank } = ctx;
@@ -37,10 +40,13 @@ if (!Bank) { console.error("Bank was not defined by js/bank.js"); process.exit(1
 
 // Every question/generator file must actually be loaded by the page.
 const html = readFileSync(join(SITE, "index.html"), "utf8");
-for (const f of [...questionFiles, ...generatorFiles]) if (!new RegExp(`src="${f.replace(/\./g, "\\.")}(\\?[^"]*)?"`).test(html)) fail(`index.html doesn't load ${f}`);
+for (const f of [...questionFiles, ...generatorFiles, ...lessonFiles]) if (!new RegExp(`src="${f.replace(/\./g, "\\.")}(\\?[^"]*)?"`).test(html)) fail(`index.html doesn't load ${f}`);
 
 // Every category in the bank must exist in app.js.
-const appCats = new Set([...readFileSync(join(SITE, "js/app.js"), "utf8").matchAll(/\{ id: "([a-z]+)"/g)].map(m => m[1]));
+const appSrc = readFileSync(join(SITE, "js/app.js"), "utf8");
+const appCats = new Set([...appSrc.matchAll(/\{ id: "([a-z]+)"/g)].map(m => m[1]));
+const groupIds = new Set([...(/const GROUPS = \[(.*?)\];/.exec(appSrc)?.[1] || "").matchAll(/id: "([a-z]+)"/g)].map(m => m[1]));
+const categoryIds = [...appCats].filter(id => !groupIds.has(id)); // the 18 categories (GROUPS also use "id:")
 for (const cat of new Set([...Object.keys(Bank.written), ...Object.keys(Bank.gens), ...Object.keys(Bank.numeric || {}), ...Object.keys(Bank.formats || {})])) if (!appCats.has(cat)) fail(`category "${cat}" isn't defined in app.js CATEGORIES`);
 
 const UNITS = ["%", "x", "US$m"];
@@ -163,9 +169,36 @@ for (const [cat, list] of Object.entries(Bank.numeric || {})) {
   });
 }
 
+// Lessons: one per category; complete once marked draft or reviewed.
+const Lessons = ctx.Lessons?.all || {};
+const text = v => typeof v === "string" && v.trim().length > 0;
+for (const cat of categoryIds) if (!Lessons[cat]) fail(`category "${cat}" has no lesson (add site/lessons/${cat}.js)`);
+for (const [cat, l] of Object.entries(Lessons)) {
+  const where = `lesson ${cat}`;
+  if (!categoryIds.includes(cat)) fail(`${where}: no such category in app.js`);
+  if (!["stub", "draft", "reviewed"].includes(l.status)) { fail(`${where}: status must be "stub", "draft" or "reviewed", got ${JSON.stringify(l.status)}`); continue; }
+  if (l.method != null && (!Array.isArray(l.method) || l.method.some(p => !text(p)))) fail(`${where}: method must be a list of non-empty paragraphs`);
+  if (l.example != null) {
+    const e = l.example;
+    if (!text(e.question) || !text(e.answer)) fail(`${where}: example needs a question and an answer`);
+    if (e.working != null && (!Array.isArray(e.working) || e.working.some(w => !text(w)))) fail(`${where}: example working must be a list of non-empty steps`);
+  }
+  if (l.source != null) {
+    if (!text(l.source.text)) fail(`${where}: source needs text`);
+    if (l.source.url != null && l.source.url !== "" && !/^https?:\/\//i.test(l.source.url)) fail(`${where}: source url must start with http:// or https://`);
+  }
+  if (l.status !== "stub") {
+    if (!Array.isArray(l.method) || !l.method.length) fail(`${where}: a ${l.status} lesson needs a method`);
+    if (!l.example) fail(`${where}: a ${l.status} lesson needs a worked example`);
+    if (!l.source) fail(`${where}: a ${l.status} lesson needs a source`);
+  }
+}
+const lessonCounts = Object.values(Lessons).reduce((m, l) => (m[l.status] = (m[l.status] || 0) + 1, m), {});
+
 if (errors.length) {
   console.error(`✗ ${errors.length} problem(s) in the question bank:`);
   for (const e of errors) console.error("  - " + e);
   process.exit(1);
 }
 console.log(`✓ ${written - formatQuestions} written questions, ${formatQuestions} new-format questions, ${gens} generators and ${typed} typed-answer generators (${RUNS} samples each) passed.`);
+console.log(`✓ ${Object.keys(Lessons).length} lessons for ${categoryIds.length} categories (${Object.entries(lessonCounts).map(([k, v]) => `${v} ${k}`).join(", ")}).`);

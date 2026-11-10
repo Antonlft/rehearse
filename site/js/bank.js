@@ -91,6 +91,13 @@ window.TRAPS = {
   "concept": "misunderstanding the concept itself"
 };
 
+/* Lessons: one per category, in site/lessons/<category>.js. See README for the template.
+   status: "stub" (not written yet) → "draft" → "reviewed". Draft and reviewed lessons need a method, an example and a source. */
+window.Lessons = {
+  all: {},
+  add(cat, lesson) { this.all[cat] = lesson; }
+};
+
 window.R = {
   int: (a, b) => a + Math.floor(Math.random() * (b - a + 1)),
   step(a, b, s) {
