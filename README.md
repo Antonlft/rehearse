@@ -21,7 +21,7 @@ node scripts/validate-questions.mjs
 node scripts/test-calculator.mjs
 ```
 
-It loads every question file and calculation generator and checks that each question has 4 unique options, 3 wrong-answer notes, an explanation and a unique ID, and that any `trap` tags are valid. It also checks that no option contains `NaN`/`Infinity`/`undefined`, that every file is loaded by `index.html`, and that every category exists in `app.js`. Each generator is run 50 times. It prints `✓ …` and exits with code 0 when everything passes, or lists each problem and exits with code 1. GitHub runs it before every deploy, and a failure stops the deploy. `test-calculator.mjs` does the same for the built-in calculator: it checks about 60 expressions against hand-worked answers.
+It loads every question file and calculation generator and checks that each question has 4 unique options, 3 wrong-answer notes, an explanation and a unique ID, and that any `trap` tags are valid. It also checks that no option contains `NaN`/`Infinity`/`undefined`, that every file is loaded by `index.html`, and that every category exists in `app.js`. Each generator is run 50 times. It prints `✓ …` and exits with code 0 when everything passes, or lists each problem and exits with code 1. GitHub runs it before every deploy, and a failure stops the deploy. `test-calculator.mjs` does the same for the built-in calculator and for reading typed answers: it checks about 90 cases against hand-worked answers.
 
 ## How it's published
 
@@ -63,6 +63,12 @@ Written questions are added with `Bank.add(categoryId, [...])`:
 
 Calculation questions are added with `Bank.gen(categoryId, () => ({ q, o, why, x, lv }))` and have no `id`.
 
+**Question types.** A question with no `type` is multiple choice. A **typed-answer** question has `type: "numeric"`, a number `answer`, a `tolerance` (how far a typed answer may be off, in the same units), an optional `unit` (`%`, `x` or `US$m`), `dp` (decimal places for showing the answer) and optional `wrongs`: known wrong answers `{ value, note, trap }`. Fields from one type are rejected on another by the question check.
+
+**One definition, two formats.** `Bank.calc(categoryId, spec)` defines a calculation once: `make()` (the random inputs), `solve(inputs)`, `wrongs(inputs)` (known wrong answers), `ask`, `why`, `fmt`, `unit`, `tolerance`, `dp`, `prompt`. It registers the multiple-choice version in `Bank.gens` (identical to a hand-written `Bank.gen`) and a typed-answer version in `Bank.numeric`, so the maths is never written twice. WACC and CAGR use it so far.
+
+**Reading typed answers** (`Typed` in `bank.js`). Spaces, thousands commas, fractions (`3/4`), `%`, a trailing `x`, and `US$`/`$`/`m`/`bn`/`k` are understood. A bare number is read both ways where that's ambiguous, and the closer reading counts: on a % question `12.5`, `12.5%`, `12.5 %` and `0.125` all mean 12.5%; on a US$m question `1.2`, `1.2m` and `1,200,000` all mean US$1.2m. A wrong answer within 10% of the right one is logged as `cause: "calculation-slip"`, anything further off as `"concept-gap"`; matching a known wrong answer also logs its mistake type.
+
 ## Saved data
 
 All progress lives in one `localStorage` key, `rehearse.v3` (the light/dark choice is kept separately under `rehearse.theme`). In `app.js` it's loaded into the global `db` object and written back with `persist()`.
@@ -89,6 +95,7 @@ All progress lives in one `localStorage` key, `rehearse.v3` (the light/dark choi
 | `srsExcluded` | Category IDs where spaced repetition is off |
 | `roundModes` | `{ test, practice }`: `"timed"` (default) or `"learning"`, remembered separately for the main test and one-category practice |
 | `calcPrefs` | Calculator overrides, e.g. `{ "test-timed": true }`. Defaults: off in the timed main test, on everywhere else |
+| `newFormats` | Include new question formats (typed answers) in rounds. Default `false`, defaulted with `??=`. Off means rounds are exactly as before |
 
 **Answer log (`db.log`).** One entry per *answered* question in every submitted round (skipped questions aren't logged):
 
@@ -134,3 +141,4 @@ When it's on for a category, each written-question slot in a round takes a due q
 | 5 | Added `schedule`, `srsEnabled` and `srsExcluded` (spaced repetition) |
 | 6 | Added `roundModes`; Learning rounds, their results and their answer log entries carry `learning: true` |
 | 7 | Added `calcPrefs`; rounds where the calculator was allowed, their results and answer log entries carry `calc: true` |
+| 8 | Added `newFormats`. Typed answers are stored as the text typed in a round's `answers[]` (plus `checked[]` in Learning mode); their log entries gain `type: "numeric"`, `given` (the number read) and `cause` |

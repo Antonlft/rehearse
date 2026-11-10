@@ -1,4 +1,4 @@
-// Checks the built-in calculator's maths against hand-worked answers. No dependencies:
+// Checks the built-in calculator's maths, and how typed answers are read and graded, against hand-worked answers. No dependencies:
 //   node scripts/test-calculator.mjs
 // Exits with code 1 if any case fails. Runs in CI before every deploy.
 import { readFileSync } from "node:fs";
@@ -10,7 +10,9 @@ const file = join(dirname(fileURLToPath(import.meta.url)), "..", "site", "js", "
 const ctx = vm.createContext({ Math, Number, String, Error, console });
 ctx.window = ctx;
 vm.runInContext(readFileSync(file, "utf8"), ctx, { filename: "calculator.js" });
+vm.runInContext(readFileSync(join(dirname(file), "bank.js"), "utf8"), ctx, { filename: "bank.js" });
 const { evaluate, toFraction, format } = ctx.Calc;
+const { Typed } = ctx;
 
 // [expression, expected value]  (worked out by hand)
 const values = [
@@ -66,10 +68,36 @@ for (const src of errors) {
 for (const [v, want] of formats) if (format(v) !== want) fails.push(`format(${v}) = ${format(v)}, expected ${want}`);
 for (const [v, want] of fractions) if (toFraction(v) !== want) fails.push(`toFraction(${v}) = ${toFraction(v)}, expected ${want}`);
 
-const total = values.length + errors.length + formats.length + fractions.length;
+// Typed answers. A WACC-style question: right answer 12.5%, tolerance 0.05 points, one known wrong answer (no tax shield).
+const pctQ = { type: "numeric", unit: "%", answer: 12.5, tolerance: 0.05, wrongs: [{ value: 14.2, note: "No tax shield.", trap: "missed-step" }] };
+const moneyQ = { type: "numeric", unit: "US$m", answer: 1.2, tolerance: 0.01 };
+const multQ = { type: "numeric", unit: "x", answer: 2.5, tolerance: 0.05 };
+// [question, typed text, should it be right?]
+const typedRight = [
+  [pctQ, "12.5%", true], [pctQ, "0.125", true], [pctQ, "12.5 %", true], [pctQ, "12.5", true], [pctQ, " 12.50 ", true],
+  [pctQ, "1/8", true], [pctQ, "12.54", true], [pctQ, "12.6", false], [pctQ, "125%", false], [pctQ, "abc", false], [pctQ, "", false],
+  [moneyQ, "1.2", true], [moneyQ, "1.2m", true], [moneyQ, "US$1.2m", true], [moneyQ, "$1,200,000", true], [moneyQ, "1200k", true],
+  [moneyQ, "0.0012bn", true], [moneyQ, "12", false],
+  [multQ, "2.5x", true], [multQ, "2.5", true], [multQ, "5/2", true], [multQ, "−2.5", false],
+];
+for (const [q, raw, want] of typedRight) {
+  const g = Typed.grade(q, raw);
+  if (g.ok !== want) fails.push(`typed ${JSON.stringify(raw)} on a ${q.unit} question (answer ${q.answer}) graded ${g.ok ? "right" : "wrong"}, expected ${want ? "right" : "wrong"}`);
+}
+// Why a typed answer was wrong: [typed text, expected cause, expected mistake type]
+const typedCauses = [["12.0%", "calculation-slip", null], ["13.5", "calculation-slip", null], ["14.2%", "concept-gap", "missed-step"], ["25%", "concept-gap", null]];
+for (const [raw, cause, trap] of typedCauses) {
+  const g = Typed.grade(pctQ, raw);
+  if (g.cause !== cause || g.trap !== trap) fails.push(`typed ${raw}: cause ${g.cause}/${g.trap}, expected ${cause}/${trap}`);
+}
+const shows = [[12.5, "%", undefined, "12.5%"], [1.2, "US$m", undefined, "US$1.2m"], [2.5, "x", undefined, "2.5x"], [-3, "%", undefined, "−3%"],
+  [6.993811140994688, "%", 1, "7.0%"], [8.4249, "%", 2, "8.42%"]];
+for (const [v, u, dp, want] of shows) if (Typed.show(v, u, dp) !== want) fails.push(`Typed.show(${v}, ${u}, ${dp}) = ${Typed.show(v, u, dp)}, expected ${want}`);
+
+const total = values.length + errors.length + formats.length + fractions.length + typedRight.length + typedCauses.length + shows.length;
 if (fails.length) {
-  console.error(`✗ ${fails.length} of ${total} calculator checks failed:`);
+  console.error(`✗ ${fails.length} of ${total} calculator and typed-answer checks failed:`);
   for (const f of fails) console.error("  - " + f);
   process.exit(1);
 }
-console.log(`✓ ${total} calculator checks passed.`);
+console.log(`✓ ${total} calculator and typed-answer checks passed.`);

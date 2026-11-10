@@ -115,16 +115,26 @@ Bank.gen("cf", () => {
   };
 });
 
-Bank.gen("cf", () => {
-  const E = R.step(400, 2000, 50), D = Math.round(E * R.step(0.2, 0.8, 0.05) / 50) * 50, V = E + D;
-  const ke = R.step(0.08, 0.13, 0.005), kd = R.step(0.04, 0.07, 0.0025), t = R.pick([0.2, 0.25, 0.3]);
-  const w = E / V * ke + D / V * kd * (1 - t);
-  return { trap: ["missed-step", "inverted", "wrong-measure"],
-    q: `A company has equity worth ${R.m(E)} and debt worth ${R.m(D)} at market value. Its cost of equity is ${R.pct(ke)}, its pre-tax cost of debt is ${R.pct(kd, 2)} and its tax rate is ${R.pct(t, 0)}. What is its WACC?`,
-    o: [R.pct(w, 2), R.pct(E / V * ke + D / V * kd, 2), R.pct(D / V * ke + E / V * kd * (1 - t), 2), R.pct((ke + kd * (1 - t)) / 2, 2)],
-    why: `WACC = E/V × Ke + D/V × Kd × (1 − t) = ${R.pct(E / V)} × ${R.pct(ke)} + ${R.pct(D / V)} × ${R.pct(kd, 2)} × ${(1 - t).toFixed(2)} = ${R.pct(w, 2)}.`,
-    x: ["That leaves out the tax shield. Interest is tax-deductible, so debt is costed after tax.", "The weights are swapped: equity's weight belongs with the cost of equity.", "That's a simple average. WACC weights each cost by its share of total capital."]
-  };
+// WACC: one definition gives both the multiple-choice question and the typed-answer version (see Bank.calc).
+Bank.calc("cf", {
+  unit: "%", tolerance: 0.05, dp: 2, prompt: "as a percentage, to 2 decimal places",
+  make() {
+    const E = R.step(400, 2000, 50), D = Math.round(E * R.step(0.2, 0.8, 0.05) / 50) * 50;
+    const ke = R.step(0.08, 0.13, 0.005), kd = R.step(0.04, 0.07, 0.0025), t = R.pick([0.2, 0.25, 0.3]);
+    return { E, D, V: E + D, ke, kd, t };
+  },
+  solve: ({ E, D, V, ke, kd, t }) => E / V * ke + D / V * kd * (1 - t),
+  wrongs: ({ E, D, V, ke, kd, t }) => [
+    { value: E / V * ke + D / V * kd, trap: "missed-step", note: "That leaves out the tax shield. Interest is tax-deductible, so debt is costed after tax." },
+    { value: D / V * ke + E / V * kd * (1 - t), trap: "inverted", note: "The weights are swapped: equity's weight belongs with the cost of equity." },
+    { value: (ke + kd * (1 - t)) / 2, trap: "wrong-measure", note: "That's a simple average. WACC weights each cost by its share of total capital." }
+  ],
+  ask: ({ E, D, ke, kd, t }) => `A company has equity worth ${R.m(E)} and debt worth ${R.m(D)} at market value. Its cost of equity is ${R.pct(ke)}, its pre-tax cost of debt is ${R.pct(kd, 2)} and its tax rate is ${R.pct(t, 0)}. What is its WACC?`,
+  why(i) {
+    const { E, D, V, ke, kd, t } = i;
+    return `WACC = E/V × Ke + D/V × Kd × (1 − t) = ${R.pct(E / V)} × ${R.pct(ke)} + ${R.pct(D / V)} × ${R.pct(kd, 2)} × ${(1 - t).toFixed(2)} = ${R.pct(this.solve(i), 2)}.`;
+  },
+  fmt: v => R.pct(v, 2)
 });
 
 Bank.gen("acc", () => {
@@ -159,15 +169,23 @@ Bank.gen("econ", () => {
   };
 });
 
-Bank.gen("maths", () => {
-  const n = R.pick([3, 4, 5, 6, 7, 8]), s = R.step(100, 600, 10), y0 = R.int(2012, 2018);
-  const e = Math.round(s * (1 + R.step(0.04, 0.18, 0.01)) ** n / 5) * 5, c = (e / s) ** (1 / n) - 1;
-  return { trap: ["wrong-measure", "units", "units"],
-    q: `Revenue grew from ${R.m(s)} in ${y0} to ${R.m(e)} in ${y0 + n}. What is the compound annual growth rate (CAGR)?`,
-    o: [R.pct(c), R.pct((e / s - 1) / n), R.pct(e / s - 1), R.pct((e / s) ** (1 / (n + 1)) - 1)],
-    why: `${y0} to ${y0 + n} is ${n} years of growth. CAGR = (${e} ÷ ${s})^(1/${n}) − 1 = ${R.pct(c)}.`,
-    x: ["That's the simple average growth rate. It ignores compounding and overstates the CAGR.", "That's total growth over the whole period, not an annual rate.", `That uses ${n + 1} periods by counting calendar years instead of the gaps between them.`]
-  };
+// CAGR: one definition gives both the multiple-choice question and the typed-answer version (see Bank.calc).
+Bank.calc("maths", {
+  unit: "%", tolerance: 0.1, dp: 1, prompt: "as a percentage, to 1 decimal place",
+  make() {
+    const n = R.pick([3, 4, 5, 6, 7, 8]), s = R.step(100, 600, 10), y0 = R.int(2012, 2018);
+    const e = Math.round(s * (1 + R.step(0.04, 0.18, 0.01)) ** n / 5) * 5;
+    return { n, s, y0, e };
+  },
+  solve: ({ n, s, e }) => (e / s) ** (1 / n) - 1,
+  wrongs: ({ n, s, e }) => [
+    { value: (e / s - 1) / n, trap: "wrong-measure", note: "That's the simple average growth rate. It ignores compounding and overstates the CAGR." },
+    { value: e / s - 1, trap: "units", note: "That's total growth over the whole period, not an annual rate." },
+    { value: (e / s) ** (1 / (n + 1)) - 1, trap: "units", note: `That uses ${n + 1} periods by counting calendar years instead of the gaps between them.` }
+  ],
+  ask: ({ n, s, y0, e }) => `Revenue grew from ${R.m(s)} in ${y0} to ${R.m(e)} in ${y0 + n}. What is the compound annual growth rate (CAGR)?`,
+  why(i) { const { n, s, y0, e } = i; return `${y0} to ${y0 + n} is ${n} years of growth. CAGR = (${e} ÷ ${s})^(1/${n}) − 1 = ${R.pct(this.solve(i))}.`; },
+  fmt: v => R.pct(v)
 });
 
 Bank.gen("maths", () => {

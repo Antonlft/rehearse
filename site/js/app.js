@@ -97,7 +97,12 @@ db.calcPrefs ||= {};
 const calcKey = (entry, learning) => `${entry}-${learning ? "learning" : "timed"}`;
 const calcPref = (entry, learning) => db.calcPrefs[calcKey(entry, learning)] ?? (calcKey(entry, learning) !== "test-timed");
 const calcFor = mode => mode === RETRY ? calcPref("practice", false) : calcPref(mode === "mixed" ? "test" : "practice", learningFor(mode));
-const SCHEMA_VERSION = 7;
+//   8: added db.newFormats; typed-answer questions keep their typed text in attempts' answers[] and a checked[] list in
+//      Learning mode; their answer log entries gain given (the number read) and cause ("calculation-slip" | "concept-gap")
+// New question formats (typed answers; ordering later) are opt-in, so rounds stay exactly as before unless switched on.
+db.newFormats ??= false; // ??= like srsEnabled: "off" is stored as false
+const NUMERIC_SHARE = 0.5; // with new formats on, half the calculation slots in categories that have them are typed
+const SCHEMA_VERSION = 8;
 db.schemaVersion = Math.max(db.schemaVersion || 1, SCHEMA_VERSION);
 let saveWarned = false;
 const persist = () => {
@@ -148,6 +153,27 @@ function materialize(src, cat) {
   return item;
 }
 
+// A typed-answer calculation question, ready for a round.
+function typedItem(fn, cat) {
+  let g;
+  for (let k = 0; k < 30; k++) { g = fn(); if (Number.isFinite(g.answer)) break; }
+  return { cat, id: null, gen: true, ...g };
+}
+
+/* Grading: the one place that decides whether an answer is right, for every question format. */
+const isBlank = a => a === null || a === undefined || a === "";
+function grade(it, ans) {
+  if (isBlank(ans)) return { ok: false, blank: true };
+  if (it.type === "numeric") return Typed.grade(it, ans); // { ok, value, cause, trap, note, unreadable }
+  return { ok: ans === it.a };
+}
+// Learning mode reveals an answer once it's final: multiple choice on click, typed answers on "Check".
+const isRevealed = (at, i) => !!at.learning && !isBlank(at.answers[i]) && (at.items[i].type !== "numeric" || !!(at.checked && at.checked[i]));
+const causeText = g => g.unreadable ? "Your answer couldn't be read as a number."
+  : g.note ? g.note
+  : g.cause === "calculation-slip" ? "You were close (within 10%), so this looks like a calculation slip."
+  : "That's quite far off, so check the method.";
+
 const MISSED_WEIGHT = 3;
 const missedLast = q => db.qStats[q.id]?.last === "wrong";
 // Weighted random pick: questions whose last answer was wrong or skipped are MISSED_WEIGHT times as likely.
@@ -184,6 +210,14 @@ function draw(cat, used) {
       if (!db.seen[cat].includes(q.id)) db.seen[cat].push(q.id);
       return materialize(q, cat);
     }
+  }
+  // New formats: some calculation slots become typed-answer questions. Skipped entirely when switched off.
+  // Each typed calculation is used at most once per round, so a category with only one doesn't repeat it.
+  const freshTyped = db.newFormats ? (Bank.numeric[cat] || []).filter(fn => !used.has(fn)) : [];
+  if (freshTyped.length && Math.random() < NUMERIC_SHARE) {
+    const tf = pick(freshTyped);
+    used.add(tf);
+    return typedItem(tf, cat);
   }
   const fresh = g.filter(fn => !used.has(fn));
   const fn = pick(fresh.length ? fresh : g);
@@ -237,6 +271,7 @@ function newRound(mode) {
 // and run through materialize() again, so the options come back in a new order.
 function startRetry(items) {
   const go_ = () => beginAttempt(RETRY, shuffle(items).map(it => {
+    if (it.type === "numeric") return { ...it }; // typed answers have no options to reshuffle
     const wrong = [0, 1, 2, 3].filter(j => j !== it.a);
     return materialize({ id: it.id, gen: it.gen, lv: it.lv, q: it.q, why: it.why,
       o: [it.o[it.a], ...wrong.map(j => it.o[j])], x: wrong.map(j => it.x[j]),
@@ -317,6 +352,7 @@ function renderSetup() {
         </div>
       </fieldset>
       <label class="calc-allow" for="calcAllow"><input type="checkbox" id="calcAllow" ${calcPref("test", db.roundModes.test === "learning") ? "checked" : ""}><span>Allow the calculator in this round <small>Off by default in the timed test, on in Learning mode</small></span></label>
+      <label class="calc-allow" for="formatsAllow"><input type="checkbox" id="formatsAllow" ${db.newFormats ? "checked" : ""}><span>Include new question formats <small>Some calculations ask you to type the answer instead of choosing it. Applies to all rounds.</small></span></label>
       <div class="setup-foot">
         <p id="setupSummary" aria-live="polite"></p>
         <div class="actions"><button class="btn" id="cancelBtn" type="button">Cancel</button><button class="btn primary lg" id="goBtn" type="button">Start round</button></div>
@@ -340,6 +376,7 @@ function renderSetup() {
     calcAllow.checked = calcPref("test", r.value === "learning"); // each mode has its own calculator setting
     sync();
   });
+  document.getElementById("formatsAllow").onchange = e => { db.newFormats = e.target.checked; persist(); };
   calcAllow.onchange = () => { db.calcPrefs[calcKey("test", db.roundModes.test === "learning")] = calcAllow.checked; persist(); sync(); };
   document.getElementById("allBtn").onclick = () => { boxes.forEach(b => b.checked = true); sync(); };
   document.getElementById("noneBtn").onclick = () => { boxes.forEach(b => b.checked = false); sync(); };
@@ -358,7 +395,7 @@ function renderSetup() {
 /* Home */
 function actionButtons(mode, label, primary) {
   if (db.attempts[mode]) {
-    const at = db.attempts[mode], done = at.answers.filter(a => a !== null).length;
+    const at = db.attempts[mode], done = at.answers.filter(a => !isBlank(a)).length;
     return `<button class="btn primary" type="button" data-resume="${mode}">Resume · ${done}/${at.items.length}</button>
             <button class="btn" type="button" data-new="${mode}">New round</button>`;
   }
@@ -410,7 +447,7 @@ function renderHome() {
         ${hist.length ? `<span>Last <b>${hist[hist.length - 1].pct}%</b></span><button class="link" type="button" data-review="mixed">Review last round</button>` : ""}
       </div>` : ""}
     </section>
-    ${db.attempts[RETRY] ? (() => { const at = db.attempts[RETRY], done = at.answers.filter(a => a !== null).length; return `
+    ${db.attempts[RETRY] ? (() => { const at = db.attempts[RETRY], done = at.answers.filter(a => !isBlank(a)).length; return `
     <section class="card test-card retry-card">
       <div class="test-row">
         <div><p class="label">In progress</p><h2>Mistakes practice</h2><ul class="facts"><li><b>${at.items.length}</b> questions you got wrong or skipped</li></ul></div>
@@ -426,6 +463,7 @@ function renderHome() {
           ${[["timed", "Timed"], ["learning", "Learning"]].map(([v, l]) => `<button type="button" data-practice-mode="${v}" aria-pressed="${db.roundModes.practice === v}">${l}</button>`).join("")}
         </div>
         <label class="switch small"><input type="checkbox" role="switch" id="practiceCalc" ${calcPref("practice", db.roundModes.practice === "learning") ? "checked" : ""}><span>Calculator</span></label>
+        <label class="switch small" title="Some calculations ask you to type the answer"><input type="checkbox" role="switch" id="practiceFormats" ${db.newFormats ? "checked" : ""}><span>Typed answers</span></label>
       </div>
     </div>
     <div class="cat-table">
@@ -438,6 +476,7 @@ function renderHome() {
   app.querySelectorAll("[data-setup]").forEach(b => b.onclick = () => go({ name: "setup" }));
   app.querySelectorAll("[data-backup]").forEach(b => b.onclick = exportBackup);
   app.querySelectorAll("[data-report]").forEach(b => b.onclick = () => go({ name: "report", back: { name: "home" } }));
+  document.getElementById("practiceFormats").onchange = e => { db.newFormats = e.target.checked; persist(); renderHome(); document.getElementById("practiceFormats").focus(); };
   const practiceCalc = document.getElementById("practiceCalc");
   practiceCalc.onchange = () => {
     db.calcPrefs[calcKey("practice", db.roundModes.practice === "learning")] = practiceCalc.checked;
@@ -507,9 +546,9 @@ function renderQuiz() {
   if (!view.live) startVisit(at);
   view.live = true;
   const info = modeInfo(view.mode), n = at.items.length, it = at.items[at.cur];
-  const answered = at.answers.filter(a => a !== null).length;
+  const answered = at.answers.filter(a => !isBlank(a)).length;
   // Learning mode: once a question is answered it locks and shows the answer and explanation.
-  const ans = at.answers[at.cur], revealed = !!at.learning && ans !== null;
+  const ans = at.answers[at.cur], revealed = isRevealed(at, at.cur);
   const optClass = i => !revealed ? "" : i === it.a ? " reveal-right" : i === ans ? " reveal-wrong" : "";
 
   meta.innerHTML = `<span>${answered} of ${n} answered</span><button class="link" id="exitBtn" type="button">Save &amp; exit</button>`;
@@ -522,6 +561,7 @@ function renderQuiz() {
     <section class="card question" aria-labelledby="qtext">
       <p class="label">${esc(catById(it.cat).name)} · Question ${at.cur + 1} of ${n}${it.lv ? ` · ${LEVELS[it.lv]}` : ""}</p>
       <p class="prompt" id="qtext">${esc(it.q)}</p>
+      ${it.type === "numeric" ? typedArea(at, it, ans, revealed) : `
       <div class="options" role="radiogroup" aria-labelledby="qtext">
         ${it.o.map((o, i) => `<button type="button" class="opt${optClass(i)}" role="radio" aria-checked="${ans === i}" data-opt="${i}" ${revealed ? "disabled" : ""}><span class="radio"></span><span>${esc(o)}</span></button>`).join("")}
       </div>
@@ -529,7 +569,7 @@ function renderQuiz() {
         <p class="feedback-title">${ans === it.a ? "Correct" : `Not quite. The answer is: ${esc(it.o[it.a])}`}</p>
         ${ans !== it.a && it.x[ans] ? `<p>${esc(it.x[ans])}</p>` : ""}
         <p>${esc(it.why)}</p>
-      </div>` : ""}
+      </div>` : ""}`}
       <div class="actions">
         <button class="btn" id="prevBtn" type="button" ${at.cur === 0 ? "disabled" : ""}>Previous</button>
         <button class="btn primary" id="nextBtn" type="button" ${at.cur === n - 1 ? "disabled" : ""}>Next</button>
@@ -544,8 +584,8 @@ function renderQuiz() {
       <p>Go to a question · filled = answered · amber ring = marked for review · outline = current</p>
       <div class="qgrid">
         ${at.items.map((_, i) => {
-          const cls = ["q", at.answers[i] !== null && "answered", at.marked[i] && "flag", i === at.cur && "current"].filter(Boolean).join(" ");
-          return `<button type="button" class="${cls}" data-go="${i}" aria-label="Question ${i + 1}${at.answers[i] !== null ? ", answered" : ""}${at.marked[i] ? ", marked" : ""}" ${i === at.cur ? 'aria-current="step"' : ""}>${i + 1}</button>`;
+          const cls = ["q", !isBlank(at.answers[i]) && "answered", at.marked[i] && "flag", i === at.cur && "current"].filter(Boolean).join(" ");
+          return `<button type="button" class="${cls}" data-go="${i}" aria-label="Question ${i + 1}${!isBlank(at.answers[i]) ? ", answered" : ""}${at.marked[i] ? ", marked" : ""}" ${i === at.cur ? 'aria-current="step"' : ""}>${i + 1}</button>`;
         }).join("")}
       </div>
     </section>`;
@@ -555,6 +595,7 @@ function renderQuiz() {
   document.getElementById("prevBtn").onclick = () => move(at.cur - 1);
   document.getElementById("nextBtn").onclick = () => move(at.cur + 1);
   document.getElementById("markBtn").onclick = toggleMark;
+  if (it.type === "numeric" && !revealed) wireTyped(at, it);
   // Calculator: only in rounds that allow it (decided when the round started).
   const calcBtn = document.getElementById("calcBtn");
   if (calcBtn) calcBtn.onclick = () => { CalcUI.toggle(); calcBtn.setAttribute("aria-expanded", CalcUI.isOpen()); };
@@ -574,8 +615,59 @@ function renderQuiz() {
   tick = setInterval(update, 500);
 }
 
+/* Typed-answer questions on the quiz screen */
+function typedHint(it, raw) {
+  if (isBlank(raw)) return it.unit === "%" ? "12.5, 12.5% and 0.125 all count as 12.5%." : it.unit === "US$m" ? "In US$ millions: 1.2, 1.2m and 1,200,000 all count as US$1.2m." : "Type a number.";
+  return Typed.readings(raw, it.unit).length ? "" : "That doesn't read as a number yet.";
+}
+function typedArea(at, it, ans, revealed) {
+  const g = revealed ? grade(it, ans) : null, right = Typed.show(it.answer, it.unit, it.dp);
+  return `<div class="typed">
+      <div class="typed-row">
+        <input id="typedInput" class="typed-input" type="text" inputmode="decimal" autocomplete="off" autocorrect="off" spellcheck="false"
+          aria-labelledby="qtext" aria-describedby="typedHint" value="${esc(ans ?? "")}" ${revealed ? "disabled" : ""}>
+        ${it.unit ? `<span class="typed-unit" aria-hidden="true">${esc(it.unit)}</span>` : ""}
+        ${at.learning && !revealed ? `<button class="btn primary" id="checkBtn" type="button">Check</button>` : ""}
+      </div>
+      <p class="typed-hint" id="typedHint" aria-live="polite">${revealed ? "" : esc(typedHint(it, ans))}</p>
+    </div>
+    ${revealed ? `<div class="feedback ${g.ok ? "ok" : "no"}" id="feedback" role="status" tabindex="-1">
+      <p class="feedback-title">${g.ok ? `Correct: ${esc(right)}` : `Not quite. The answer is ${esc(right)}${g.value != null ? `; you gave ${esc(Typed.show(g.value, it.unit))}` : ""}.`}</p>
+      ${g.ok ? "" : `<p>${esc(causeText(g))}</p>`}
+      <p>${esc(it.why)}</p>
+    </div>` : ""}`;
+}
+function wireTyped(at, it) {
+  const input = document.getElementById("typedInput"), hint = document.getElementById("typedHint");
+  const i = at.cur;
+  const save = () => {
+    ensureTiming(at);
+    at.answers[i] = input.value.trim() === "" ? null : input.value;
+    at.answeredAt[i] = at.answers[i] === null ? null : Date.now();
+    persist();
+    hint.textContent = typedHint(it, input.value);
+    // Update the answered count and navigator without redrawing (which would lose the cursor).
+    const n = at.answers.filter(a => !isBlank(a)).length, span = meta.querySelector("span");
+    if (span) span.textContent = `${n} of ${at.items.length} answered`;
+    document.querySelector(`[data-go="${i}"]`)?.classList.toggle("answered", !isBlank(at.answers[i]));
+  };
+  const check = () => {
+    if (isBlank(at.answers[i])) { hint.textContent = "Type an answer first."; input.focus(); return; }
+    (at.checked ||= [])[i] = true; persist(); renderQuiz();
+    document.getElementById("feedback")?.focus({ preventScroll: true });
+  };
+  input.oninput = save;
+  input.onkeydown = e => {
+    if (e.key !== "Enter") return;
+    e.preventDefault();
+    if (at.learning) check(); else move(at.cur + 1);
+  };
+  const btn = document.getElementById("checkBtn");
+  if (btn) btn.onclick = check;
+}
+
 function renderExpired(at) {
-  const info = modeInfo(view.mode), done = at.answers.filter(a => a !== null).length;
+  const info = modeInfo(view.mode), done = at.answers.filter(a => !isBlank(a)).length;
   at.viewStart = null; at.viewIdx = null; // a visit left open while away isn't time spent on the question
   meta.innerHTML = `<button class="link" id="exitBtn" type="button">All assessments</button>`;
   app.innerHTML = `
@@ -596,6 +688,7 @@ function renderExpired(at) {
 
 function choose(i) {
   const at = db.attempts[view.mode];
+  if (at.items[at.cur].type === "numeric") return; // typed questions are answered in their text box, not with 1–4
   if (at.learning && at.answers[at.cur] !== null) return; // Learning mode: the answer locks once it's revealed
   ensureTiming(at); at.answers[at.cur] = i; at.answeredAt[at.cur] = Date.now(); persist(); renderQuiz();
   if (at.learning) document.getElementById("feedback")?.focus({ preventScroll: true });
@@ -605,7 +698,7 @@ function toggleMark() { const at = db.attempts[view.mode]; at.marked[at.cur] = !
 
 function askSubmit() {
   const at = db.attempts[view.mode];
-  const blank = at.answers.filter(a => a === null).length, flagged = at.marked.filter(Boolean).length;
+  const blank = at.answers.filter(a => isBlank(a)).length, flagged = at.marked.filter(Boolean).length;
   const bits = [];
   if (blank) bits.push(`${blank} unanswered question${blank > 1 ? "s" : ""}`);
   if (flagged) bits.push(`${flagged} marked for review`);
@@ -620,14 +713,15 @@ function submit(timedOut) {
   const pressureFrom = at.deadline - (at.deadline - at.start) * 0.1;
   let correct = 0;
   at.items.forEach((it, i) => {
-    const ok = at.answers[i] === it.a;
+    const g = grade(it, at.answers[i]), ok = g.ok;
     if (ok) correct++;
     // Answer log: answered questions only (skips aren't logged). Calculation questions are logged with qid null.
     // i = position in the round, so later notes (e.g. "I read it wrong") can point at this entry via (at, i).
-    if (at.answers[i] !== null) {
+    if (!isBlank(at.answers[i])) {
       const entry = { qid: it.id || null, cat: it.cat, ok, at: submittedAt, usedMs: at.spentMs[i], answeredAt: at.answeredAt[i], mode, i,
         timePressure: at.answeredAt[i] != null && at.answeredAt[i] >= pressureFrom };
-      const trap = !ok && it.trap ? it.trap[at.answers[i]] : null;
+      const trap = it.type === "numeric" ? g.trap : !ok && it.trap ? it.trap[at.answers[i]] : null;
+      if (it.type === "numeric") { entry.type = "numeric"; entry.given = g.value; if (!ok && g.cause) entry.cause = g.cause; }
       if (trap) entry.trap = trap;
       if (at.learning) entry.learning = true;
       if (at.calc) entry.calc = true;
@@ -638,7 +732,7 @@ function submit(timedOut) {
     // Per-question record (written questions only; calculations get new numbers each time). Retries count here.
     if (it.id) { const qs = (db.qStats[it.id] ||= { n: 0, wrong: 0, last: null }); qs.n++; if (!ok) qs.wrong++; qs.last = ok ? "ok" : "wrong"; }
     // Spaced repetition schedule follows the answer log (answered written questions), whether or not it's switched on.
-    if (it.id && at.answers[i] !== null) scheduleAnswer(db.schedule, it.id, ok, submittedAt);
+    if (it.id && !isBlank(at.answers[i])) scheduleAnswer(db.schedule, it.id, ok, submittedAt);
   });
   const pct = Math.round(correct / at.items.length * 100);
   const result = { at: submittedAt, mode, items: at.items, answers: at.answers, marked: at.marked, correct, total: at.items.length, pct,
@@ -669,7 +763,7 @@ function diagnose() {
   const answers = db.log.filter(isAnswer).slice(-REPORT_WINDOW);
   const cats = {}, cat = id => (cats[id] ||= { n: 0, ok: 0, tpN: 0, tpOk: 0, tpWrong: 0, misread: 0 });
   const all = { n: 0, ok: 0 }, tp = { n: 0, ok: 0 }, calm = { n: 0, ok: 0 }, traps = {};
-  let tagged = 0, misreads = 0;
+  let tagged = 0, misreads = 0, slips = 0, gaps = 0;
   for (const e of answers) {
     // Mistakes practice re-asks known misses, so it's left out of accuracy (as in category accuracy on the home page).
     if (e.mode !== RETRY) {
@@ -679,6 +773,8 @@ function diagnose() {
       else if (e.timePressure === false) { calm.n++; if (e.ok) calm.ok++; }
     }
     if (!e.ok && e.trap) { tagged++; traps[e.trap] = (traps[e.trap] || 0) + 1; }
+    if (!e.ok && e.cause === "calculation-slip") slips++; // typed answers: close but outside the tolerance
+    if (!e.ok && e.cause === "concept-gap") gaps++;       // typed answers: far off
     if (!e.ok && e.i != null && notes.get(noteKey(e.at, e.i)) === "misread") { misreads++; cat(e.cat).misread++; }
   }
   const name = id => catById(id)?.name || id;
@@ -699,11 +795,16 @@ function diagnose() {
     const most = Object.entries(cats).filter(([, c]) => c.misread >= 2).sort((a, b) => b[1].misread - a[1].misread)[0];
     found.push([misreads * 5, `You've marked ${misreads} wrong answers as misread.${most ? ` Most were in ${name(most[0])}.` : ""} Take a second to reread the question before the options.`]);
   }
+  const typedWrong = slips + gaps;
+  if (typedWrong >= 4 && slips / typedWrong >= 0.6)
+    found.push([slips / typedWrong * 40, `${slips} of your ${typedWrong} wrong typed answers were close (within 10%): mostly calculation slips, so double-check the final arithmetic.`]);
+  else if (typedWrong >= 4 && gaps / typedWrong >= 0.6)
+    found.push([gaps / typedWrong * 40, `${gaps} of your ${typedWrong} wrong typed answers were far off, which points to the method rather than the arithmetic.`]);
   const insights = found.sort((a, b) => b[0] - a[0]).slice(0, 3).map(f => f[1]);
   const empty = answers.length < 10
     ? `Patterns appear once you've answered a few more questions (${answers.length} logged so far).`
     : `No clear weak spots in your last ${answers.length} answers. This updates after every round.`;
-  return { insights, empty, cats, traps, tagged, answers: answers.length, tp, calm };
+  return { insights, empty, cats, traps, tagged, answers: answers.length, tp, calm, slips, gaps };
 }
 
 function insightsBox(withLink) {
@@ -733,6 +834,11 @@ function renderReport() {
       <thead><tr><th scope="col">Mistake</th><th scope="col">Times</th></tr></thead>
       <tbody>${traps.map(([k, v]) => `<tr><th scope="row">${esc(TRAPS[k] ? TRAPS[k][0].toUpperCase() + TRAPS[k].slice(1) : k)}</th><td>${v}</td></tr>`).join("")}</tbody>
     </table></div>` : `<div class="card"><p class="muted">Mistake types will show here once the questions' wrong answers are tagged with the kind of slip they represent.</p></div>`}
+    ${d.slips + d.gaps ? `<div class="section-head"><h2>Typed answers</h2><p>Wrong typed answers, by how far off they were</p></div>
+    <div class="table-wrap"><table class="report-table">
+      <thead><tr><th scope="col">Kind of miss</th><th scope="col">Times</th></tr></thead>
+      <tbody><tr><th scope="row">Close (within 10%): calculation slip</th><td>${d.slips}</td></tr><tr><th scope="row">Further off: concept gap</th><td>${d.gaps}</td></tr></tbody>
+    </table></div>` : ""}
     <div class="result-actions"><button class="btn lg" id="backBtn" type="button">Back</button></div>`;
   document.getElementById("backLink").onclick = document.getElementById("backBtn").onclick = () => go(back);
 }
@@ -740,7 +846,7 @@ function renderReport() {
 /* Results */
 function renderResults() {
   const r = view.result, info = modeInfo(view.mode);
-  const status = i => r.answers[i] === null ? "skip" : r.answers[i] === r.items[i].a ? "ok" : "no";
+  const status = i => isBlank(r.answers[i]) ? "skip" : grade(r.items[i], r.answers[i]).ok ? "ok" : "no";
   const cats = {};
   r.items.forEach((it, i) => { const c = (cats[it.cat] ||= { n: 0, ok: 0 }); c.n++; if (status(i) === "ok") c.ok++; });
   const wrongN = r.items.filter((_, i) => status(i) === "no").length;
@@ -814,18 +920,22 @@ function renderResults() {
 
 // misread: true/false when the "I read it wrong" button applies (logged wrong answer), null otherwise.
 function reviewItem(it, i, ans, marked, misread) {
-  const st = ans === null ? ["skip", "Unanswered"] : ans === it.a ? ["ok", "Correct"] : ["no", "Incorrect"];
+  const g = grade(it, ans);
+  const st = isBlank(ans) ? ["skip", "Unanswered"] : g.ok ? ["ok", "Correct"] : ["no", "Incorrect"];
   const misreadBtn = st[0] === "no" && misread !== null
     ? `<button type="button" class="misread" data-misread="${i}" aria-pressed="${misread}">${misread ? "Marked as misread · undo" : "I read the question wrong"}</button>` : "";
   return `
     <article class="card item" id="r-${i}">
       <div class="item-top">
-        <p class="label">${esc(catById(it.cat).name)} · Question ${i + 1}${it.lv ? ` · ${LEVELS[it.lv]}` : ""}${it.gen ? " · Calculation" : ""}</p>
+        <p class="label">${esc(catById(it.cat).name)} · Question ${i + 1}${it.lv ? ` · ${LEVELS[it.lv]}` : ""}${it.gen ? " · Calculation" : ""}${it.type === "numeric" ? " · Typed answer" : ""}</p>
         <span class="pills">${misreadBtn}<span class="pill ${st[0]}">${st[1]}</span>${marked ? `<span class="pill flagged">Marked</span>` : ""}</span>
       </div>
       <p class="prompt">${esc(it.q)}</p>
       <ul class="ans">
-        ${it.o.map((o, j) => {
+        ${it.type === "numeric" ? `
+          <li class="right"><span class="mark" aria-hidden="true">✓</span><div><span>${esc(Typed.show(it.answer, it.unit, it.dp))}${g.ok ? ` <em>(your answer: ${esc(ans)})</em>` : ""}</span><span class="note">${esc(it.why)}</span></div></li>
+          ${!isBlank(ans) && !g.ok ? `<li class="wrong"><span class="mark" aria-hidden="true">✗</span><div><span>${esc(ans)} <em>(your answer${g.value != null ? `, read as ${esc(Typed.show(g.value, it.unit))}` : ""})</em></span><span class="note">${esc(causeText(g))}</span></div></li>` : ""}`
+        : it.o.map((o, j) => {
           const cls = j === it.a ? "right" : j === ans ? "wrong" : "plain";
           const note = j === it.a ? it.why : it.x[j];
           return `<li class="${cls}"><span class="mark" aria-hidden="true">${j === it.a ? "✓" : j === ans ? "✗" : ""}</span><div><span>${esc(o)}${j === ans ? " <em>(your answer)</em>" : ""}</span>${note ? `<span class="note">${esc(note)}</span>` : ""}</div></li>`;
@@ -863,6 +973,7 @@ function closeModal() {
 
 document.addEventListener("keydown", e => {
   if (e.target.closest?.(".calc")) return; // typing or tapping in the calculator never triggers quiz shortcuts
+  if (e.target.matches?.("input[type=text], textarea")) return; // nor does typing a typed answer
   if (e.key === "Escape") return closeModal();
   if (view.name !== "quiz" || modalRoot.innerHTML || e.metaKey || e.ctrlKey || e.altKey) return;
   const at = db.attempts[view.mode];
