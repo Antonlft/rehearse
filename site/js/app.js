@@ -269,8 +269,9 @@ function allocate(cats, n) {
 function buildRound(mode, cats) {
   const used = new Set();
   const items = allocate(cats, modeInfo(mode).n).map(cat => draw(cat, used));
-  // Single-category practice runs from basic to advanced when the category has levels.
-  if (mode !== "mixed" && items.every(it => it.lv)) items.sort((a, b) => a.lv - b.lv);
+  // Single-category practice runs from basic to advanced when the category has levels. Questions without a level
+  // (e.g. some calculation questions) sort as intermediate; the sort is stable, so fully levelled rounds are unchanged.
+  if (mode !== "mixed" && items.some(it => it.lv)) items.sort((a, b) => (a.lv || 2) - (b.lv || 2));
   return items;
 }
 
