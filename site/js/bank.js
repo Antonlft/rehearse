@@ -13,6 +13,7 @@ window.TRAPS = {
   "wrong-measure": "using a related but wrong measure or formula",
   "sign": "getting a sign or direction wrong",
   "units": "a units or scale slip",
+  "double-count": "counting something twice",
   "concept": "misunderstanding the concept itself"
 };
 

@@ -56,7 +56,7 @@ Written questions are added with `Bank.add(categoryId, [...])`:
 
 - `id` is permanent. Saved stats and the answer log refer to it, so never rename, renumber or reuse an ID.
 - `lv` (1 basic, 2 intermediate, 3 advanced) is optional. Today only the six hospitality & living categories have it.
-- `trap` is optional: a list of 3 mistake types, one per wrong option in the same order as `x` (or `null` for an untagged option). The allowed types are `TRAPS` in `site/js/bank.js`: `inverted`, `missed-step`, `wrong-measure`, `sign`, `units`, `concept`. When you pick a tagged wrong option, its type is logged and counted in the weak spots report.
+- `trap` is optional: a list of 3 mistake types, one per wrong option in the same order as `x` (or `null` for an untagged option). The allowed types are `TRAPS` in `site/js/bank.js`: `inverted`, `missed-step`, `wrong-measure`, `sign`, `units`, `double-count`, `concept`. By agreement, pure theory mistakes are left untagged, so `concept` is currently unused. When you pick a tagged wrong option, its type is logged and counted in the weak spots report.
 
 Calculation questions are added with `Bank.gen(categoryId, () => ({ q, o, why, x, lv }))` and have no `id`.
 
