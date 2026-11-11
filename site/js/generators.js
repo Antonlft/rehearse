@@ -457,3 +457,81 @@ Bank.calc("mna", {
   why(i) { const { P, B, W, t } = i; return `Deferred tax liability on the write-up = ${W} × ${R.pct(t, 0)} = ${R.m(W * t, 1)}. Net identifiable assets at fair value = ${B} + ${W} − ${R.num(W * t, 1)} = ${R.m(B + W * (1 - t), 1)}. Goodwill = ${P} − ${R.num(B + W * (1 - t), 1)} = ${R.m(this.solve(i), 1)}.`; },
   fmt: v => R.m(v, 1)
 });
+
+// PE fund: carried interest from a whole-fund waterfall (8% compounded preferred return, 20% carry), with or without a full catch-up.
+// Uses the same redraw guard as the M&A calculations (mnaFar).
+Bank.calc("lbo", {
+  lv: 3, unit: "US$m", tolerance: 0.05, dp: 1, prompt: "in US$m, to 1 decimal place",
+  make() {
+    for (;;) {
+      const C = R.step(100, 1000, 10), n = R.int(3, 7), D = Math.round(C * R.step(1.3, 2.6, 0.05)), cu = Math.random() < 0.5;
+      const P = D - C, pref = C * (1.08 ** n - 1);
+      if (P < 1.3 * pref) continue; // enough profit for the catch-up to complete
+      const i = { C, n, D, cu, P, pref };
+      if (mnaFar(this.solve(i), this.wrongs(i).map(w => w.value), 0.12, 0.5)) return i;
+    }
+  },
+  solve: ({ cu, P, pref }) => cu ? 0.2 * P : 0.2 * (P - pref),
+  wrongs: ({ cu, P, pref, D }) => cu ? [
+    { value: 0.2 * (P - pref), trap: "missed-step", note: "That leaves out the catch-up. With a full catch-up, the GP ends up with 20% of all the profit, not just the profit above the preferred return." },
+    { value: 0.2 * D, trap: "wrong-measure", note: "Carry is a share of profit, not of total proceeds: the LPs' capital comes back first." },
+    { value: 0.8 * P, trap: "inverted", note: "That's the LPs' share of the profit, not the GP's." }
+  ] : [
+    { value: 0.2 * P, trap: "concept", note: "That assumes a full catch-up. Without one, the GP shares only in the profit above the preferred return." },
+    { value: 0.2 * D, trap: "wrong-measure", note: "Carry is a share of profit, not of total proceeds: the LPs' capital comes back first." },
+    { value: 0.8 * (P - pref), trap: "inverted", note: "That's the LPs' share of the profit above the preferred return, not the GP's." }
+  ],
+  ask: ({ C, n, D, cu }) => `A private equity fund invested ${R.m(C)} of LP capital at the start and returned ${R.m(D)} in total at the end of year ${n}. LPs get an 8% preferred return, compounded annually; carried interest is 20%, ${cu ? "with a full (100%) GP catch-up" : "with no GP catch-up"}, under a whole-fund waterfall. How much carried interest does the GP receive?`,
+  why(i) {
+    const { C, n, D, cu, P, pref } = i;
+    const base = `Profit = ${R.num(D)} − ${R.num(C)} = ${R.m(P)}. Preferred return = ${R.num(C)} × (1.08^${n} − 1) = ${R.m(pref, 1)}. `;
+    return base + (cu ? `There's enough profit for the catch-up to complete, so the GP ends with 20% of all profit: 20% × ${R.num(P)} = ${R.m(this.solve(i), 1)}.`
+      : `With no catch-up, the GP gets 20% of the profit above the preferred return: 20% × (${R.num(P)} − ${R.num(pref, 1)}) = ${R.m(this.solve(i), 1)}.`);
+  },
+  fmt: v => R.m(v, 1)
+});
+
+// PE fund: TVPI from paid-in capital, distributions and the value of remaining investments.
+Bank.calc("lbo", {
+  lv: 2, unit: "x", tolerance: 0.01, dp: 2, prompt: "as a multiple, to 2 decimal places",
+  make() {
+    for (;;) {
+      const PI = R.step(50, 500, 10), K = PI + R.step(20, 300, 10), Dst = R.step(0, Math.round(PI * 1.5 / 5) * 5, 5), N = R.step(Math.round(PI * 0.2 / 5) * 5, Math.round(PI * 1.5 / 5) * 5, 5);
+      const i = { PI, K, Dst, N };
+      if (mnaFar(this.solve(i), this.wrongs(i).map(w => w.value), 0.12, 0.05)) return i;
+    }
+  },
+  solve: ({ PI, Dst, N }) => (Dst + N) / PI,
+  wrongs: ({ PI, K, Dst, N }) => [
+    { value: Dst / PI, trap: "wrong-measure", note: "That's DPI: it counts only cash returned. TVPI adds the value of the investments still held." },
+    { value: (Dst + N) / K, trap: "wrong-measure", note: "TVPI divides by capital paid in (called), not by total commitments." },
+    { value: N / PI, trap: "missed-step", note: "That leaves out the distributions already paid. TVPI counts both cash returned and value still held." }
+  ],
+  ask: ({ PI, K, Dst, N }) => `A fund has ${R.m(K)} of commitments, of which ${R.m(PI)} has been called. It has distributed ${R.m(Dst)} to LPs, and its remaining investments are valued at ${R.m(N)}. What is its TVPI?`,
+  why(i) { const { PI, Dst, N } = i; return `TVPI = (distributions + remaining value) ÷ paid-in capital = (${Dst} + ${N}) ÷ ${PI} = ${R.x(this.solve(i), 2)}. DPI, the cash-only part, is ${Dst} ÷ ${PI} = ${R.x(Dst / PI, 2)}.`; },
+  fmt: v => R.x(v, 2)
+});
+
+// LBO: maximum debt under a leverage cap and an interest-cover test.
+Bank.calc("lbo", {
+  lv: 2, unit: "US$m", tolerance: 0.05, dp: 1, prompt: "in US$m, to 1 decimal place",
+  make() {
+    for (;;) {
+      const E = R.step(40, 400, 10), lev = R.step(4, 6.5, 0.5), cov = R.pick([1.5, 2, 2.5, 3]), r = R.step(0.06, 0.12, 0.005);
+      const i = { E, lev, cov, r };
+      if (mnaFar(this.solve(i), this.wrongs(i).map(w => w.value), 0.12, 1)) return i;
+    }
+  },
+  solve: ({ E, lev, cov, r }) => Math.min(lev * E, E / cov / r),
+  wrongs: ({ E, lev, cov, r }) => [
+    { value: Math.max(lev * E, E / cov / r), trap: "wrong-measure", note: "That's the looser of the two limits. Lenders apply both tests, so the tighter one binds." },
+    { value: E / cov, trap: "units", note: "That's the most interest the company can carry each year, not the debt it supports." },
+    { value: (lev * E + E / cov / r) / 2, trap: "wrong-measure", note: "Lenders apply the tighter of the two limits, not an average of them." }
+  ],
+  ask: ({ E, lev, cov, r }) => `Lenders will lend up to ${R.x(lev)} EBITDA, provided EBITDA covers interest at least ${R.num(cov, 1)} times. The company has EBITDA of ${R.m(E)} and the debt costs ${R.pct(r, 1)} a year. What is the most it can borrow?`,
+  why(i) {
+    const { E, lev, cov, r } = i, A = lev * E, B = E / cov / r;
+    return `Leverage limit = ${R.x(lev)} × ${E} = ${R.m(A, 1)}. Coverage limit: interest can be at most ${E} ÷ ${R.num(cov, 1)} = ${R.m(E / cov, 1)}, which at ${R.pct(r, 1)} supports ${R.m(B, 1)}. The tighter limit binds: ${R.m(Math.min(A, B), 1)} (the ${A <= B ? "leverage" : "coverage"} test).`;
+  },
+  fmt: v => R.m(v, 1)
+});
