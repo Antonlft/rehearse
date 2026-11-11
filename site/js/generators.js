@@ -776,3 +776,26 @@ Bank.calc("cm", {
   why(i) { const { I, p, X } = i; return `Take the preference: ${R.m(I)}. Or convert: ${R.pct(p, 0)} × ${R.num(X)} = ${R.m(p * X, 1)}. The VC takes the larger, ${R.m(this.solve(i), 1)}. Converting pays more once the sale price exceeds ${R.num(I)} ÷ ${R.pct(p, 0)} = ${R.m(I / p, 1)}.`; },
   fmt: v => R.m(v, 1)
 });
+
+// Restructuring: value available to creditors in a Chapter 7 liquidation analysis. Same redraw guard (mnaFar).
+Bank.calc("rx", {
+  lv: 2, unit: "US$m", tolerance: 0.05, dp: 1, prompt: "in US$m, to 1 decimal place",
+  make() {
+    for (;;) {
+      const C = R.step(5, 50, 5), AR = R.step(20, 200, 5), INV = R.step(20, 200, 5), PPE = R.step(50, 400, 10), W = R.step(5, 40, 5);
+      const r1 = R.pick([0.7, 0.75, 0.8]), r2 = R.pick([0.4, 0.5, 0.6]), r3 = R.pick([0.3, 0.4, 0.5]);
+      const i = { C, AR, INV, PPE, W, r1, r2, r3 };
+      if (this.solve(i) <= 5) continue;
+      if (mnaFar(this.solve(i), this.wrongs(i).map(w => w.value), 0.12, 0.5)) return i;
+    }
+  },
+  solve: ({ C, AR, INV, PPE, W, r1, r2, r3 }) => C + AR * r1 + INV * r2 + PPE * r3 - W,
+  wrongs: ({ C, AR, INV, PPE, W, r1, r2, r3 }) => [
+    { value: C + AR + INV + PPE - W, trap: "missed-step", note: "That uses book values. In a liquidation, assets sell for much less, so each is cut to its expected recovery." },
+    { value: C + AR * r1 + INV * r2 + PPE * r3, trap: "missed-step", note: "That leaves out the wind-down and trustee costs, which are paid before creditors." },
+    { value: C + (AR + INV + PPE) * r1 - W, trap: "wrong-measure", note: "That uses the receivables recovery rate for everything. Inventory and PP&E usually recover much less." }
+  ],
+  ask: ({ C, AR, INV, PPE, W, r1, r2, r3 }) => `In a Chapter 7 liquidation analysis, a company has cash of ${R.m(C)}, receivables of ${R.m(AR)} (expected to recover ${R.pct(r1, 0)}), inventory of ${R.m(INV)} (recovering ${R.pct(r2, 0)}) and PP&E of ${R.m(PPE)} (recovering ${R.pct(r3, 0)}). Wind-down and trustee costs are ${R.m(W)}. How much is left for creditors?`,
+  why(i) { const { C, AR, INV, PPE, W, r1, r2, r3 } = i; return `Recoveries: cash ${R.num(C)} + receivables ${R.num(AR * r1, 1)} + inventory ${R.num(INV * r2, 1)} + PP&E ${R.num(PPE * r3, 1)} = ${R.m(C + AR * r1 + INV * r2 + PPE * r3, 1)}. Less costs of ${R.num(W)} = ${R.m(this.solve(i), 1)}, which is then shared out by priority.`; },
+  fmt: v => R.m(v, 1)
+});
