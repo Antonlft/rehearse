@@ -389,3 +389,71 @@ Bank.gen("bt", () => {
     x: ["Averaging the two times ignores that they work at the same time.", "Adding the times is how long it takes if they work one after the other.", "Halving the faster time assumes both work as fast as the quicker analyst."]
   };
 });
+
+// M&A: target shareholders' stake after an all-stock deal.
+// Inputs are redrawn until every known wrong answer is clearly apart from the right one (more than 12% and 0.5 points away),
+// so a typed conceptual mistake is never mistaken for a calculation slip, and the wrong answers stay apart from each other.
+const mnaFar = (a, ws, rel, abs) => ws.every(w => Math.abs(w - a) > Math.max(rel * Math.abs(a), abs)) && ws.every((w, i) => ws.every((u, j) => i === j || Math.abs(w - u) > abs));
+Bank.calc("mna", {
+  lv: 2, unit: "%", tolerance: 0.1, dp: 1, prompt: "as a percentage, to 1 decimal place",
+  make() {
+    for (;;) {
+      const SA = R.step(100, 800, 10), PA = R.step(20, 120, 1), ST = R.step(20, 300, 5), PT = R.step(10, 80, 0.5);
+      const N = ST * PT / PA, a = N / (SA + N);
+      if (a < 0.08 || a > 0.7) continue;
+      if (mnaFar(a, [N / SA, SA / (SA + N), ST / (SA + ST)], 0.12, 0.005)) return { SA, PA, ST, PT, N };
+    }
+  },
+  solve: ({ SA, N }) => N / (SA + N),
+  wrongs: ({ SA, ST, N }) => [
+    { value: N / SA, trap: "missed-step", note: "That divides by the buyer's existing shares only. The new shares are part of the combined total too." },
+    { value: SA / (SA + N), trap: "inverted", note: "That's the buyer's existing shareholders' stake, not the target's." },
+    { value: ST / (SA + ST), trap: "wrong-measure", note: "That uses the target's old share count. Its holders receive new buyer shares, worth the purchase price at the buyer's share price." }
+  ],
+  ask: ({ SA, PA, ST, PT }) => `A buyer has ${SA}m shares trading at US$${PA}. It agrees to buy a target with ${ST}m shares for US$${R.num(PT, 2)} per share, paid entirely in new buyer shares. What share of the combined company will the target's shareholders own?`,
+  why(i) { const { SA, PA, ST, PT, N } = i; return `Purchase price = ${ST}m × US$${R.num(PT, 2)} = ${R.m(ST * PT, 1)}. New buyer shares = ${R.num(ST * PT, 1)} ÷ ${PA} = ${R.num(N, 2)}m. Target holders own ${R.num(N, 2)} ÷ (${SA} + ${R.num(N, 2)}) = ${R.pct(this.solve(i))}.`; },
+  fmt: v => R.pct(v)
+});
+
+// M&A: exchange ratio implied by the undisturbed price, the premium and the buyer's share price.
+Bank.calc("mna", {
+  lv: 2, unit: "x", tolerance: 0.002, dp: 3, prompt: "as buyer shares per target share, to 3 decimal places",
+  make() {
+    for (;;) {
+      const PT = R.step(10, 60, 0.5), p = R.step(0.2, 0.45, 0.05), PA = R.step(20, 120, 1), er = PT * (1 + p) / PA;
+      if (er < 0.15 || er > 3) continue;
+      if (mnaFar(er, [PT / PA, PA / (PT * (1 + p)), PT * p / PA], 0.12, 0.01)) return { PT, p, PA };
+    }
+  },
+  solve: ({ PT, p, PA }) => PT * (1 + p) / PA,
+  wrongs: ({ PT, p, PA }) => [
+    { value: PT / PA, trap: "missed-step", note: "That leaves out the premium. The offer is the undisturbed price plus the premium." },
+    { value: PA / (PT * (1 + p)), trap: "inverted", note: "That's flipped: it's target shares per buyer share. Divide the offer price by the buyer's share price." },
+    { value: PT * p / PA, trap: "wrong-measure", note: "That converts only the premium into buyer shares, not the whole offer price." }
+  ],
+  ask: ({ PT, p, PA }) => `A target's undisturbed share price is US$${R.num(PT, 2)}. A buyer whose shares trade at US$${PA} offers a ${R.pct(p, 0)} premium, paid entirely in its own shares. What exchange ratio does that imply?`,
+  why(i) { const { PT, p, PA } = i; return `Offer price = US$${R.num(PT, 2)} × ${(1 + p).toFixed(2)} = US$${R.num(PT * (1 + p), 2)}. Exchange ratio = ${R.num(PT * (1 + p), 2)} ÷ ${PA} = ${R.x(this.solve(i), 3)}: each target share becomes ${this.solve(i).toFixed(3)} buyer shares.`; },
+  fmt: v => R.x(v, 3)
+});
+
+// M&A: goodwill after the purchase price allocation, including the deferred tax liability on write-ups.
+Bank.calc("mna", {
+  lv: 3, unit: "US$m", tolerance: 0.05, dp: 1, prompt: "in US$m, to 1 decimal place",
+  make() {
+    for (;;) {
+      const P = R.step(300, 1500, 10), B = R.step(100, Math.round(P * 0.6 / 10) * 10, 10), W = R.step(20, Math.round(P * 0.3 / 10) * 10, 10), t = R.pick([0.21, 0.25, 0.3]);
+      const g = P - B - W * (1 - t);
+      if (P - B - W <= 0) continue;
+      if (mnaFar(g, [P - B, P - B - W, P - B - W * (1 + t)], 0.12, 0.5)) return { P, B, W, t };
+    }
+  },
+  solve: ({ P, B, W, t }) => P - B - W * (1 - t),
+  wrongs: ({ P, B, W, t }) => [
+    { value: P - B, trap: "missed-step", note: "That compares the price with book value only. Identifiable assets are first written up to fair value." },
+    { value: P - B - W, trap: "missed-step", note: "That leaves out the deferred tax liability on the write-up, which reduces the net assets acquired and so adds to goodwill." },
+    { value: P - B - W * (1 + t), trap: "sign", note: "The deferred tax on the write-up is a liability: it reduces net assets, so it increases goodwill rather than reducing it." }
+  ],
+  ask: ({ P, B, W, t }) => `A buyer pays ${R.m(P)} for 100% of a target with book net assets of ${R.m(B)}. In the purchase price allocation it writes up identifiable assets by ${R.m(W)}; their tax base doesn't change, and the tax rate is ${R.pct(t, 0)}. How much goodwill does it recognise?`,
+  why(i) { const { P, B, W, t } = i; return `Deferred tax liability on the write-up = ${W} × ${R.pct(t, 0)} = ${R.m(W * t, 1)}. Net identifiable assets at fair value = ${B} + ${W} − ${R.num(W * t, 1)} = ${R.m(B + W * (1 - t), 1)}. Goodwill = ${P} − ${R.num(B + W * (1 - t), 1)} = ${R.m(this.solve(i), 1)}.`; },
+  fmt: v => R.m(v, 1)
+});
