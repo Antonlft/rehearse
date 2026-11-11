@@ -1176,7 +1176,7 @@ Bank.case("hk", {
     const N = R.step(100, 600, 10), o = R.step(0.6, 0.85, 0.05), A = R.step(120, 450, 5), rs = R.pick([0.55, 0.6, 0.65, 0.7]);
     const gm = R.step(0.3, 0.45, 0.01), c = R.step(0.06, 0.09, 0.005);
     const RP = +(o * A).toFixed(2), RR = +(N * RP * 365 / 1e6).toFixed(2), TR = +(RR / rs).toFixed(2), GOP = +(TR * gm).toFixed(2);
-    const GPPAR = GOP * 1e6 / (N * 365), NOI = +(GOP - 0.07 * TR).toFixed(2), V = NOI * 1e6 / c / N;
+    const GPPAR = GOP * 1e6 / (N * 365), NOI = +(GOP - 0.07 * TR).toFixed(2), V = Math.round(NOI * 1e6 / c / N / 1000) * 1000; // value per key, to the nearest US$1,000
     return { N, o, A, rs, gm, c, RP, RR, TR, GOP, GPPAR, NOI, V };
   },
   intro: ({ N, o, A, rs, gm, c }) => `A ${N}-room hotel runs at ${R.pct(o, 0)} occupancy with an average daily rate (ADR) of US$${A}. Rooms make up ${R.pct(rs, 0)} of its total revenue (the rest is food, drinks and other services), and its gross operating profit (GOP) margin is ${R.pct(gm, 0)} of total revenue. The owner pays a base management fee of 3% and sets aside a 4% reserve for furniture, fixtures and equipment (FF&E), both on total revenue. Similar hotels sell at a ${R.pct(c, 1)} cap rate on net operating income (NOI).`,
@@ -1224,7 +1224,7 @@ Bank.case("hk", {
       wrongs: ({ NOI, c, N, GOP }) => [
         { value: NOI * 1e6 / c, trap: "missed-step", note: "That's the whole hotel's value. Divide by the number of rooms for the value per key." },
         { value: GOP * 1e6 / c / N, trap: "wrong-measure", note: "That capitalises GOP. Buyers value the NOI left after fees and the FF&E reserve." }],
-      why: ({ NOI, c, N, V }) => `Value = NOI ÷ cap rate = ${R.num(NOI, 2)} ÷ ${R.pct(c, 1)} = ${R.m(NOI / c, 1)}. Per key = ÷ ${N} = US$${R.num(Math.round(V / 1000) * 1000)} (about).` }
+      why: ({ NOI, c, N, V }) => `Value = NOI ÷ cap rate = ${R.num(NOI, 2)} ÷ ${R.pct(c, 1)} = ${R.m(NOI / c, 1)}. Per key = ÷ ${N} ≈ US$${R.num(V)}.` }
   ]
 });
 
