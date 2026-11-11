@@ -1061,3 +1061,219 @@ Bank.case("lbo", {
       why: ({ M }) => `IRR = ${M.toFixed(2)}^(1/5) − 1 = ${R.pct(M ** 0.2 - 1)}. Rules of thumb over 5 years: 2x ≈ 15%, 2.5x ≈ 20%, 3x ≈ 25%.` }
   ]
 });
+
+// Case study: is a project worth doing? EBIT, free cash flow, present value, NPV and discounted payback.
+Bank.case("cf", {
+  lv: 2,
+  make() {
+    for (;;) {
+      const N = R.pick([5, 8, 10]), D = R.step(2, 20, 1), C = N * D, E = Math.round(D * R.step(1.6, 3, 0.1)), Rv = Math.round(E / R.step(0.3, 0.6, 0.05)), K = Rv - E;
+      const t = R.pick([0.21, 0.25, 0.3]), r = R.pick([0.06, 0.07, 0.08, 0.09, 0.1]);
+      const AF = n => +((1 - (1 + r) ** -n) / r).toFixed(2), afs = Array.from({ length: N }, (_, k) => AF(k + 1));
+      const EBIT = Rv - K - D, F = +(EBIT * (1 - t) + D).toFixed(2), PV = +(F * afs[N - 1]).toFixed(1), NPV = +(PV - C).toFixed(1);
+      if (NPV < 0.08 * C || PV > 1.8 * C) continue;
+      const pb = afs.findIndex(a => F * a >= C) + 1;
+      if (pb < 2) continue;
+      return { N, D, C, E, Rv, K, t, r, afs, EBIT, F, PV, NPV, pb };
+    }
+  },
+  intro: ({ N, C, Rv, K, t, r }) => `A company can build a plant for ${R.m(C)}, paid upfront. It would earn revenue of ${R.m(Rv)} a year with cash operating costs of ${R.m(K)} a year, for ${N} years, with no value at the end. The plant is depreciated straight-line over the ${N} years. The tax rate is ${R.pct(t, 0)} and the company's WACC (weighted average cost of capital) is ${R.pct(r, 0)}. Ignore working capital.`,
+  why: () => "NPV says whether the project adds value; discounted payback says how long the money is at risk. A positive NPV means the project pays back, in today's money, within its life.",
+  steps: [
+    { unit: "US$m", dp: 1, tolerance: 0.1, prompt: "in US$m",
+      ask: () => "What is the plant's yearly EBIT (operating profit)?",
+      solve: i => i.EBIT,
+      wrongs: ({ Rv, K, D }) => [
+        { value: Rv - K, trap: "missed-step", note: "That's EBITDA. Depreciation is an operating cost too, so take it off for EBIT." },
+        { value: Rv - D, trap: "missed-step", note: "That leaves out the cash operating costs." }],
+      why: ({ C, N, D, Rv, K, EBIT }) => `Depreciation = ${R.num(C)} ÷ ${N} = ${R.m(D)} a year. EBIT = ${R.num(Rv)} − ${R.num(K)} − ${R.num(D)} = ${R.m(EBIT)}.` },
+    { unit: "US$m", dp: 2, tolerance: 0.02, prompt: "in US$m, to 2 decimal places",
+      ask: () => "What is the plant's yearly free cash flow?",
+      solve: i => i.F,
+      wrongs: ({ EBIT, t, D }) => [
+        { value: EBIT * (1 - t), trap: "missed-step", note: "That's after-tax operating profit. Depreciation isn't a cash cost, so add it back." },
+        { value: EBIT + D, trap: "missed-step", note: "That leaves out tax. Tax is paid on EBIT: free cash flow = EBIT × (1 − tax rate) + depreciation." }],
+      why: ({ EBIT, t, D, F }) => `Free cash flow = EBIT × (1 − tax rate) + depreciation = ${R.num(EBIT)} × ${(1 - t).toFixed(2)} + ${R.num(D)} = ${R.m(F, 2)}.` },
+    { unit: "US$m", dp: 1, tolerance: 0.1, prompt: "in US$m, to 1 decimal place",
+      ask: ({ N, r, F, afs }) => `Free cash flow is ${R.m(F, 2)} a year for ${N} years. The ${N}-year annuity factor at ${R.pct(r, 0)} is ${afs[N - 1].toFixed(2)} (the present value of US$1 a year for ${N} years). What is the present value of the free cash flows?`,
+      solve: i => i.PV,
+      wrongs: ({ F, N }) => [{ value: F * N, trap: "missed-step", note: "That adds the cash flows without discounting them. Money in later years is worth less today." }],
+      why: ({ F, afs, N, PV }) => `Present value = ${R.num(F, 2)} × ${afs[N - 1].toFixed(2)} = ${R.m(PV, 1)}.` },
+    { unit: "US$m", dp: 1, tolerance: 0.1, prompt: "in US$m, to 1 decimal place",
+      ask: ({ PV, C }) => `The free cash flows are worth ${R.m(PV, 1)} today, and the plant costs ${R.m(C)} upfront. What is the project's NPV (net present value)?`,
+      solve: i => i.NPV,
+      wrongs: ({ PV, F, N, C }) => [
+        { value: PV, trap: "missed-step", note: "That's the present value of the inflows. NPV takes off the upfront cost." },
+        { value: F * N - C, trap: "missed-step", note: "That uses undiscounted cash flows. NPV discounts them first." }],
+      why: ({ PV, C, NPV }) => `NPV = ${R.num(PV, 1)} − ${R.num(C)} = ${R.m(NPV, 1)}. It's positive, so the project earns more than its WACC and adds value.` },
+    { unit: "years", dp: 0, tolerance: 0, prompt: "as a whole number of years",
+      ask: ({ F, C, r, afs }) => `Annuity factors at ${R.pct(r, 0)}: ${afs.map((a, k) => `${k + 1} year${k ? "s" : ""} ${a.toFixed(2)}`).join(" · ")}. With ${R.m(F, 2)} of free cash flow a year and a ${R.m(C)} cost, in which year do the discounted cash flows first cover the cost (the discounted payback)?`,
+      solve: i => i.pb,
+      wrongs: ({ C, F }) => [{ value: Math.ceil(C / F), trap: "missed-step", note: "That's the simple payback, on undiscounted cash flows. Discounting makes it take longer." }],
+      why: ({ F, C, afs, pb }) => `Cumulative discounted cash flow = ${R.num(F, 2)} × the annuity factor. Year ${pb - 1}: ${R.num(F, 2)} × ${afs[pb - 2].toFixed(2)} = ${R.m(F * afs[pb - 2], 1)}, short of ${R.m(C)}. Year ${pb}: ${R.num(F, 2)} × ${afs[pb - 1].toFixed(2)} = ${R.m(F * afs[pb - 1], 1)}, which covers it. Simple payback, without discounting, would be ${R.num(C / F, 1)} years.` }
+  ]
+});
+
+// Case study: accretion/dilution walked through, from EPS before to the synergies needed. Only dilutive deals, so the
+// last step always has an answer.
+Bank.case("mna", {
+  lv: 3,
+  make() {
+    for (;;) {
+      const A = R.step(100, 500, 10), S = R.step(50, 400, 10), P = +(A * R.step(12, 25, 1) / S).toFixed(2);
+      const X = Math.round(S * P * R.step(0.4, 1, 0.05) / 10) * 10, B = +(X / R.step(14, 30, 1)).toFixed(1);
+      const s = R.pick([0.4, 0.5, 0.6]), k = R.step(0.05, 0.09, 0.005), t = R.pick([0.21, 0.25]);
+      const E0 = +(A / S).toFixed(2), I = +((1 - s) * X * k * (1 - t)).toFixed(1), NI = +(A + B - I).toFixed(1), N = +(s * X / P).toFixed(2), E1 = +(NI / (S + N)).toFixed(2);
+      if (E1 > E0 * 0.96) continue;
+      const Syn = (E0 * (S + N) - NI) / (1 - t);
+      if (Syn < 1) continue;
+      return { A, S, P, X, B, s, k, t, E0, I, NI, N, E1, Syn };
+    }
+  },
+  intro: ({ A, S, P, X, B, s, k, t }) => `A buyer earns net income of ${R.m(A)} on ${R.num(S)} million shares, which trade at US$${R.num(P, 2)}. It agrees to buy a target for ${R.m(X)} (equity value); the target earns ${R.m(B, 1)} of net income. It pays ${R.pct(s, 0)} in new shares at its current price and the rest with new debt at ${R.pct(k)} interest; the tax rate is ${R.pct(t, 0)}. Ignore synergies, fees and intangibles until the last step.`,
+  why: () => "The deal costs the buyer after-tax interest and new shares; it buys the target's earnings. When the target's earnings don't cover that cost, EPS falls, and synergies have to close the gap.",
+  steps: [
+    { unit: "US$", dp: 2, tolerance: 0.01, prompt: "in US$ per share, to 2 decimal places",
+      ask: () => "What is the buyer's earnings per share (EPS) before the deal?",
+      solve: i => i.E0,
+      wrongs: ({ P }) => [{ value: P, trap: "wrong-measure", note: "That's the share price. EPS = net income ÷ shares." }],
+      why: ({ A, S, E0 }) => `EPS = ${R.num(A)} ÷ ${R.num(S)} = US$${R.num(E0, 2)}.` },
+    { unit: "US$m", dp: 1, tolerance: 0.1, prompt: "in US$m, to 1 decimal place",
+      ask: () => "How much after-tax interest does the new debt cost each year?",
+      solve: i => i.I,
+      wrongs: ({ s, X, k, t }) => [
+        { value: (1 - s) * X * k, trap: "missed-step", note: "That's before tax. Interest is tax-deductible, so its cost to net income is × (1 − tax rate)." },
+        { value: X * k * (1 - t), trap: "double-count", note: "That charges interest on the whole price, but only the part not paid in shares is borrowed." }],
+      why: ({ s, X, k, t, I }) => `Debt = ${R.pct(1 - s, 0)} × ${R.num(X)} = ${R.m((1 - s) * X)}. After-tax interest = ${R.num((1 - s) * X)} × ${R.pct(k)} × (1 − ${R.pct(t, 0)}) = ${R.m(I, 1)}.` },
+    { unit: "US$m", dp: 1, tolerance: 0.1, prompt: "in US$m, to 1 decimal place",
+      ask: ({ I }) => `The new debt costs ${R.m(I, 1)} a year after tax. What is the combined company's net income?`,
+      solve: i => i.NI,
+      wrongs: ({ A, B, I }) => [
+        { value: A + B, trap: "missed-step", note: "That leaves out the interest on the new debt." },
+        { value: A - I, trap: "missed-step", note: "That leaves out the target's net income, which the buyer now owns." }],
+      why: ({ A, B, I, NI }) => `Combined net income = ${R.num(A)} + ${R.num(B, 1)} − ${R.num(I, 1)} = ${R.m(NI, 1)}.` },
+    { unit: "US$", dp: 2, tolerance: 0.01, prompt: "in US$ per share, to 2 decimal places",
+      ask: ({ NI, N, S, s, X, P }) => `Combined net income is ${R.m(NI, 1)}. The buyer issues ${R.num(N, 2)} million new shares (${R.pct(s, 0)} × ${R.num(X)} ÷ ${R.num(P, 2)}). What is EPS after the deal?`,
+      solve: i => i.NI / (i.S + i.N),
+      wrongs: ({ NI, S, A, B, N }) => [
+        { value: NI / S, trap: "missed-step", note: "That divides by the old share count. The new shares share the earnings too." },
+        { value: (A + B) / (S + N), trap: "missed-step", note: "That uses net income before the interest on the new debt." }],
+      why: ({ NI, S, N, E0, E1 }) => `EPS after = ${R.num(NI, 1)} ÷ (${R.num(S)} + ${R.num(N, 2)}) = US$${R.num(E1, 2)}, against US$${R.num(E0, 2)} before: the deal is dilutive.` },
+    { unit: "US$m", dp: 1, tolerance: 0.15, prompt: "in US$m, to 1 decimal place",
+      ask: ({ E0, NI, S, N, t }) => `EPS was US$${R.num(E0, 2)} before the deal. After it, net income is ${R.m(NI, 1)} on ${R.num(S + N, 2)} million shares. The tax rate is ${R.pct(t, 0)}. What pre-tax synergies would bring EPS back to US$${R.num(E0, 2)}?`,
+      solve: i => i.Syn,
+      wrongs: ({ Syn, t }) => [
+        { value: Syn * (1 - t), trap: "missed-step", note: "That's the after-tax gap. Synergies are taxed, so the pre-tax amount = gap ÷ (1 − tax rate)." },
+        { value: Syn * (1 - t) ** 2, trap: "sign", note: "That takes tax off the gap instead of grossing it up." }],
+      why: ({ E0, NI, S, N, t, Syn }) => `Net income needed = US$${R.num(E0, 2)} × ${R.num(S + N, 2)}m = ${R.m(E0 * (S + N), 1)}. After-tax gap = ${R.num(E0 * (S + N), 1)} − ${R.num(NI, 1)} = ${R.m(E0 * (S + N) - NI, 1)}. Pre-tax synergies = ${R.num(E0 * (S + N) - NI, 1)} ÷ (1 − ${R.pct(t, 0)}) = ${R.m(Syn, 1)}.` }
+  ]
+});
+
+// Case study: a hotel from rooms to value, through RevPAR, revenue, GOP, GOPPAR and NOI.
+Bank.case("hk", {
+  lv: 2,
+  make() {
+    const N = R.step(100, 600, 10), o = R.step(0.6, 0.85, 0.05), A = R.step(120, 450, 5), rs = R.pick([0.55, 0.6, 0.65, 0.7]);
+    const gm = R.step(0.3, 0.45, 0.01), c = R.step(0.06, 0.09, 0.005);
+    const RP = +(o * A).toFixed(2), RR = +(N * RP * 365 / 1e6).toFixed(2), TR = +(RR / rs).toFixed(2), GOP = +(TR * gm).toFixed(2);
+    const GPPAR = GOP * 1e6 / (N * 365), NOI = +(GOP - 0.07 * TR).toFixed(2), V = NOI * 1e6 / c / N;
+    return { N, o, A, rs, gm, c, RP, RR, TR, GOP, GPPAR, NOI, V };
+  },
+  intro: ({ N, o, A, rs, gm, c }) => `A ${N}-room hotel runs at ${R.pct(o, 0)} occupancy with an average daily rate (ADR) of US$${A}. Rooms make up ${R.pct(rs, 0)} of its total revenue (the rest is food, drinks and other services), and its gross operating profit (GOP) margin is ${R.pct(gm, 0)} of total revenue. The owner pays a base management fee of 3% and sets aside a 4% reserve for furniture, fixtures and equipment (FF&E), both on total revenue. Similar hotels sell at a ${R.pct(c, 1)} cap rate on net operating income (NOI).`,
+  why: () => "RevPAR drives room revenue; the revenue mix and the GOP margin turn it into profit; fees and the FF&E reserve leave NOI, which the cap rate turns into value.",
+  steps: [
+    { unit: "US$", dp: 2, tolerance: 0.01, prompt: "in US$, to 2 decimal places",
+      ask: () => "What is the hotel's RevPAR (revenue per available room)?",
+      solve: i => i.RP,
+      wrongs: ({ A, o }) => [
+        { value: A, trap: "missed-step", note: "That's the ADR. RevPAR spreads room revenue over every available room, sold or not: occupancy × ADR." },
+        { value: A / o, trap: "inverted", note: "Multiply by occupancy, don't divide: RevPAR is lower than ADR." }],
+      why: ({ o, A, RP }) => `RevPAR = occupancy × ADR = ${R.pct(o, 0)} × US$${A} = US$${R.num(RP, 2)}.` },
+    { unit: "US$m", dp: 2, tolerance: 0.02, prompt: "in US$m, to 2 decimal places",
+      ask: ({ RP }) => `RevPAR is US$${R.num(RP, 2)}. What is the hotel's yearly room revenue?`,
+      solve: i => i.RR,
+      wrongs: ({ N, RP, A }) => [
+        { value: N * RP * 30 / 1e6, trap: "units", note: "That's about a month. A year has 365 nights." },
+        { value: N * A * 365 / 1e6, trap: "double-count", note: "That uses ADR on every room, as if the hotel were always full. RevPAR already allows for occupancy." }],
+      why: ({ N, RP, RR }) => `Room revenue = ${N} rooms × US$${R.num(RP, 2)} × 365 = ${R.m(RR, 2)}.` },
+    { unit: "US$m", dp: 2, tolerance: 0.02, prompt: "in US$m, to 2 decimal places",
+      ask: ({ RR, rs }) => `Room revenue is ${R.m(RR, 2)}, which is ${R.pct(rs, 0)} of total revenue. What is total revenue?`,
+      solve: i => i.TR,
+      wrongs: ({ RR, rs }) => [{ value: RR * rs, trap: "inverted", note: "Rooms are a share of the total, so divide by that share: total revenue is bigger than room revenue." }],
+      why: ({ RR, rs, TR }) => `Total revenue = ${R.num(RR, 2)} ÷ ${R.pct(rs, 0)} = ${R.m(TR, 2)}.` },
+    { unit: "US$m", dp: 2, tolerance: 0.02, prompt: "in US$m, to 2 decimal places",
+      ask: ({ TR, gm }) => `Total revenue is ${R.m(TR, 2)} and the GOP margin is ${R.pct(gm, 0)}. What is GOP (gross operating profit)?`,
+      solve: i => i.GOP,
+      wrongs: ({ RR, gm }) => [{ value: RR * gm, trap: "wrong-measure", note: "The GOP margin applies to total revenue, not room revenue." }],
+      why: ({ TR, gm, GOP }) => `GOP = ${R.num(TR, 2)} × ${R.pct(gm, 0)} = ${R.m(GOP, 2)}.` },
+    { unit: "US$", dp: 2, tolerance: 0.05, prompt: "in US$, to 2 decimal places",
+      ask: ({ GOP, N }) => `GOP is ${R.m(GOP, 2)} for ${N} rooms. What is GOPPAR (GOP per available room per night)?`,
+      solve: i => i.GPPAR,
+      wrongs: ({ GOP, N }) => [{ value: GOP * 1e6 / N, trap: "units", note: "That's GOP per room per year. GOPPAR is per night: divide by 365 too." }],
+      why: ({ GOP, N, GPPAR }) => `GOPPAR = ${R.num(GOP, 2)}m ÷ (${N} × 365) = US$${R.num(GPPAR, 2)}.` },
+    { unit: "US$m", dp: 2, tolerance: 0.02, prompt: "in US$m, to 2 decimal places",
+      ask: ({ GOP, TR }) => `GOP is ${R.m(GOP, 2)} and total revenue ${R.m(TR, 2)}. After the 3% base management fee and the 4% FF&E reserve, what is NOI (net operating income)?`,
+      solve: i => i.NOI,
+      wrongs: ({ GOP, RR, TR }) => [
+        { value: GOP, trap: "missed-step", note: "That leaves out the management fee and the FF&E reserve, which owners deduct before valuing a hotel." },
+        { value: GOP - 0.07 * RR, trap: "wrong-measure", note: "The fee and the reserve are charged on total revenue, not room revenue." }],
+      why: ({ GOP, TR, NOI }) => `Fee and reserve = 7% × ${R.num(TR, 2)} = ${R.m(0.07 * TR, 2)}. NOI = ${R.num(GOP, 2)} − ${R.num(0.07 * TR, 2)} = ${R.m(NOI, 2)}.` },
+    { unit: "US$", dp: 0, tolerance: 1000, prompt: "in US$, to the nearest US$1,000",
+      ask: ({ NOI, c, N }) => `NOI is ${R.m(NOI, 2)} and similar hotels sell at a ${R.pct(c, 1)} cap rate. What is the hotel worth per room (per key)?`,
+      solve: i => i.V,
+      wrongs: ({ NOI, c, N, GOP }) => [
+        { value: NOI * 1e6 / c, trap: "missed-step", note: "That's the whole hotel's value. Divide by the number of rooms for the value per key." },
+        { value: GOP * 1e6 / c / N, trap: "wrong-measure", note: "That capitalises GOP. Buyers value the NOI left after fees and the FF&E reserve." }],
+      why: ({ NOI, c, N, V }) => `Value = NOI ÷ cap rate = ${R.num(NOI, 2)} ÷ ${R.pct(c, 1)} = ${R.m(NOI / c, 1)}. Per key = ÷ ${N} = US$${R.num(Math.round(V / 1000) * 1000)} (about).` }
+  ]
+});
+
+// Case study: buying an office building, from rent to the year-1 cash-on-cash return.
+Bank.case("rev", {
+  lv: 2,
+  make() {
+    for (;;) {
+      const SF = R.step(50000, 400000, 10000), rent = R.step(25, 80, 1), o = R.step(0.8, 0.95, 0.05), e = R.step(0.25, 0.4, 0.05);
+      const c = R.step(0.05, 0.08, 0.0025), L = R.step(0.5, 0.65, 0.05), ir = R.step(0.045, 0.065, 0.0025);
+      const GI = +(SF * rent * o / 1e6).toFixed(2), NOI = +(GI * (1 - e)).toFixed(2), V = +(NOI / c).toFixed(1), Eq = +(V * (1 - L)).toFixed(1);
+      const Int = V * L * ir, CoC = (NOI - Int) / Eq;
+      if (CoC < 0.02) continue;
+      return { SF, rent, o, e, c, L, ir, GI, NOI, V, Eq, Int, CoC };
+    }
+  },
+  intro: ({ SF, rent, o, e, c, L, ir }) => `An investor looks at an office building with ${R.num(SF)} sq ft of lettable space, rented at US$${rent} per sq ft a year and ${R.pct(o, 0)} occupied. Operating costs not recovered from tenants come to ${R.pct(e, 0)} of rental income. Similar buildings trade at a ${R.pct(c, 2)} cap rate. The investor would borrow ${R.pct(L, 0)} of the price (loan-to-value) on an interest-only loan at ${R.pct(ir, 2)}.`,
+  why: () => "Income, less costs, gives NOI; the cap rate turns NOI into value; the loan decides how much equity goes in and what's left for it after interest.",
+  steps: [
+    { unit: "US$m", dp: 2, tolerance: 0.02, prompt: "in US$m, to 2 decimal places",
+      ask: () => "What is the building's yearly rental income, after vacancy?",
+      solve: i => i.GI,
+      wrongs: ({ SF, rent }) => [{ value: SF * rent / 1e6, trap: "missed-step", note: "That assumes the building is full. Only the occupied space pays rent." }],
+      why: ({ SF, rent, o, GI }) => `Rental income = ${R.num(SF)} × US$${rent} × ${R.pct(o, 0)} = ${R.m(GI, 2)}.` },
+    { unit: "US$m", dp: 2, tolerance: 0.02, prompt: "in US$m, to 2 decimal places",
+      ask: ({ GI, e }) => `Rental income is ${R.m(GI, 2)} and unrecovered costs are ${R.pct(e, 0)} of it. What is NOI (net operating income)?`,
+      solve: i => i.NOI,
+      wrongs: ({ GI, e }) => [
+        { value: GI, trap: "missed-step", note: "That leaves out the operating costs the landlord pays." },
+        { value: GI * e, trap: "inverted", note: "That's the costs. NOI is what's left: income × (1 − cost share)." }],
+      why: ({ GI, e, NOI }) => `NOI = ${R.num(GI, 2)} × (1 − ${R.pct(e, 0)}) = ${R.m(NOI, 2)}.` },
+    { unit: "US$m", dp: 1, tolerance: 0.15, prompt: "in US$m, to 1 decimal place",
+      ask: ({ NOI, c }) => `NOI is ${R.m(NOI, 2)} and the market cap rate is ${R.pct(c, 2)}. What is the building worth?`,
+      solve: i => i.V,
+      wrongs: ({ GI, c }) => [{ value: GI / c, trap: "wrong-measure", note: "That capitalises gross income. The cap rate applies to NOI, after costs." }],
+      why: ({ NOI, c, V }) => `Value = NOI ÷ cap rate = ${R.num(NOI, 2)} ÷ ${R.pct(c, 2)} = ${R.m(V, 1)}.` },
+    { unit: "US$m", dp: 1, tolerance: 0.1, prompt: "in US$m, to 1 decimal place",
+      ask: ({ V, L }) => `The building costs ${R.m(V, 1)} and the loan covers ${R.pct(L, 0)} of it. How much equity does the investor put in? Ignore fees.`,
+      solve: i => i.Eq,
+      wrongs: ({ V, L }) => [
+        { value: V * L, trap: "inverted", note: "That's the loan. Equity pays the rest: price × (1 − loan-to-value)." },
+        { value: V, trap: "missed-step", note: "That's the whole price. The loan pays for most of it." }],
+      why: ({ V, L, Eq }) => `Equity = ${R.num(V, 1)} × (1 − ${R.pct(L, 0)}) = ${R.m(Eq, 1)}.` },
+    { unit: "%", dp: 1, tolerance: 0.1, prompt: "as a percentage, to 1 decimal place",
+      ask: ({ Eq, V, L, ir, NOI }) => `The investor puts in ${R.m(Eq, 1)} and borrows ${R.m(V * L, 1)} at ${R.pct(ir, 2)}, interest only. NOI is ${R.m(NOI, 2)}. What is the year-1 cash-on-cash return (cash left after interest ÷ equity)?`,
+      solve: i => i.CoC,
+      wrongs: ({ NOI, Eq, V }) => [
+        { value: NOI / Eq, trap: "missed-step", note: "That leaves out the interest, which is paid before the investor gets anything." },
+        { value: NOI / V, trap: "wrong-measure", note: "That's the cap rate (the unlevered yield on the whole price), not the return on the investor's equity." }],
+      why: ({ V, L, ir, NOI, Eq, Int, CoC }) => `Interest = ${R.num(V * L, 1)} × ${R.pct(ir, 2)} = ${R.m(Int, 2)}. Cash after interest = ${R.num(NOI, 2)} − ${R.num(Int, 2)} = ${R.m(NOI - Int, 2)}. Cash-on-cash = ${R.num(NOI - Int, 2)} ÷ ${R.num(Eq, 1)} = ${R.pct(CoC)}.` }
+  ]
+});
