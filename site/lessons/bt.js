@@ -30,5 +30,8 @@ Lessons.add("bt", {
   },
   "widget": {
     "type": "montyHall"
-  }
+  },
+  "widgets": [
+    { "type": "marketSize", "values": { "pop": 30, "share": 0.4, "freq": 2, "price": 5 } }
+  ]
 });

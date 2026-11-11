@@ -24,6 +24,10 @@ r = run("evBridge", { ev: 500, debt: 600, cash: 0, nci: 0 }); near("evBridge", "
 r = run("evBridge", { ev: 1500, debt: 450, cash: 120, nci: 70, pref: 0, assoc: 30 }); near("evBridge", "with associates", r.equity, 1130);
 // A US$90m after-tax pension deficit is deducted like debt: 1,130 − 90 = 1,040
 r = run("evBridge", { ev: 1500, debt: 450, cash: 120, nci: 70, pref: 0, assoc: 30, pension: 90 }); near("evBridge", "with a pension deficit", r.equity, 1040);
+// Market sizing: 30m × 40% = 12m buyers; × 2 a week × US$5 = US$120m a week; × 52 = US$6,240m a year (US$520m a month); 1,248m purchases
+r = run("marketSize", {}); near("marketSize", "buyers", r.buyers, 12); near("marketSize", "purchases", r.purchases, 1248); near("marketSize", "week", r.week, 120); near("marketSize", "month", r.month, 520); near("marketSize", "year", r.year, 6240);
+// 335m × 50% = 167.5m buyers × 1 a week × US$4 = US$670m a week; × 52 = US$34,840m a year
+r = run("marketSize", { pop: 335, share: 0.5, freq: 1, price: 4 }); near("marketSize", "US example year", r.year, 34840);
 // WACC: 70% × 10% + 30% × 6% × 75% = 7% + 1.35% = 8.35%; shield 30% × 6% × 25% = 0.45%
 r = run("wacc", {}); near("wacc", "wacc", r.wacc, 0.0835); near("wacc", "shield", r.shield, 0.0045); near("wacc", "equity part", r.eq, 0.07);
 // Compounding at 8% for 10 years: 1.08^10 = 2.158925; rule of 72 = 9.0 years; exact = ln 2 / ln 1.08 = 9.00647 years

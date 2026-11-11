@@ -365,6 +365,28 @@
       (r.bargain ? note("The price is below the fair value of the net assets: after rechecking the values, IFRS 3 books the difference as a bargain purchase gain in profit.") : "")
   });
 
+  // Market sizing: a top-down chain (people × share who buy × purchases a week × price), shown per week, month and year.
+  const bigUsd = v => v >= 1000 ? "US$" + num(v / 1000, 1) + "bn" : usd(v, v < 10 ? 1 : 0);
+  define("marketSize", {
+    title: "Market sizing: build the chain",
+    inputs: [
+      { k: "pop", label: "People in the market (millions)", min: 1, max: 400, step: 1, value: 30, fmt: v => num(v, 0) + "m" },
+      { k: "share", label: "Share who buy", min: 0.05, max: 1, step: 0.05, value: 0.4, fmt: v => pct(v, 0) },
+      { k: "freq", label: "Purchases per buyer per week", min: 0.25, max: 7, step: 0.25, value: 2, fmt: v => num(v, v % 1 ? 2 : 0) },
+      { k: "price", label: "Price per purchase", min: 1, max: 50, step: 0.5, value: 5, fmt: v => "US$" + num(v, v % 1 ? 2 : 0) }
+    ],
+    compute: v => {
+      const buyers = v.pop * v.share, week = buyers * v.freq * v.price;
+      return { buyers, purchases: buyers * v.freq * 52, week, month: week * 52 / 12, year: week * 52 };
+    },
+    render: (v, r) => stats([stat("Buyers", num(r.buyers, 1) + "m"), stat("Purchases a year", num(r.purchases, 0) + "m"), stat("Market a year", bigUsd(r.year), true)]) +
+      bars([{ label: "Per week", value: r.week, text: bigUsd(r.week) },
+        { label: "Per month", value: r.month, text: bigUsd(r.month) },
+        { label: "Per year", value: r.year, cls: "total", text: bigUsd(r.year) }]) +
+      note(`${num(v.pop, 0)}m people × ${pct(v.share, 0)} who buy = ${num(r.buyers, 1)}m buyers. × ${num(v.freq, v.freq % 1 ? 2 : 0)} a week × 52 weeks = ${num(r.purchases, 0)}m purchases a year. × US$${num(v.price, v.price % 1 ? 2 : 0)} = ${bigUsd(r.year)} a year.`) +
+      note("Every step multiplies, so 10% more on any one assumption adds 10% to the answer. Spend your time on the assumption you're least sure of, and keep every number in the same time unit: the yearly bar is 52 times the weekly one.")
+  });
+
   define("montyHall", {
     title: "Monty Hall: switch or stay?",
     inputs: [{ k: "games", label: "Games to simulate", min: 10, max: 5000, step: 10, value: 1000, fmt: v => num(v, 0) }],
