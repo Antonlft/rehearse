@@ -320,6 +320,7 @@ main { padding-block: 30px 48px; }
 .srs-head b { color: var(--ink); }
 .srs-cats { margin-top: 12px; }
 .srs-cats[hidden] { display: none; } /* .check-grid sets display: grid, which would otherwise override hidden */
+@media (min-width: 900px) { #app.wide .srs-cats { grid-template-columns: repeat(3, minmax(0, 1fr)); } } /* the wider home page fits 3 columns */
 .switch { flex: none; display: inline-flex; align-items: center; gap: 8px; font-size: 13px; font-weight: 500; cursor: pointer; }
 .switch input { appearance: none; -webkit-appearance: none; margin: 0; width: 36px; height: 20px; border-radius: 999px; background: var(--rule-strong); position: relative; cursor: pointer; transition: background .15s; }
 .switch input::after { content: ""; position: absolute; top: 2px; left: 2px; width: 16px; height: 16px; border-radius: 50%; background: var(--page); transition: transform .15s; }
@@ -501,7 +502,7 @@ sup { font-size: 0.72em; line-height: 0; vertical-align: super; }
 .practice-summary { font-size: 12px; color: var(--muted); }
 .practice-summary .link { font-size: 12px; }
 /* Home: section tabs (same pill pattern as the other selectors, a little larger, full width on phones) */
-.home-tabs { margin: -6px 0 20px; }
+.home-tabs { display: flex; justify-content: center; margin: -6px 0 20px; }
 .home-tabs .seg { display: flex; width: fit-content; max-width: 100%; }
 .home-tabs .seg button { padding: 6px 16px; font-size: 13px; line-height: 1.25; }
 @media (max-width: 520px) {

@@ -443,7 +443,7 @@ function go(v) {
   render();
 }
 function render() {
-  app.classList.toggle("wide", view.name === "lessons"); // the lessons grid uses the full header width
+  app.classList.toggle("wide", view.name === "lessons" || view.name === "home"); // the lessons grid and the home page use the full header width
   if (view.name === "quiz") renderQuiz();
   else if (view.name === "results") renderResults();
   else if (view.name === "setup") renderSetup();
