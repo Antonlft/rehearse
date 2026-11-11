@@ -74,7 +74,39 @@ Bank.add("cm", [
   { id: "cm-13", lv: 1, q: "In a firm-commitment underwriting, who bears the risk of unsold shares?",
     o: ["The underwriters, who buy the shares and resell them", "The issuer", "The stock exchange", "The regulator"],
     why: "In a firm commitment the banks guarantee the proceeds. In a best-efforts deal the issuer bears the risk.",
-    x: ["The issuer bears the risk in a best-efforts deal.", "Exchanges don't take risk on offerings.", "Regulators don't take risk on offerings."] }
+    x: ["The issuer bears the risk in a best-efforts deal.", "Exchanges don't take risk on offerings.", "Regulators don't take risk on offerings."] },
+  { id: "cm-14", lv: 1, trap: ["inverted", "wrong-measure", "sign"], q: "A start-up raises US$5m at a US$20m pre-money valuation. What is the post-money valuation, and what stake does the new investor get?",
+    o: ["US$25m post-money; the investor owns 20%", "US$20m post-money; the investor owns 25%", "US$25m post-money; the investor owns 25%", "US$15m post-money; the investor owns 33%"],
+    why: "Post-money = pre-money + new money = 20 + 5 = US$25m. The investor owns 5 ÷ 25 = 20%. Dividing by the pre-money (5 ÷ 20 = 25%) is the classic mistake.",
+    x: ["That treats the pre-money as the post-money.", "5 ÷ 20 = 25% divides by the pre-money; the stake is new money ÷ post-money.", "The new money is added to the pre-money, not subtracted."] },
+  { id: "cm-15", lv: 2, trap: ["missed-step", "wrong-measure", "concept"], q: "A VC invested US$10m for 20% with a 1x non-participating liquidation preference. The company is sold for US$30m. How much does the VC get?",
+    o: ["US$10m: its preference beats converting (20% × 30 = US$6m)", "US$6m: its 20% share", "US$14m: its US$10m back plus 20% of the rest", "US$30m: preferred holders take everything"],
+    why: "Non-participating preferred takes the better of two options: its preference (1 × US$10m) or converting to common and taking 20% of the proceeds (US$6m). At a US$30m sale it takes the US$10m; above US$50m, converting pays more.",
+    x: ["That ignores the preference, which pays more at this price.", "Taking the preference and then sharing in the rest is participating preferred, a different term.", "A 1x preference is capped at the amount invested."] },
+  { id: "cm-16", lv: 3, trap: ["inverted", "concept", "wrong-measure"], q: "How does participating preferred differ from non-participating preferred?",
+    o: ["It gets its money back first, then also shares in what's left alongside common shareholders", "It must choose between its money back and its share of the proceeds", "It ranks behind common shareholders", "It converts automatically at the IPO price, and that's the only difference"],
+    why: "Participating preferred 'double dips': the preference first, then its pro-rata share of the rest. It's investor-friendly and often capped (for example at 3x the investment), above which the investor would rather convert.",
+    x: ["That's non-participating preferred.", "Preferred ranks ahead of common in a sale or liquidation.", "Conversion terms are separate; participation is about how the proceeds are split."] },
+  { id: "cm-17", lv: 3, trap: ["inverted", "concept", "concept"], q: "A new round is priced below an earlier investor's price (a down round). How does full-ratchet anti-dilution compare with broad-based weighted-average anti-dilution?",
+    o: ["Full ratchet resets the conversion price to the new, lower price; weighted average moves it only part of the way", "Weighted average is harsher on founders than full ratchet", "Both leave the conversion price unchanged", "Full ratchet applies only if the company is sold"],
+    why: "Anti-dilution protects earlier investors in a down round by letting their preferred convert into more shares. Full ratchet is the most investor-friendly and can heavily dilute founders; broad-based weighted average, the market norm, scales the adjustment by the size of the new round.",
+    x: ["It's the other way round: full ratchet is far harsher on founders.", "The whole point of anti-dilution is to lower the conversion price in a down round.", "It applies in down rounds, not only on a sale."] },
+  { id: "cm-18", lv: 3, trap: ["inverted", "concept", "concept"], q: "A term sheet values a start-up at US$20m pre-money 'including a 15% option pool'. Who bears the dilution from that pool?",
+    o: ["The existing shareholders (the founders), because the pool is created inside the pre-money valuation", "The new investor only", "The new investor and the founders equally", "Nobody, because options aren't shares yet"],
+    why: "Creating the pool before the round means its shares come out of the existing holders' slice, so the founders' effective pre-money is lower than the headline: the 'option pool shuffle'. Founders can push for a smaller pool, or for it to be created after the round.",
+    x: ["The investor's stake is fixed on a post-money basis that already includes the pool, so the pool doesn't dilute it.", "Because the pool sits in the pre-money, only existing holders are diluted.", "Valuations count the pool on a fully diluted basis."] },
+  { id: "cm-19", lv: 2, trap: ["wrong-measure", "concept", "concept"], q: "What is a PIPE (private investment in public equity)?",
+    o: ["A listed company sells shares or convertibles directly to selected investors, usually at a small discount", "A private company's first sale of shares to the public", "A loan secured on a company's listed shares", "A pension fund's investment in private equity funds"],
+    why: "PIPEs raise money quickly from a few institutions without a full marketed offering. They're common for smaller companies, in rescues and to fund SPAC mergers; the discount, and any warrants, compensate investors for not being able to sell until the shares are registered for resale.",
+    x: ["That's an IPO.", "A loan against shares is a margin loan, not a PIPE.", "That's an LP commitment to a private equity fund."] },
+  { id: "cm-20", lv: 2, trap: ["concept", "wrong-measure", "concept"], q: "What does a shelf registration let a US-listed company do?",
+    o: ["Register securities in advance and sell them quickly over the next three years, when markets suit", "Never file a prospectus again", "List its shares on several exchanges at once", "Buy back its own shares without disclosure"],
+    why: "Once the SEC registration statement (often on Form S-3) is effective, the company can 'take shares off the shelf' in quick offerings, such as overnight deals or at-the-market sales, with only a short prospectus supplement. Large, seasoned issuers can use automatic shelf registration.",
+    x: ["A prospectus supplement is still needed for each sale.", "Listing on several exchanges is a separate process.", "Buybacks have their own disclosure rules."] },
+  { id: "cm-21", lv: 2, trap: ["inverted", "concept", "wrong-measure"], q: "Why do some companies list with dual-class shares?",
+    o: ["Founders keep voting control through high-vote shares while selling low-vote shares to the public", "To give public investors more votes than the founders", "To pay all shareholders a higher dividend", "To qualify for every stock index"],
+    why: "Dual-class structures (for example 10 votes per founder share) let founders raise capital without losing control, which supporters say protects long-term plans. Critics point to weaker accountability, some index providers restrict such companies, and many structures now include sunset clauses.",
+    x: ["It's the reverse: the founders' shares carry the extra votes.", "Dividends are usually the same; the difference is voting power.", "Some indices restrict dual-class companies, so it can reduce index eligibility."] }
 ]);
 
 // New-format questions (shown only when "new formats" is on).
@@ -88,5 +120,16 @@ Bank.addFormat("cm", [
       "Price the deal and allocate the shares, usually leaving a small discount so they trade up; the greenshoe lets the banks stabilise the price.",
       "Trading starts, and insiders are held by a lock-up, typically 180 days."
     ],
-    why: "Show you know the trade-off: a higher price raises more money, but a deal priced too tightly can trade badly and hurt the company's reputation with investors." }
+    why: "Show you know the trade-off: a higher price raises more money, but a deal priced too tightly can trade badly and hurt the company's reputation with investors." },
+  { id: "cm-grid-01", lv: 2, type: "grid", q: "In a venture capital term sheet, is each term founder-friendly or investor-friendly?",
+    columns: ["Founder-friendly", "Investor-friendly"],
+    rows: [
+      { text: "1x non-participating liquidation preference", answer: 0, note: "The market standard: investors get their money back or convert, not both." },
+      { text: "Participating preferred with no cap", answer: 1, note: "Investors take their money back and then share in the rest." },
+      { text: "A 3x liquidation preference", answer: 1, note: "Investors take three times their money before common shareholders get anything." },
+      { text: "Full-ratchet anti-dilution", answer: 1, note: "The conversion price drops all the way to any lower later price." },
+      { text: "Broad-based weighted-average anti-dilution", answer: 0, note: "The market norm: the adjustment is scaled by the size of the down round." },
+      { text: "A large option pool created inside the pre-money valuation", answer: 1, note: "The pool dilutes only the existing holders, lowering the founders' effective pre-money." }
+    ],
+    why: "The standard, more founder-friendly package is a 1x non-participating preference with broad-based weighted-average anti-dilution. Multiples, participation, full ratchets and large pre-money option pools shift value towards investors." }
 ]);

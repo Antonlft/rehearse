@@ -728,3 +728,51 @@ Bank.calc("val", {
   why(i) { const { PE, g } = i; return `PEG = P/E ÷ growth = ${R.num(PE, 1)} ÷ ${g} = ${this.solve(i).toFixed(2)}. Below about 1.0 is often read as cheap for the growth, above as expensive.`; },
   fmt: v => v.toFixed(2)
 });
+
+// ECM: the new investor's stake after a funding round. Same redraw guard (mnaFar).
+Bank.calc("cm", {
+  lv: 1, unit: "%", tolerance: 0.1, dp: 1, prompt: "as a percentage, to 1 decimal place",
+  make() {
+    for (;;) {
+      const M = R.step(4, 200, 1), I = R.step(1, 50, 0.5);
+      if (I / M < 0.05 || I / M > 0.6) continue;
+      const i = { M, I };
+      if (mnaFar(this.solve(i), this.wrongs(i).map(w => w.value), 0.12, 0.005)) return i;
+    }
+  },
+  solve: ({ M, I }) => I / (M + I),
+  wrongs: ({ M, I }) => [
+    { value: I / M, trap: "wrong-measure", note: "That divides by the pre-money. The stake is new money ÷ post-money (pre-money + new money)." },
+    { value: M / (M + I), trap: "inverted", note: "That's the existing shareholders' stake after the round, not the new investor's." },
+    { value: I / (M - I), trap: "sign", note: "The new money is added to the pre-money, not subtracted from it." }
+  ],
+  ask: ({ M, I }) => `A start-up raises ${R.m(I)} at a ${R.m(M)} pre-money valuation. What stake does the new investor own after the round?`,
+  why(i) { const { M, I } = i; return `Post-money = ${R.num(M)} + ${R.num(I)} = ${R.m(M + I)}. Stake = ${R.num(I)} ÷ ${R.num(M + I)} = ${R.pct(this.solve(i))}.`; },
+  fmt: v => R.pct(v)
+});
+
+// ECM: what a VC with a 1x non-participating preference receives on a sale.
+Bank.calc("cm", {
+  lv: 2, unit: "US$m", tolerance: 0.05, dp: 1, prompt: "in US$m, to 1 decimal place",
+  make() {
+    for (;;) {
+      const I = R.step(2, 50, 1), p = R.step(0.1, 0.4, 0.05), X = Math.round(I / p * R.step(0.5, 2, 0.05) / 5) * 5;
+      if (X <= I * 1.2) continue;
+      const i = { I, p, X };
+      if (mnaFar(this.solve(i), this.wrongs(i).map(w => w.value), 0.12, 0.5)) return i;
+    }
+  },
+  solve: ({ I, p, X }) => Math.max(I, p * X),
+  wrongs: ({ I, p, X }) => (I >= p * X ? [
+    { value: p * X, trap: "missed-step", note: "That always converts. At this price the preference pays more, so the VC takes it." },
+    { value: I + p * (X - I), trap: "wrong-measure", note: "Taking the preference and then sharing in the rest is participating preferred; this is non-participating." },
+    { value: p * (X - I), trap: "concept", note: "The VC either takes its preference or converts and shares in all the proceeds; it doesn't just share in what's left." }
+  ] : [
+    { value: I, trap: "missed-step", note: "That always takes the preference. At this price converting pays more, so the VC converts." },
+    { value: I + p * (X - I), trap: "wrong-measure", note: "Taking the preference and then sharing in the rest is participating preferred; this is non-participating." },
+    { value: p * (X - I), trap: "concept", note: "Once it converts, the VC shares in all the proceeds, not just what's left after its preference." }
+  ]),
+  ask: ({ I, p, X }) => `A VC invested ${R.m(I)} for ${R.pct(p, 0)} of a company, with a 1x non-participating liquidation preference and no other preferred shares. The company is sold for ${R.m(X)}. How much does the VC receive?`,
+  why(i) { const { I, p, X } = i; return `Take the preference: ${R.m(I)}. Or convert: ${R.pct(p, 0)} × ${R.num(X)} = ${R.m(p * X, 1)}. The VC takes the larger, ${R.m(this.solve(i), 1)}. Converting pays more once the sale price exceeds ${R.num(I)} ÷ ${R.pct(p, 0)} = ${R.m(I / p, 1)}.`; },
+  fmt: v => R.m(v, 1)
+});
