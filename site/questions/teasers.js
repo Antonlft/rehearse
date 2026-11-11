@@ -58,5 +58,66 @@ Bank.add("bt", [
   { id: "bt-15", lv: 1, trap: ["wrong-measure", "missed-step", "wrong-measure"], q: "You draw two cards from a standard 52-card deck without replacement. What is the probability that both are aces?",
     o: ["1 in 221", "1 in 169", "1 in 13", "1 in 52"],
     why: "4/52 × 3/51 = 12/2,652 = 1/221.",
-    x: ["(4/52)² = 1/169 assumes the first card goes back in the deck.", "That's the chance of one ace.", "That's the chance of one specific card."] }
+    x: ["(4/52)² = 1/169 assumes the first card goes back in the deck.", "That's the chance of one ace.", "That's the chance of one specific card."] },
+  { id: "bt-16", lv: 1, trap: ["missed-step", "concept", "concept"], q: "An interviewer asks: \"How big is the US market for gym memberships?\" What should you do first?",
+    o: ["Clarify the scope: yearly revenue or number of members, which kinds of gym, and whether corporate deals count", "Start by multiplying the US population by a membership rate", "Give a quick guess so the interviewer has a number to work with", "Explain that you'd need industry data before you can answer"],
+    why: "Market sizing questions are deliberately vague. A few seconds agreeing what you're measuring (value or volume, which products, which period) keeps the rest of the answer on track and shows structure.",
+    x: ["Jumping into numbers risks sizing the wrong thing, for example members when the interviewer wanted revenue.", "A guess without a method is exactly what the question is meant to avoid. The interviewer is grading the reasoning.", "The point is to estimate without data. Saying you need data ends the exercise."] },
+  { id: "bt-17", lv: 1, trap: ["inverted", "concept", "concept"], q: "You estimate a city's coffee shop revenue by counting shops per street, multiplying by the number of streets, then by cups sold per shop per day and the price. Which approach is that, and what's the alternative?",
+    o: ["Bottom-up; top-down would start from the city's population and how often people buy coffee out", "Top-down; bottom-up would start from the city's population and how often people buy coffee out", "Bottom-up; top-down would start from one shop's accounts", "Comparables; the alternative is a DCF"],
+    why: "Bottom-up builds from things you can count on the ground (shops, rooms, seats). Top-down starts from a total, such as the population, and narrows it with shares and frequencies. Doing both and comparing them is the best sanity check.",
+    x: ["That swaps the names. Counting shops and cups is building up from units: bottom-up.", "One shop's accounts is still a bottom-up input. Top-down starts from the whole population or market.", "Comparables and DCF are valuation methods, not ways to size a market."] },
+  { id: "bt-18", lv: 1, trap: ["concept", "units", "units"], q: "Which set of round anchor numbers is closest to reality today?",
+    o: ["US: about 335 million people and 130 million households; world: about 8 billion people", "US: about 335 million people and 300 million households; world: about 8 billion people", "US: about 33 million people and 13 million households; world: about 8 billion people", "US: about 335 million people and 130 million households; world: about 80 billion people"],
+    why: "A few anchors make sizing faster: the US has about 335 million people in about 130 million households (roughly 2.5 people each), and the world has about 8 billion people. Saying which anchor you're using lets the interviewer correct it.",
+    x: ["A household holds about 2.5 people on average, so there are far fewer households than people.", "That's a factor of 10 too small. About 33 million is closer to the population of a single large US state.", "That's a factor of 10 too big for the world's population."] },
+  { id: "bt-19", lv: 2, trap: ["concept", "concept", "concept"], q: "A candidate sizes the yearly US market for dog food: 130 million households, 40% own a dog, US$10 of food per dog per day, so about US$190bn a year. Which assumption is off?",
+    o: ["US$10 of food per dog per day: something like US$1.50–2 is realistic, giving roughly US$30–40bn", "130 million households: the US has far more", "40% of households owning a dog: the real share is closer to 5%", "Assuming one dog per household: the average dog-owning household has about five"],
+    why: "US$10 a day is about US$3,650 a year per dog, far more than most owners spend on food. At about US$1.75 a day, 52 million dogs (130m × 40%) cost about US$33bn a year. Checking each step against everyday experience catches this kind of error.",
+    x: ["About 130 million households is a good anchor.", "Around 40% of US households own a dog, so that assumption is reasonable.", "Most dog-owning households have one or two dogs, so one per household is a fair simplification."] },
+  { id: "bt-20", lv: 1, trap: ["missed-step", "concept", "units"], q: "A candidate estimates that 20 million people each buy a US$5 sandwich twice a week, and says the market is worth US$200m a year. What went wrong?",
+    o: ["The weekly figure wasn't turned into a yearly one: × 52 gives about US$10bn", "Nothing: US$200m a year is right", "The price should be halved, because there are two sandwiches", "It should be × 12 for a year, giving about US$2.4bn"],
+    why: "20 million × 2 × US$5 = US$200m, but that's per week. A year has 52 weeks: US$200m × 52 = US$10.4bn. Writing the unit next to every number (per week, per year, millions, billions) prevents this slip.",
+    x: ["US$200m is the weekly spend. The question asks for a year.", "Each sandwich costs US$5, so two cost US$10 a week per person. The price isn't shared.", "× 12 turns a monthly figure into a yearly one. A weekly figure needs × 52."] },
+  { id: "bt-21", lv: 2, trap: ["missed-step", "concept", "double-count"], q: "What's the cleanest way to estimate a city's yearly hotel room revenue?",
+    o: ["Hotel rooms × occupancy × average daily rate (ADR) × 365", "Hotel rooms × average daily rate (ADR) × 365", "Visitors per year × average daily rate (ADR)", "Hotel rooms × RevPAR × 365 × occupancy"],
+    why: "Room revenue = room nights sold × the average rate per night. Room nights sold = rooms × occupancy × 365. Equivalently, rooms × RevPAR (revenue per available room) × 365, since RevPAR = occupancy × ADR.",
+    x: ["That assumes every room is sold every night. Occupancy is usually 60–85%.", "Visitors aren't room nights: many stay several nights, some share rooms, and some don't stay in hotels at all.", "RevPAR already includes occupancy (RevPAR = occupancy × ADR), so this counts it twice."] }
+]);
+
+// New-format questions (shown only when "new formats" is on).
+Bank.addFormat("bt", [
+  { id: "bt-ord-01", lv: 1, type: "order", q: "Put the steps of a good market sizing answer in order, first to last.",
+    answer: ["Clarify what's being measured", "Choose top-down or bottom-up", "Split it into drivers", "Put a round number on each driver", "Calculate", "Sanity-check another way", "State the answer and what drives it"],
+    why: "Agree the question, pick a route, then break it into drivers before putting numbers on them. Finish with a check from a second angle and a one-line conclusion naming the assumption that matters most." },
+  // Walk-through cards: answer out loud, then grade yourself against the model answer.
+  { id: "bt-walk-01", lv: 2, type: "walk", q: "Estimate the yearly room revenue of all hotels in a large city such as New York.",
+    points: [
+      "Clarify: room revenue only (not food, drinks or events), one year, every hotel in the city.",
+      "Structure: rooms × occupancy × average daily rate (ADR) × 365, or rooms × RevPAR × 365.",
+      "Rooms: about 120,000 (a few hundred hotels with a few hundred rooms each).",
+      "Occupancy about 80% and ADR about US$300 for a major gateway city.",
+      "120,000 × 80% × US$300 × 365 ≈ US$10.5bn a year.",
+      "Check: that's about 35 million occupied room nights. At about 2 nights per stay and 1.5 guests per room, that's roughly 26 million hotel guests a year: plausible for a city with tens of millions of visitors."
+    ],
+    why: "The structure and the check matter more than the exact figure. Naming the driver that varies most between cities (the room rate) shows judgement." },
+  { id: "bt-walk-02", lv: 3, type: "walk", q: "Estimate the total value of the office buildings in a city's central business district.",
+    points: [
+      "Clarify: market value of office buildings (land included), in one district, today.",
+      "Route 1, size × value per square foot: land area × share built on × average floors gives floor space.",
+      "Example: about 1 square mile (about 28 million sq ft of land), half built on, 15 floors on average: about 200 million sq ft.",
+      "At about US$500 per sq ft: roughly US$100bn.",
+      "Route 2, income ÷ cap rate: net operating income about US$30 per sq ft × 85% occupied ÷ a 6% cap rate ≈ US$425 per sq ft, close to the US$500 used.",
+      "Conclude: roughly US$100bn; the number of floors and the value per square foot move the answer most."
+    ],
+    why: "Two routes, one physical and one from income, is what a real estate interviewer hopes to hear. Cap rate = net operating income ÷ value, so value = income ÷ cap rate." },
+  { id: "bt-walk-03", lv: 1, type: "walk", q: "Estimate how many cups of coffee are sold in the US each day, outside the home.",
+    points: [
+      "Clarify: cups bought out of home (cafés, restaurants, gas stations, convenience stores), one day, the whole US.",
+      "Top-down: about 335 million people, about 260 million adults.",
+      "Say about 15% of adults buy coffee out on a given day (about 40 million), at about 1.2 cups each: about 50 million cups.",
+      "Bottom-up check: about 40,000 coffee shops × 400 cups a day = 16 million, plus about 350,000 restaurants and convenience stores × 100 cups = 35 million: about 50 million.",
+      "Conclude: roughly 50 million cups a day; the share of adults buying each day drives the answer."
+    ],
+    why: "Two routes landing in the same range is the strongest sanity check. Round numbers keep the arithmetic in your head and easy to follow." }
 ]);

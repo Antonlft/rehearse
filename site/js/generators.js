@@ -956,3 +956,47 @@ Bank.calc("mna", {
   why(i) { const { NA, EB, NB, p, c } = i; return `Price paid = ${R.num(EB)} × ${(1 + p).toFixed(2)} = ${R.m(EB * (1 + p), 1)}. Borrowed for the cash part = ${R.pct(c, 0)} × ${R.num(EB * (1 + p), 1)} = ${R.m(c * EB * (1 + p), 1)}. Combined net debt = ${NA} + ${NB} + ${R.num(c * EB * (1 + p), 1)} = ${R.m(this.solve(i), 1)}.`; },
   fmt: v => R.m(v, 1)
 });
+
+// Market sizing: a city's yearly hotel room revenue. Same redraw guard (mnaFar).
+Bank.calc("bt", {
+  lv: 1, unit: "US$m", tolerance: 1, dp: 0, prompt: "in US$m, to the nearest million",
+  make() {
+    for (;;) {
+      const N = R.step(20000, 150000, 5000), o = R.step(0.6, 0.85, 0.05), A = R.step(120, 400, 10);
+      const i = { N, o, A };
+      if (mnaFar(this.solve(i), this.wrongs(i).map(w => w.value), 0.12, 5)) return i;
+    }
+  },
+  solve: ({ N, o, A }) => N * o * A * 365 / 1e6,
+  wrongs: ({ N, o, A }) => [
+    { value: N * A * 365 / 1e6, trap: "missed-step", note: "That leaves out occupancy: it assumes every room is sold every night." },
+    { value: N * o * A * 30 / 1e6, trap: "units", note: "That's about a month. A year has 365 nights." },
+    { value: N * o * o * A * 365 / 1e6, trap: "double-count", note: "That applies occupancy twice. Rooms × occupancy gives the rooms sold each night; multiply once by the rate." }
+  ],
+  ask: ({ N, o, A }) => `A city has ${R.num(N)} hotel rooms. Average occupancy is ${R.pct(o, 0)} and the average daily rate (ADR) is US$${A}. What is the city's yearly hotel room revenue?`,
+  why(i) { const { N, o, A } = i; return `Rooms sold per night = ${R.num(N)} × ${R.pct(o, 0)} = ${R.num(N * o)}. Revenue per night = ${R.num(N * o)} × US$${A} = ${R.m(N * o * A / 1e6, 2)}. Per year = × 365 = ${R.m(this.solve(i), 0)} (about US$${R.num(this.solve(i) / 1000, 1)}bn).`; },
+  fmt: v => R.m(v, 0)
+});
+
+// Market sizing: a yearly consumer market from population, the share who buy, purchases per week and price. Same redraw guard (mnaFar).
+Bank.calc("bt", {
+  lv: 1, unit: "US$m", tolerance: 1, dp: 0, prompt: "in US$m, to the nearest million",
+  make() {
+    const goods = [["a takeaway coffee", 3, 6, [1, 2, 3]], ["a lunchtime sandwich", 5, 10, [1, 2]], ["a fitness class", 15, 30, [0.5, 1, 2]], ["a bunch of flowers", 10, 25, [0.5]]];
+    for (;;) {
+      const [g, lo, hi, fs] = R.pick(goods), P = R.step(5, 60, 1), s = R.step(0.1, 0.5, 0.05), f = R.pick(fs), p = R.step(lo, hi, 0.5);
+      const i = { g, P, s, f, p }, a = this.solve(i);
+      if (a < 50 || a > 50000) continue;
+      if (mnaFar(a, this.wrongs(i).map(w => w.value), 0.12, 5)) return i;
+    }
+  },
+  solve: ({ P, s, f, p }) => P * s * f * p * 52,
+  wrongs: ({ P, s, f, p }) => [
+    { value: P * s * f * p, trap: "units", note: "That's the weekly spend. A year has 52 weeks." },
+    { value: P * f * p * 52, trap: "missed-step", note: "That assumes everyone buys. Only the given share of people do." },
+    { value: P * s * f * p * 12, trap: "units", note: "× 12 turns a monthly figure into a yearly one. A weekly figure needs × 52." }
+  ],
+  ask: ({ g, P, s, f, p }) => `A city region has ${P} million people. About ${R.pct(s, 0)} of them buy ${g} ${f === 0.5 ? "once every two weeks" : f === 1 ? "once a week" : f === 2 ? "twice a week" : f + " times a week"}, paying about US$${R.num(p, p % 1 ? 2 : 0)} each time. Roughly how much do they spend on it a year?`,
+  why(i) { const { P, s, f, p } = i, buyers = P * s; return `Buyers = ${P}m × ${R.pct(s, 0)} = ${R.num(buyers, 1)}m. Weekly spend = ${R.num(buyers, 1)}m × ${f} × US$${R.num(p, p % 1 ? 2 : 0)} = ${R.m(buyers * f * p, 1)}. Yearly = × 52 = ${R.m(this.solve(i), 0)}.`; },
+  fmt: v => R.m(v, 0)
+});
