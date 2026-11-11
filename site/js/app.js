@@ -138,10 +138,27 @@ let view = { name: "home" };
 let reviewFilter = "all";
 
 const esc = s => String(s).replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+/* Glossary terms (site/js/glossary.js) in lessons and explanations are marked so pointing at or tapping them shows
+   their full name and definition. Only the first use is marked: per explanation, or per lesson page while a lesson
+   renders (glOnce). Question text and options use esc(), never rich(), so a definition can't give an answer away. */
+const GL = window.Glossary || [];
+const GL_RAW = new Map(GL.map(g => [g.term, g]));
+const GL_ESC = new Map(GL.map(g => [esc(g.term), g]));
+const GL_RE = GL.length ? new RegExp(`(?<![A-Za-z0-9&;-])(${[...GL_ESC.keys()].sort((a, b) => b.length - a.length).map(t => t.replace(/[.*+?^${}()|[\]\\/]/g, "\\$&")).join("|")})(s?)(?![A-Za-z0-9])`, "g") : null;
+let glOnce = null;
+const glossify = h => {
+  if (!GL_RE) return h;
+  const seen = glOnce || new Set();
+  return h.replace(GL_RE, (m, t, s) => {
+    if (seen.has(t)) return m;
+    seen.add(t);
+    return `<span class="gl" tabindex="0" data-gl="${t}">${t}${s}</span>`;
+  });
+};
 // Escaped text with powers shown as superscripts: "2.73^(1/5)" → 2.73<sup>1/5</sup>, "1.08^5" → 1.08<sup>5</sup>.
 // Content keeps plain "^" text; only the display changes. Used for explanations and lessons.
 // In formulas, {{a // b}} is shown as a stacked fraction (a over b).
-const rich = s => esc(s)
+const rich = s => glossify(esc(s))
   .replace(/\{\{(.+?)\s\/\/\s(.+?)\}\}/g, '<span class="frac"><span class="frac-n">$1</span><span class="frac-d">$2</span></span>')
   .replace(/\((<span class="frac">.*?<\/span><\/span>)\)/g, '<span class="big-paren">(</span>$1<span class="big-paren">)</span>') // brackets as tall as the fraction
   .replace(/\^\(([^()]+)\)/g, "<sup>$1</sup>").replace(/\^(\d+(?:\.\d+)?|[A-Za-z]\w*)/g, "<sup>$1</sup>");
@@ -431,7 +448,39 @@ function endVisit(at) {
   at.viewStart = null; at.viewIdx = null;
 }
 
+/* Glossary definition box: shown while pointing at, focusing or after tapping a marked term; hidden on leaving,
+   tapping elsewhere, Escape, scrolling or changing screen. */
+const glTip = document.createElement("div");
+glTip.id = "glTip"; glTip.className = "gl-tip"; glTip.setAttribute("role", "tooltip"); glTip.hidden = true;
+document.body.appendChild(glTip);
+let glFor = null;
+function glShow(el) {
+  const g = GL_RAW.get(el.dataset.gl);
+  if (!g) return;
+  if (glFor && glFor !== el) glFor.removeAttribute("aria-describedby");
+  glFor = el;
+  glTip.innerHTML = `<span class="gl-tip-head"><b>${esc(g.term)}</b> · ${esc(g.full)}</span><span>${esc(g.def)}</span>`;
+  glTip.hidden = false;
+  el.setAttribute("aria-describedby", "glTip");
+  const r = el.getBoundingClientRect(), w = glTip.offsetWidth, h = glTip.offsetHeight;
+  let top = r.bottom + 6;
+  if (top + h > innerHeight - 8) top = Math.max(8, r.top - h - 6);
+  glTip.style.left = Math.max(8, Math.min(r.left + r.width / 2 - w / 2, innerWidth - w - 8)) + "px";
+  glTip.style.top = top + "px";
+}
+function glHide() { if (glFor) glFor.removeAttribute("aria-describedby"); glFor = null; glTip.hidden = true; }
+document.addEventListener("mouseover", e => {
+  const el = e.target.closest && e.target.closest(".gl");
+  if (el) { if (el !== glFor) glShow(el); } else if (glFor && document.activeElement !== glFor) glHide();
+});
+document.addEventListener("focusin", e => { if (e.target.classList && e.target.classList.contains("gl")) glShow(e.target); });
+document.addEventListener("focusout", e => { if (e.target === glFor) glHide(); });
+document.addEventListener("click", e => { const el = e.target.closest && e.target.closest(".gl"); if (el) glShow(el); else if (glFor) glHide(); });
+document.addEventListener("keydown", e => { if (e.key === "Escape" && glFor) glHide(); });
+window.addEventListener("scroll", () => { if (glFor) glHide(); }, { passive: true });
+
 function go(v) {
+  glHide();
   if (v.name !== "quiz") CalcUI.hide(); // the calculator only lives on the quiz screen
   if (v.name !== "sprint") sprint = null; // leaving a sprint abandons it; only finished sprints are saved
   // Leaving a live round (Save & exit, logo, etc.): stop its clock so time away isn't counted.
@@ -451,6 +500,7 @@ function render() {
   else if (view.name === "lesson") renderLesson();
   else if (view.name === "sprint") renderSprint();
   else if (view.name === "lessons") renderLessons();
+  else if (view.name === "glossary") renderGlossary();
   else renderHome();
 }
 
@@ -620,7 +670,7 @@ function renderPracticeTab() {
       <section class="card home-tile">
         <h2>Lessons</h2>
         <p>A method, a worked example and a source for every category.</p>
-        <div class="tile-actions"><button class="btn" type="button" data-lessons>Open lessons</button></div>
+        <div class="tile-actions"><button class="btn" type="button" data-lessons>Open lessons</button><button class="link" type="button" data-glossary>Glossary</button></div>
       </section>
     </div>`;
 }
@@ -714,6 +764,7 @@ function wireHome() {
     document.querySelector(`[data-home-tab="${homeTab}"]`).focus();
   });
   app.querySelectorAll("[data-lessons]").forEach(b => b.onclick = () => go({ name: "lessons" }));
+  app.querySelectorAll("[data-glossary]").forEach(b => b.onclick = () => go({ name: "glossary", back: { name: "home" } }));
   if (document.getElementById("srs")) wireSrsPanel();
   app.querySelectorAll("[data-new]").forEach(b => b.onclick = () => b.dataset.new === "mixed" ? go({ name: "setup" }) : newRound(b.dataset.new));
   app.querySelectorAll("[data-setup]").forEach(b => b.onclick = () => go({ name: "setup" }));
@@ -1570,7 +1621,7 @@ function renderLessons() {
   app.innerHTML = `
     <div class="page-head">
       <h1>Lessons</h1>
-      <p>A short method, a worked example and interactive "Try it" tools for every category. Open one before practising, or after a round to go deeper.</p>
+      <p>A short method, a worked example and interactive "Try it" tools for every category. Open one before practising, or after a round to go deeper. Unsure of a term? <button class="link" type="button" data-glossary>Open the glossary</button>.</p>
     </div>
     ${GROUPS.map(g => `
     <h2 class="lesson-group">${esc(g.name)}</h2>
@@ -1585,7 +1636,43 @@ function renderLessons() {
       }).join("")}
     </div>`).join("")}`;
   document.getElementById("lessonsHome").onclick = () => go({ name: "home" });
+  app.querySelectorAll("[data-glossary]").forEach(b => b.onclick = () => go({ name: "glossary", back: { name: "lessons" } }));
   app.querySelectorAll("[data-lesson]").forEach(b => b.onclick = () => go({ name: "lesson", cat: b.dataset.lesson, back: { name: "lessons" } }));
+}
+
+/* Glossary page: every term A–Z, searchable, each linked to its lesson. */
+function renderGlossary() {
+  const back = view.back || { name: "home" };
+  const entries = [...GL].sort((a, b) => a.term.localeCompare(b.term, "en", { sensitivity: "base" }));
+  meta.innerHTML = `<button class="link" id="backLink" type="button">Back</button>`;
+  app.innerHTML = `
+    <div class="page-head">
+      <h1>Glossary</h1>
+      <p>Every acronym and short term used in the lessons and questions. In lessons and answer explanations, terms with a dotted underline show their definition when you point at or tap them.</p>
+    </div>
+    <div class="gl-search">
+      <label class="style-label" for="glSearch">Search</label>
+      <input id="glSearch" class="typed-input" type="search" placeholder="e.g. RevPAR or margin" autocomplete="off" spellcheck="false">
+      <span class="muted" id="glCount" aria-live="polite"></span>
+    </div>
+    <div class="gl-list" id="glList"></div>`;
+  const input = document.getElementById("glSearch"), list = document.getElementById("glList"), count = document.getElementById("glCount");
+  const draw = () => {
+    const q = input.value.trim().toLowerCase();
+    const hits = entries.filter(g => !q || `${g.term} ${g.full} ${g.def}`.toLowerCase().includes(q));
+    count.textContent = `${hits.length} term${hits.length === 1 ? "" : "s"}`;
+    let letter = "";
+    list.innerHTML = hits.length ? hits.map(g => {
+      const L = g.term[0].toUpperCase(), head = L !== letter ? `<h2 class="gl-letter">${esc(L)}</h2>` : "";
+      letter = L;
+      return `${head}<div class="gl-entry"><p class="gl-name"><b>${esc(g.term)}</b> <span>${esc(g.full)}</span></p>
+        <p class="gl-def">${esc(g.def)} <button class="link" type="button" data-gl-lesson="${esc(g.cat)}">${esc(catById(g.cat).name)} lesson</button></p></div>`;
+    }).join("") : `<p class="muted">No term matches “${esc(input.value.trim())}”.</p>`;
+    list.querySelectorAll("[data-gl-lesson]").forEach(b => b.onclick = () => go({ name: "lesson", cat: b.dataset.glLesson, back: { name: "glossary", back } }));
+  };
+  input.oninput = draw;
+  draw();
+  document.getElementById("backLink").onclick = () => go(back);
 }
 
 /* Lessons: one page per category (content in site/lessons/<category>.js) */
@@ -1598,9 +1685,10 @@ function renderLesson() {
   // "widget" is the lesson's main "Try it"; an optional "widgets" list adds more below it.
   const tries = [l.widget, ...(Array.isArray(l.widgets) ? l.widgets : [])].filter(w => w && Widgets.registry[w.type]);
   meta.innerHTML = `<button class="link" id="backLink" type="button">Back</button>`;
+  glOnce = new Set(); // mark each glossary term once on this page
   app.innerHTML = `
     <div class="title-row">
-      <div><h1>${esc(c.name)}</h1><p>Learn · ${esc(c.desc)}</p></div>
+      <div><h1>${esc(c.name)}</h1><p>Learn · ${esc(c.desc)} · <button class="link" type="button" data-glossary>Glossary</button></p></div>
       <span class="pill lesson-status ${esc(l.status)}">${esc(LESSON_STATUS[l.status] || l.status)}</span>
     </div>
     <section class="card lesson">
@@ -1621,8 +1709,10 @@ function renderLesson() {
       <button class="btn primary lg" id="practiseBtn" type="button">Practise this category</button>
       <button class="btn lg" id="backBtn" type="button">Back</button>
     </div>`;
+  glOnce = null;
   document.getElementById("backLink").onclick = document.getElementById("backBtn").onclick = () => go(back);
   document.getElementById("practiseBtn").onclick = () => newRound(view.cat);
+  app.querySelectorAll("[data-glossary]").forEach(b => b.onclick = () => go({ name: "glossary", back: { ...view } }));
   tries.forEach((w, i) => Widgets.mount(document.getElementById("lessonWidget" + i), w.type, w.values || {}));
 }
 

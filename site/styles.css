@@ -502,6 +502,23 @@ sup { font-size: 0.72em; line-height: 0; vertical-align: super; }
 
 /* Question style selector (home) */
 .style-bar { margin-bottom: 14px; }
+/* Glossary: marked terms, the definition box and the Glossary page */
+.gl { border-bottom: 1px dotted var(--muted); cursor: help; }
+.gl:focus-visible { outline: 2px solid var(--navy); outline-offset: 1px; border-radius: 2px; }
+.gl-tip { position: fixed; z-index: 60; max-width: min(320px, calc(100vw - 16px)); display: grid; gap: 3px; padding: 9px 12px; border: 1px solid var(--rule-strong); border-radius: 6px; background: var(--page); box-shadow: 0 6px 20px var(--shadow); font-size: 13px; line-height: 1.45; color: var(--ink); pointer-events: none; }
+.gl-tip[hidden] { display: none; }
+.gl-tip span { color: var(--muted); }
+.gl-tip .gl-tip-head { color: var(--ink); }
+.gl-search { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; margin-bottom: 18px; }
+.gl-search .typed-input { width: 20em; }
+.gl-letter { margin: 18px 0 6px; padding-bottom: 4px; border-bottom: 1px solid var(--rule); font-size: 13px; font-weight: 600; color: var(--navy); }
+.gl-entry { padding: 8px 0; }
+.gl-entry + .gl-entry { border-top: 1px dashed var(--rule); }
+.gl-name b { font-size: 15px; }
+.gl-name span { color: var(--muted); }
+.gl-def { margin-top: 2px; font-size: 13.5px; }
+.gl-def .link { font-size: 12.5px; margin-left: 4px; }
+
 /* Home: compact tiles under the main test */
 .home-tiles { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; margin-top: 14px; }
 .home-tile { display: flex; flex-direction: column; gap: 6px; padding: 16px 18px; }

@@ -48,6 +48,7 @@ The version stamp makes browsers fetch matching files after each deploy. Any new
 | `site/js/sprint.js` | The mental maths sprint's sums (8 kinds, friendly numbers) and a "how to get faster" trick for each kind; the sprint screen and results (one collapsible row per kind with your sums and its trick, and a progress chart), plus the "Progress & tips" overview opened from the home card, are in `app.js` |
 | `site/js/app.js` | Everything else: categories, round building, quiz, results, saving |
 | `site/lessons/*.js` | One lesson (Learn page) per category, all listed on the Lessons page (opened from the Lessons tile on the home page's Practice tab) |
+| `site/js/glossary.js` | The glossary: every acronym and short term with its full name, a one-line definition and its category. Shown on the Glossary page and as hover/tap definitions in lessons and explanations (never in question text or options). The question check requires every acronym used in a lesson to have an entry |
 | `scripts/validate-questions.mjs` | The question check |
 | `scripts/test-calculator.mjs` | The calculator check |
 | `scripts/test-widgets.mjs` | The lesson widget check |

@@ -17,6 +17,9 @@
 //    method items are paragraphs, { section } headings or blocks { kind, title?, text, note? } (kinds: Lessons.BLOCKS);
 //    within each section blocks follow Lessons.ORDER, and a kind repeated in a section needs a title on each block;
 //    a lesson's optional widget (and any extra ones in `widgets`) must be defined in site/js/widgets.js, with starting values only for its own inputs
+//  - the glossary (site/js/glossary.js, loaded by index.html): every entry has a unique term, a full name, a definition
+//    and a real category; and every acronym used in a lesson has an entry (plurals like "LPs" count via "LP",
+//    compounds like "EV/EBITDA" via their parts), so a lesson can't use a term the glossary doesn't explain
 // Exits with code 1 on any violation.
 import { readFileSync, readdirSync } from "node:fs";
 import { join, dirname } from "node:path";
@@ -37,7 +40,7 @@ const load = rel => vm.runInContext(readFileSync(join(SITE, rel), "utf8"), ctx, 
 const questionFiles = readdirSync(join(SITE, "questions")).filter(f => f.endsWith(".js")).sort().map(f => `questions/${f}`);
 const generatorFiles = readdirSync(join(SITE, "js")).filter(f => /^generators.*\.js$/.test(f)).sort().map(f => `js/${f}`);
 const lessonFiles = readdirSync(join(SITE, "lessons")).filter(f => f.endsWith(".js")).sort().map(f => `lessons/${f}`);
-for (const f of ["js/bank.js", "js/widgets.js", ...questionFiles, ...generatorFiles, ...lessonFiles]) {
+for (const f of ["js/bank.js", "js/widgets.js", "js/glossary.js", ...questionFiles, ...generatorFiles, ...lessonFiles]) {
   try { load(f); } catch (e) { fail(`${f}: failed to load: ${e.message}`); }
 }
 const { Bank } = ctx;
@@ -46,7 +49,7 @@ if (!Bank) { console.error("Bank was not defined by js/bank.js"); process.exit(1
 
 // Every question/generator file must actually be loaded by the page.
 const html = readFileSync(join(SITE, "index.html"), "utf8");
-for (const f of [...questionFiles, ...generatorFiles, ...lessonFiles]) if (!new RegExp(`src="${f.replace(/\./g, "\\.")}(\\?[^"]*)?"`).test(html)) fail(`index.html doesn't load ${f}`);
+for (const f of [...questionFiles, ...generatorFiles, ...lessonFiles, "js/glossary.js"]) if (!new RegExp(`src="${f.replace(/\./g, "\\.")}(\\?[^"]*)?"`).test(html)) fail(`index.html doesn't load ${f}`);
 
 // Every category in the bank must exist in app.js.
 const appSrc = readFileSync(join(SITE, "js/app.js"), "utf8");
@@ -274,6 +277,31 @@ for (const [cat, l] of Object.entries(Lessons)) {
     if (!l.source) fail(`${where}: a ${l.status} lesson needs a source`);
   }
 }
+// Glossary: well-formed entries, and every acronym in a lesson explained there.
+const Glossary = ctx.Glossary || [];
+if (!Array.isArray(Glossary) || !Glossary.length) fail("js/glossary.js must define a non-empty window.Glossary list");
+const glTerms = new Set();
+Glossary.forEach((g, i) => {
+  const where = `glossary entry ${i + 1}${g && g.term ? ` (${g.term})` : ""}`;
+  if (!g || !text(g.term) || !text(g.full) || !text(g.def)) return fail(`${where}: needs a term, a full name and a definition`);
+  if (glTerms.has(g.term)) fail(`${where}: the term appears twice`);
+  glTerms.add(g.term);
+  if (!categoryIds.includes(g.cat)) fail(`${where}: cat must be a category id, got ${JSON.stringify(g.cat)}`);
+});
+// Not acronyms for this rule: currencies and places, Roman numerals, and people's or publishers' names in sources.
+const NOT_ACRONYMS = new Set(["US", "UK", "EU", "II", "III", "IV", "McGraw", "DeMarzo", "McKinsey", "HotelAVE"]);
+const ACRONYM = /(?<![A-Za-z0-9])(?=[A-Za-z0-9&/]*[A-Z][A-Za-z0-9&/]*[A-Z])[A-Za-z][A-Za-z0-9&/]*[A-Za-z0-9](?![A-Za-z0-9])/g;
+const known = t => NOT_ACRONYMS.has(t) || glTerms.has(t) || (t.endsWith("s") && glTerms.has(t.slice(0, -1)));
+for (const [cat, l] of Object.entries(Lessons)) {
+  const missing = new Set();
+  // The "Try it" settings (widget names and slider keys) aren't shown as text, so they're left out.
+  for (const m of JSON.stringify({ ...l, widget: undefined, widgets: undefined }).replace(/\\n/g, " ").matchAll(ACRONYM)) {
+    const t = m[0];
+    if (!known(t) && !(t.includes("/") && t.split("/").every(p => p && known(p)))) missing.add(t);
+  }
+  if (missing.size) fail(`lesson ${cat}: no glossary entry for ${[...missing].join(", ")} (add them to js/glossary.js)`);
+}
+
 const lessonCounts = Object.values(Lessons).reduce((m, l) => (m[l.status] = (m[l.status] || 0) + 1, m), {});
 
 if (errors.length) {
@@ -283,3 +311,4 @@ if (errors.length) {
 }
 console.log(`✓ ${written - formatQuestions} written questions, ${formatQuestions} new-format questions, ${gens} generators, ${typed} typed-answer generators and ${cases} case stud${cases === 1 ? "y" : "ies"} (${RUNS} samples each) passed.`);
 console.log(`✓ ${Object.keys(Lessons).length} lessons for ${categoryIds.length} categories (${Object.entries(lessonCounts).map(([k, v]) => `${v} ${k}`).join(", ")}).`);
+console.log(`✓ ${Glossary.length} glossary terms; every acronym in the lessons has one.`);
