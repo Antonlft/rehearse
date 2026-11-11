@@ -1,10 +1,14 @@
 // Lesson: Corporate finance. Status "draft": written by Claude, to be reviewed; change to "reviewed" once checked.
-// Fields: method (paragraphs), example (question, working steps, answer), source (text, optional url), widget (interactive "Try it").
+// Fields: method (paragraphs or coloured blocks { kind, title?, text, note? }), example (question, working steps, answer), source (text, optional url), widget (interactive "Try it").
 Lessons.add("cf", {
   "status": "draft",
   "method": [
-    "The weighted average cost of capital (WACC) is the return a company must earn for all its investors: WACC = E/V × cost of equity + D/V × cost of debt × (1 − tax rate), using market values for the weights. Debt is cheaper than equity because lenders are paid first and interest is tax-deductible, so its cost is taken after tax.",
-    "The cost of equity usually comes from CAPM: risk-free rate + beta × equity risk premium. Beta should reflect the business's risk at its target capital structure, so unlever peers' betas and relever at your own. WACC is the rate for unlevered free cash flow; a project creates value only if it earns more than its WACC."
+    {"kind": "idea", "text": "The weighted average cost of capital (WACC) is the return a company must earn for all its investors."},
+    {"kind": "formula", "title": "WACC", "text": "WACC = E/V × cost of equity + D/V × cost of debt × (1 − tax rate)", "note": "Use market values for the weights."},
+    {"kind": "read", "text": "Debt is cheaper than equity because lenders are paid first and interest is tax-deductible, so its cost is taken after tax."},
+    {"kind": "formula", "title": "CAPM", "text": "Cost of equity = risk-free rate + beta × equity risk premium"},
+    {"kind": "watch", "text": "Beta should reflect the business's risk at its target capital structure: unlever peers' betas and relever at your own, rather than using one company's raw beta."},
+    {"kind": "practice", "text": "WACC is the rate for unlevered free cash flow; a project creates value only if it earns more than its WACC."}
   ],
   "example": {
     "question": "A company is 60% equity and 40% debt at market value. Its cost of equity is 11%, its pre-tax cost of debt 6% and its tax rate 25%. What is its WACC?",

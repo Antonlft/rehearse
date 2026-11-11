@@ -1,10 +1,13 @@
 // Lesson: Financial institutions (FIG). Status "draft": written by Claude, to be reviewed; change to "reviewed" once checked.
-// Fields: method (paragraphs), example (question, working steps, answer), source (text, optional url), widget (interactive "Try it").
+// Fields: method (paragraphs or coloured blocks { kind, title?, text, note? }), example (question, working steps, answer), source (text, optional url), widget (interactive "Try it").
 Lessons.add("fig", {
   "status": "draft",
   "method": [
-    "Banks are valued on their equity, not on enterprise value. Interest is a bank's raw material: it pays interest to depositors and earns it on loans, so EBITDA and EV say little. Use equity measures instead: P/E, price to tangible book (P/TBV) and dividend-based models, and check capital strength through the CET1 ratio (common equity tier 1 ÷ risk-weighted assets).",
-    "P/TBV is tied to returns. A bank that earns exactly its cost of equity on its tangible equity is worth its tangible book: 1.0x. Higher returns justify a premium, roughly P/TBV = (ROTE − g) ÷ (cost of equity − g). So a bank trading below book is one the market thinks earns less than its cost of equity."
+    {"kind": "idea", "text": "Banks are valued on their equity, not on enterprise value. Interest is a bank's raw material: it pays interest to depositors and earns it on loans, so EBITDA and EV say little."},
+    {"kind": "practice", "text": "Use equity measures: P/E, price to tangible book (P/TBV) and dividend-based models. Check capital strength through the CET1 ratio (common equity tier 1 ÷ risk-weighted assets)."},
+    {"kind": "formula", "text": "P/TBV = (ROTE − g) ÷ (cost of equity − g)", "note": "ROTE = return on tangible equity; g = long-run growth."},
+    {"kind": "read", "text": "A bank that earns exactly its cost of equity on its tangible equity is worth its tangible book: 1.0x. Higher returns justify a premium, so a bank trading below book is one the market thinks earns less than its cost of equity."},
+    {"kind": "watch", "text": "Don't value a bank with EV/EBITDA or a DCF of unlevered free cash flow: deposits and debt are part of how it operates, not just how it's financed."}
   ],
   "example": {
     "question": "A bank earns a 13% return on tangible equity (ROTE). Its cost of equity is 10% and its long-run growth is 2%. What P/TBV does that justify?",

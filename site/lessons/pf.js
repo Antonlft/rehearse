@@ -1,10 +1,14 @@
 // Lesson: Property finance & rates. Status "draft": written by Claude, to be reviewed; change to "reviewed" once checked.
-// Fields: method (paragraphs), example (question, working steps, answer), source (text, optional url), widget (interactive "Try it").
+// Fields: method (paragraphs or coloured blocks { kind, title?, text, note? }), example (question, working steps, answer), source (text, optional url), widget (interactive "Try it").
 Lessons.add("pf", {
   "status": "draft",
   "method": [
-    "Property lenders size a loan using several tests and lend the lowest result. Loan-to-value (LTV) caps the loan against the property's value; interest cover (ICR = NOI ÷ interest) and debt service cover (DSCR, which includes principal repayments) check that income covers the payments; debt yield (NOI ÷ loan) shows the lender's return on income if it had to take the property.",
-    "Floating-rate loans are priced at a benchmark (SOFR in the US, SONIA in the UK) plus a margin; swaps or caps fix or limit the cost. Leverage is positive when the property's yield is above the cost of debt and negative when it's below. Higher rates both shrink the loan the ICR test allows and push yields up, and so values down."
+    {"kind": "idea", "text": "Property lenders size a loan using several tests and lend the lowest result."},
+    {"kind": "formula", "text": "LTV = loan ÷ value · ICR = NOI ÷ interest · debt yield = NOI ÷ loan", "note": "DSCR is like ICR but includes principal repayments."},
+    {"kind": "read", "title": "What each test protects", "text": "LTV caps the loan against the property's value; ICR and DSCR check that income covers the payments; debt yield shows the lender's return on income if it had to take the property."},
+    {"kind": "practice", "text": "Floating-rate loans are priced at a benchmark (SOFR in the US, SONIA in the UK) plus a margin; swaps or caps fix or limit the cost."},
+    {"kind": "read", "title": "Positive and negative leverage", "text": "Leverage is positive when the property's yield is above the cost of debt, and negative when it's below."},
+    {"kind": "watch", "text": "Higher rates hit twice: they shrink the loan the ICR test allows, and they push yields up and so values down."}
   ],
   "example": {
     "question": "A property worth US$80m earns NOI of US$4.8m. The lender allows 65% LTV, a minimum ICR of 1.6x and a minimum 8% debt yield, at a 6.5% interest rate. What's the maximum loan?",

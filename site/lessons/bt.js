@@ -1,10 +1,12 @@
 // Lesson: Brain teasers. Status "draft": written by Claude, to be reviewed; change to "reviewed" once checked.
-// Fields: method (paragraphs), example (question, working steps, answer), source (text, optional url), widget (interactive "Try it").
+// Fields: method (paragraphs or coloured blocks { kind, title?, text, note? }), example (question, working steps, answer), source (text, optional url), widget (interactive "Try it").
 Lessons.add("bt", {
   "status": "draft",
   "method": [
-    "Brain teasers test structured thinking, not trivia. Talk through your approach: restate the problem, look for a shortcut (symmetry, working backwards, the complement), then sanity-check the answer. Interviewers care more about how you get there than about speed.",
-    "Probability puzzles often hide a trap. For 'at least one', work out the chance of none and subtract it from 1. Check whether events are independent and whether the first draw changes the second. Count outcomes carefully, and when intuition says 50/50, ask what information you've actually been given."
+    {"kind": "idea", "text": "Brain teasers test structured thinking, not trivia. Interviewers care more about how you get there than about speed."},
+    {"kind": "how", "text": "Talk through your approach: restate the problem, look for a shortcut (symmetry, working backwards, the complement), then sanity-check the answer."},
+    {"kind": "formula", "text": "P(at least one) = 1 − P(none)"},
+    {"kind": "watch", "text": "Probability puzzles often hide a trap. Check whether events are independent and whether the first draw changes the second. Count outcomes carefully, and when intuition says 50/50, ask what information you've actually been given."}
   ],
   "example": {
     "question": "You pick one of three doors; one hides a car. The host, who knows where it is, opens another door to show a goat and offers you a switch. Should you switch?",

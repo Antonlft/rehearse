@@ -131,6 +131,9 @@ let view = { name: "home" };
 let reviewFilter = "all";
 
 const esc = s => String(s).replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+// Escaped text with powers shown as superscripts: "2.73^(1/5)" → 2.73<sup>1/5</sup>, "1.08^5" → 1.08<sup>5</sup>.
+// Content keeps plain "^" text; only the display changes. Used for explanations and lessons.
+const rich = s => esc(s).replace(/\^\(([^()]+)\)/g, "<sup>$1</sup>").replace(/\^(\d+(?:\.\d+)?|[A-Za-z]\w*)/g, "<sup>$1</sup>");
 const fmt = ms => { const t = Math.max(0, Math.ceil(ms / 1000)); return String(Math.floor(t / 60)).padStart(2, "0") + ":" + String(t % 60).padStart(2, "0"); };
 const shuffle = arr => { const a = [...arr]; for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; };
 const pick = arr => arr[Math.floor(Math.random() * arr.length)];
@@ -636,7 +639,7 @@ function renderQuiz() {
       ${revealed ? `<div class="feedback ${ans === it.a ? "ok" : "no"}" id="feedback" role="status" tabindex="-1">
         <p class="feedback-title">${ans === it.a ? "Correct" : `Not quite. The answer is: ${esc(it.o[it.a])}`}</p>
         ${ans !== it.a && it.x[ans] ? `<p>${esc(it.x[ans])}</p>` : ""}
-        <p>${esc(it.why)}</p>
+        <p>${rich(it.why)}</p>
       </div>` : ""}`}
       <div class="actions">
         <button class="btn" id="prevBtn" type="button" ${at.cur === 0 ? "disabled" : ""}>Previous</button>
@@ -705,7 +708,7 @@ function typedArea(at, it, ans, revealed) {
     ${revealed ? `<div class="feedback ${g.ok ? "ok" : "no"}" id="feedback" role="status" tabindex="-1">
       <p class="feedback-title">${g.ok ? `Correct: ${esc(right)}` : `Not quite. The answer is ${esc(right)}${g.value != null ? `; you gave ${esc(Typed.show(g.value, it.unit))}` : ""}.`}</p>
       ${g.ok ? "" : `<p>${esc(causeText(g))}</p>`}
-      <p>${esc(it.why)}</p>
+      <p>${rich(it.why)}</p>
     </div>` : ""}`;
 }
 function wireTyped(at, it) {
@@ -752,7 +755,7 @@ function orderArea(at, it, ans, revealed) {
     ${revealed ? `<div class="feedback ${g.ok ? "ok" : "no"}" id="feedback" role="status" tabindex="-1">
       <p class="feedback-title">${g.ok ? "Correct order" : `Not quite: ${g.placed} of ${n} steps are in the right place.`}</p>
       ${g.ok ? "" : `<p>The right order is:</p><ol class="order-correct">${it.answer.map(a => `<li>${esc(a)}</li>`).join("")}</ol>`}
-      <p>${esc(it.why)}</p>
+      <p>${rich(it.why)}</p>
     </div>` : `<div class="order-foot">
       <p class="typed-hint" id="orderHint">${isBlank(ans) ? "Use ▲ ▼ to put the steps in order. Not answered yet." : "Your order is saved."}</p>
       ${isBlank(ans) ? `<button class="btn" id="orderKeep" type="button">Use this order</button>` : ""}
@@ -796,7 +799,7 @@ function gridArea(at, it, ans, revealed) {
     </div>
     ${revealed ? `<div class="feedback ${g.ok ? "ok" : "no"}" id="feedback" role="status" tabindex="-1">
       <p class="feedback-title">${g.ok ? `All ${n} right` : `Not quite: ${g.right} of ${n} right.`}</p>
-      <p>${esc(it.why)}</p>
+      <p>${rich(it.why)}</p>
     </div>` : `<div class="order-foot">
       <p class="typed-hint" id="gridHint">${done} of ${n} rows answered${done && done < n ? ". Rows left empty count as wrong." : "."}</p>
       ${at.learning ? `<button class="btn primary" id="checkBtn" type="button">Check</button>` : ""}
@@ -834,8 +837,8 @@ function walkArea(at, it, ans, revealed) {
       <ul class="walk-points">${it.points.map(p => `<li>${esc(p)}</li>`).join("")}</ul>
       ${revealed ? `<div class="feedback ${ans === "got" ? "ok" : "no"}" id="feedback" role="status" tabindex="-1">
         <p class="feedback-title">You marked: ${esc(walkLabel(ans))}</p>
-        <p>${esc(it.why)}</p>
-      </div>` : `<p class="note-block">${esc(it.why)}</p>
+        <p>${rich(it.why)}</p>
+      </div>` : `<p class="note-block">${rich(it.why)}</p>
       <div class="walk-grade" role="radiogroup" aria-label="How did you do?">
         <span class="walk-ask">How did you do?</span>
         ${WALK_GRADES.map(([k, l], n) => `<button type="button" class="grid-choice" role="radio" aria-checked="${ans === k}" data-walk="${k}" aria-keyshortcuts="${n + 1}">${l}</button>`).join("")}
@@ -1160,6 +1163,27 @@ function renderSprintResults() {
   document.getElementById("sprintHome").onclick = document.getElementById("sprintBack").onclick = () => go({ name: "home" });
 }
 
+// A lesson's method: plain paragraphs stay paragraphs; typed blocks become coloured cards (Lessons.BLOCKS).
+// Two short blocks in a row share a line on wider screens; a long block takes the full width.
+const METHOD_SHORT = 190;
+function methodHtml(items) {
+  const block = b => `<div class="mblock mb-${esc(b.kind)}">
+      <span class="mb-label">${esc(Lessons.BLOCKS[b.kind] || b.kind)}${b.title ? ` · ${esc(b.title)}` : ""}</span>
+      <p class="${b.kind === "formula" ? "mb-eq" : "mb-text"}">${rich(b.text)}</p>
+      ${b.note ? `<p class="mb-note">${rich(b.note)}</p>` : ""}
+    </div>`;
+  const short = b => b && typeof b === "object" && (b.text.length + (b.note || "").length + (b.title || "").length) <= METHOD_SHORT;
+  let html = "", run = [];
+  const flush = () => { if (run.length) html += `<div class="mb-grid">${run.map(b => short(b) && run.length > 1 ? block(b) : block({ ...b, wide: true })).join("")}</div>`; run = []; };
+  for (let i = 0; i < items.length; i++) {
+    const b = items[i];
+    if (typeof b === "string") { flush(); html += `<p>${rich(b)}</p>`; continue; }
+    if (short(b) && short(items[i + 1])) { flush(); run = [b, items[i + 1]]; flush(); i++; continue; }
+    flush(); run = [b]; flush();
+  }
+  return html;
+}
+
 /* Lessons page: every lesson as a card, grouped like the home page. */
 function renderLessons() {
   meta.innerHTML = `<button class="link" id="lessonsHome" type="button">All assessments</button>`;
@@ -1202,11 +1226,14 @@ function renderLesson() {
     </div>
     <section class="card lesson">
       <h2>Method</h2>
-      ${l.method && l.method.length ? l.method.map(p => `<p>${esc(p)}</p>`).join("") : missing}
+      ${l.method && l.method.length ? methodHtml(l.method) : missing}
       <h2>Worked example</h2>
-      ${ex ? `<p class="prompt">${esc(ex.question)}</p>
-        ${ex.working && ex.working.length ? `<ol class="lesson-steps">${ex.working.map(w => `<li>${esc(w)}</li>`).join("")}</ol>` : ""}
-        <p class="lesson-answer"><b>Answer:</b> ${esc(ex.answer)}</p>` : missing}
+      ${ex ? `<p class="prompt">${rich(ex.question)}</p>
+        <details class="lesson-reveal">
+          <summary><span class="when-closed">Show working and answer</span><span class="when-open">Hide working and answer</span></summary>
+          ${ex.working && ex.working.length ? `<ol class="lesson-steps">${ex.working.map(w => `<li>${rich(w)}</li>`).join("")}</ol>` : ""}
+          <p class="lesson-answer"><b>Answer:</b> ${rich(ex.answer)}</p>
+        </details>` : missing}
       ${tries.length ? `<h2>Try it</h2>${tries.map((_, i) => `<div class="lesson-widget" id="lessonWidget${i}"></div>`).join("")}` : ""}
       <h2>Source</h2>
       ${src ? `<p>${safeUrl ? `<a href="${esc(safeUrl)}" target="_blank" rel="noopener noreferrer">${esc(src.text)}</a>` : esc(src.text)}</p>` : missing}
@@ -1319,24 +1346,24 @@ function reviewItem(it, i, ans, marked, misread) {
       ${it.type === "walk" ? `
       <p class="label">A strong answer covers</p>
       <ul class="walk-points">${it.points.map(p => `<li>${esc(p)}</li>`).join("")}</ul>
-      <p class="note-block">${esc(it.why)}</p>` : it.type === "grid" ? `
+      <p class="note-block">${rich(it.why)}</p>` : it.type === "grid" ? `
       <p class="label">${g.ok ? `All ${it.rows.length} rows right` : `${g.right} of ${it.rows.length} rows right`}</p>
       <ul class="ans">${it.rowOrder.map(k => {
         const row = it.rows[k], pick = Array.isArray(ans) ? ans[k] ?? null : null, okRow = pick === row.answer;
         return `<li class="${okRow ? "right" : isBlank(ans) ? "plain" : "wrong"}"><span class="mark" aria-hidden="true">${okRow ? "✓" : isBlank(ans) ? "" : "✗"}</span><div><span>${esc(row.text)}: <b>${esc(it.columns[row.answer])}</b>${!okRow && pick !== null ? ` <em>(your answer: ${esc(it.columns[pick])})</em>` : ""}${!okRow && pick === null && !isBlank(ans) ? " <em>(left empty)</em>" : ""}</span>${row.note ? `<span class="note">${esc(row.note)}</span>` : ""}</div></li>`;
       }).join("")}</ul>
-      <p class="note-block">${esc(it.why)}</p>` : it.type === "order" ? `
+      <p class="note-block">${rich(it.why)}</p>` : it.type === "order" ? `
       ${isBlank(ans) ? "" : `<p class="label">Your order</p><ol class="order-list review">${ans.map((step, pos) => `<li class="order-item ${step === pos ? "right" : "wrong"}"><span class="order-num" aria-hidden="true">${pos + 1}</span><span class="order-text">${esc(it.answer[step])}</span><span class="order-mark" aria-label="${step === pos ? "right place" : "wrong place"}">${step === pos ? "✓" : "✗"}</span></li>`).join("")}</ol>`}
       ${g.ok ? "" : `<p class="label">The right order</p><ol class="order-correct">${it.answer.map(a => `<li>${esc(a)}</li>`).join("")}</ol>`}
-      <p class="note-block">${esc(it.why)}</p>` : `
+      <p class="note-block">${rich(it.why)}</p>` : `
       <ul class="ans">
         ${it.type === "numeric" ? `
-          <li class="right"><span class="mark" aria-hidden="true">✓</span><div><span>${esc(Typed.show(it.answer, it.unit, it.dp))}${g.ok ? ` <em>(your answer: ${esc(ans)})</em>` : ""}</span><span class="note">${esc(it.why)}</span></div></li>
+          <li class="right"><span class="mark" aria-hidden="true">✓</span><div><span>${esc(Typed.show(it.answer, it.unit, it.dp))}${g.ok ? ` <em>(your answer: ${esc(ans)})</em>` : ""}</span><span class="note">${rich(it.why)}</span></div></li>
           ${!isBlank(ans) && !g.ok ? `<li class="wrong"><span class="mark" aria-hidden="true">✗</span><div><span>${esc(ans)} <em>(your answer${g.value != null ? `, read as ${esc(Typed.show(g.value, it.unit))}` : ""})</em></span><span class="note">${esc(causeText(g))}</span></div></li>` : ""}`
         : it.o.map((o, j) => {
           const cls = j === it.a ? "right" : j === ans ? "wrong" : "plain";
           const note = j === it.a ? it.why : it.x[j];
-          return `<li class="${cls}"><span class="mark" aria-hidden="true">${j === it.a ? "✓" : j === ans ? "✗" : ""}</span><div><span>${esc(o)}${j === ans ? " <em>(your answer)</em>" : ""}</span>${note ? `<span class="note">${esc(note)}</span>` : ""}</div></li>`;
+          return `<li class="${cls}"><span class="mark" aria-hidden="true">${j === it.a ? "✓" : j === ans ? "✗" : ""}</span><div><span>${esc(o)}${j === ans ? " <em>(your answer)</em>" : ""}</span>${note ? `<span class="note">${rich(note)}</span>` : ""}</div></li>`;
         }).join("")}
       </ul>`}
       ${st[0] !== "ok" ? learnLink() : ""}

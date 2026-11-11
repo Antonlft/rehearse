@@ -27,6 +27,11 @@
   --font-logo: "IBM Plex Serif", Georgia, "Times New Roman", serif;
   --font-mono: "IBM Plex Mono", ui-monospace, Menlo, Consolas, monospace;
   --radius: 6px;
+  --violet: #5b3fa8;
+  --violet-bg: #f4f0fb;
+  --violet-line: #d9cdf2;
+  --navy-bg: #edf2fb;
+  --navy-line: #cdd8ee;
   color-scheme: light dark;
 }
 /* Theme: follows the device until the header toggle sets data-theme="light" or "dark" on <html> (remembered per browser). */
@@ -56,6 +61,13 @@
     --bad-line: #6a2e29;
     --status-ink: #0e1218;
     --scrim: rgb(0 0 0 / .6);
+    --violet: #c2b1f4;
+    --violet-bg: #211b34;
+    --violet-line: #4b3e76;
+  --navy-bg: #182136;
+  --navy-line: #33425f;
+    --navy-bg: #182136;
+    --navy-line: #33425f;
     --shadow: rgb(0 0 0 / .5);
   }
 }
@@ -82,6 +94,9 @@
   --bad-line: #6a2e29;
   --status-ink: #0e1218;
   --scrim: rgb(0 0 0 / .6);
+  --violet: #c2b1f4;
+  --violet-bg: #211b34;
+  --violet-line: #4b3e76;
   --shadow: rgb(0 0 0 / .5);
 }
 * { box-sizing: border-box; }
@@ -420,6 +435,38 @@ main { padding-block: 30px 48px; }
 .grid-choice:hover:not(:disabled) { border-color: var(--navy); }
 .grid-choice[aria-checked="true"] { background: var(--navy); border-color: var(--navy); color: var(--navy-ink); }
 .grid-choice:disabled { cursor: default; }
+
+/* Powers written with ^ in content are shown as superscripts (rich() in app.js); line-height 0 keeps lines even. */
+sup { font-size: 0.72em; line-height: 0; vertical-align: super; }
+
+/* Worked example: the working and answer open and close under the question */
+.lesson-reveal { margin-top: 4px; }
+.lesson-reveal > summary { display: inline-flex; align-items: center; gap: 8px; padding: 7px 14px; border: 1px solid var(--rule-strong); border-radius: 5px; background: var(--page); color: var(--ink); font-size: 13.5px; font-weight: 500; cursor: pointer; list-style: none; user-select: none; }
+.lesson-reveal > summary::-webkit-details-marker { display: none; }
+.lesson-reveal > summary::before { content: ""; width: 7px; height: 7px; border-right: 2px solid currentColor; border-bottom: 2px solid currentColor; transform: rotate(-45deg); transition: transform 0.15s; margin-right: 2px; }
+.lesson-reveal[open] > summary::before { transform: rotate(45deg); }
+.lesson-reveal > summary:hover { border-color: var(--navy); }
+.lesson-reveal > summary:focus-visible { outline: 2px solid var(--navy); outline-offset: 2px; }
+.lesson-reveal[open] .when-closed, .lesson-reveal:not([open]) .when-open { display: none; }
+.lesson-reveal[open] > summary { margin-bottom: 12px; }
+@media (prefers-reduced-motion: reduce) { .lesson-reveal > summary::before { transition: none; } }
+
+/* Lesson method blocks: one colour per kind, the same in every lesson */
+.mb-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; margin-bottom: 10px; }
+.mblock { --mb: var(--navy); --mb-bg: var(--navy-bg); --mb-line: var(--navy-line); grid-column: span 1; padding: 12px 14px 12px 16px; border: 1px solid var(--mb-line); border-left: 4px solid var(--mb); border-radius: 5px; background: var(--mb-bg); }
+.mb-grid > .mblock:only-child { grid-column: 1 / -1; }
+.mb-label { display: block; font-size: 11px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: var(--mb); margin-bottom: 4px; }
+.lesson .mblock p { max-width: none; margin: 0; }
+.mb-text { font-size: 14px; line-height: 1.55; }
+.mb-eq { font-size: 16px; font-weight: 500; line-height: 1.5; }
+.lesson .mblock .mb-note { margin-top: 4px; font-size: 12.5px; color: var(--muted); }
+.mb-idea { --mb: var(--navy); --mb-bg: var(--navy-bg); --mb-line: var(--navy-line); }
+.mb-how { --mb: var(--good); --mb-bg: var(--good-bg); --mb-line: var(--good-line); }
+.mb-formula { --mb: var(--violet); --mb-bg: var(--violet-bg); --mb-line: var(--violet-line); }
+.mb-read { --mb: var(--amber); --mb-bg: var(--amber-bg); --mb-line: var(--amber-line); }
+.mb-watch { --mb: var(--bad); --mb-bg: var(--bad-bg); --mb-line: var(--bad-line); }
+.mb-practice { --mb: var(--muted); --mb-bg: var(--tray); --mb-line: var(--rule); }
+@media (max-width: 640px) { .mb-grid { grid-template-columns: minmax(0, 1fr); } }
 
 /* Lessons page */
 #app.wide { max-width: 1080px; }

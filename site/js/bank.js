@@ -95,6 +95,10 @@ window.TRAPS = {
    status: "stub" (not written yet) → "draft" → "reviewed". Draft and reviewed lessons need a method, an example and a source. */
 window.Lessons = {
   all: {},
+  // Method blocks: a lesson's method can mix plain paragraphs (strings) with typed blocks { kind, title?, text, note? }.
+  // When a kind appears more than once in a lesson, each of those blocks needs a short title ("How it works · The fund").
+  // Each kind has one label and one colour, the same in every lesson.
+  BLOCKS: { idea: "Key idea", how: "How it works", formula: "Formula", read: "How to read it", watch: "Watch out", practice: "In practice" },
   add(cat, lesson) { this.all[cat] = lesson; }
 };
 

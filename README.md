@@ -85,7 +85,11 @@ Each category has a lesson in `site/lessons/<category>.js`, reachable from "Lear
 ```js
 Lessons.add("val", {
   status: "draft",            // "stub" (not written yet) → "draft" → "reviewed"
-  method: ["A paragraph explaining the method.", "Another paragraph."],
+  method: [                    // plain paragraphs, or coloured blocks { kind, title?, text, note? }
+    { kind: "idea", text: "What it is, in a sentence or two." },
+    { kind: "formula", text: "Value = NOI ÷ yield", note: "optional line under a formula" },
+    "A plain paragraph still works."
+  ],
   example: {
     question: "A worked problem.",
     working: ["Step 1 …", "Step 2 …"],
@@ -97,7 +101,7 @@ Lessons.add("val", {
 });
 ```
 
-Text is shown as plain paragraphs and numbered steps (no formatting code needed). The question check requires a lesson for every category; a stub may be empty, but a draft or reviewed lesson must have a method, an example and a source, and a source link must start with `http://` or `https://`. All 18 lessons are drafts written by Claude (method, worked example, source and widget), to be reviewed and marked "reviewed".
+Text is shown as plain paragraphs and numbered steps (no formatting code needed). Method blocks have six kinds, each with one label and colour in every lesson (`Lessons.BLOCKS` in `bank.js`): `idea` (Key idea, navy), `how` (How it works, green), `formula` (Formula, purple), `read` (How to read it, amber), `watch` (Watch out, red) and `practice` (In practice, grey). Two short blocks in a row share a line on wider screens. A block can add a short `title` after its label ("How it works · The fund"); when a kind appears more than once in a lesson, each of those blocks must have one. The question check requires a lesson for every category; a stub may be empty, but a draft or reviewed lesson must have a method, an example and a source, and a source link must start with `http://` or `https://`. All 18 lessons are drafts written by Claude (method, worked example, source and widget), to be reviewed and marked "reviewed".
 
 **Widgets.** `site/js/widgets.js` defines 23 interactive "Try it" widgets (sliders that recalculate live, with a small chart), at least one per category: `evBridge`, `dilutedShares` (Valuation's second widget), `goodwill` (M&A's second widget), `fundWaterfall` (LBO's second widget), `reitNav` (Real estate valuation's second widget), `yieldToWorst` (Credit & debt's second widget), `wacc`, `compound`, `lboReturns`, `recovery`, `depreciation`, `bondPrice`, `ptbv`, `terp`, `yieldCurve`, `accretion`, `montyHall`, `revpar`, `hotelModels`, `yieldValue`, `rentRoll`, `maxLoan`, `capitalStack`. Each has a pure `compute()` for the maths and a `render()` for the picture. `node scripts/test-widgets.mjs` checks the maths against hand-worked answers (it also runs before every deploy), and the question check rejects a lesson that names a widget that doesn't exist or gives it starting values outside its sliders.
 
