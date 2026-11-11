@@ -76,9 +76,10 @@
       { k: "cash", label: "Cash", min: 0, max: 600, step: 10, value: 100, fmt: usd },
       { k: "nci", label: "Non-controlling interests", min: 0, max: 300, step: 10, value: 50, fmt: usd },
       { k: "pref", label: "Preferred shares", min: 0, max: 300, step: 10, value: 0, fmt: usd },
-      { k: "assoc", label: "Associates (stakes held in other companies)", min: 0, max: 300, step: 10, value: 0, fmt: usd }
+      { k: "assoc", label: "Associates (stakes held in other companies)", min: 0, max: 300, step: 10, value: 0, fmt: usd },
+      { k: "pension", label: "Pension deficit (defined benefit, after tax)", min: 0, max: 300, step: 10, value: 0, fmt: usd }
     ],
-    compute: v => ({ netDebt: v.debt - v.cash, equity: v.ev - v.debt + v.cash - v.pref - v.nci + (v.assoc || 0) }),
+    compute: v => ({ netDebt: v.debt - v.cash, equity: v.ev - v.debt + v.cash - v.pref - v.nci + (v.assoc || 0) - (v.pension || 0) }),
     render: (v, r) => stats([stat("Net debt", usd(r.netDebt)), stat("Equity value", usd(r.equity), true)]) +
       waterfall([{ label: "EV", value: v.ev, kind: "total", text: num(v.ev, 0) },
         { label: "Debt", value: v.debt, kind: "down", text: (v.debt ? "−" : "") + num(v.debt, 0) },
@@ -86,8 +87,9 @@
         { label: "Pref", value: v.pref, kind: "down", text: (v.pref ? "−" : "") + num(v.pref, 0) },
         { label: "NCI", value: v.nci, kind: "down", text: (v.nci ? "−" : "") + num(v.nci, 0) },
         { label: "Assoc.", value: v.assoc || 0, kind: "up", text: (v.assoc ? "+" : "") + num(v.assoc || 0, 0) },
+        ...(v.pension ? [{ label: "Pension", value: v.pension, kind: "down", text: "−" + num(v.pension, 0) }] : []),
         { label: "Equity", value: r.equity, kind: "total", text: num(r.equity, 0) }]) +
-      note("Chart in US$ millions. NCI = non-controlling interests; Assoc. = associates, minority stakes the company holds in other businesses.") +
+      note("Chart in US$ millions. NCI = non-controlling interests; Assoc. = associates, minority stakes the company holds in other businesses." + (v.pension ? " Pension = the unfunded deficit of a defined-benefit plan, after tax." : "")) +
       (r.equity < 0 ? note("Equity value is negative: the claims ahead of shareholders exceed what the business is worth.") : "")
   });
 

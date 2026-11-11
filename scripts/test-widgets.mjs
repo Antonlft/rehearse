@@ -22,6 +22,8 @@ let r = run("evBridge", {}); near("evBridge", "net debt", r.netDebt, 300); near(
 r = run("evBridge", { ev: 500, debt: 600, cash: 0, nci: 0 }); near("evBridge", "negative equity", r.equity, -100);
 // Associates are added: 1,500 − 450 + 120 − 70 + 30 = 1,130 (the Valuation lesson's worked example)
 r = run("evBridge", { ev: 1500, debt: 450, cash: 120, nci: 70, pref: 0, assoc: 30 }); near("evBridge", "with associates", r.equity, 1130);
+// A US$90m after-tax pension deficit is deducted like debt: 1,130 − 90 = 1,040
+r = run("evBridge", { ev: 1500, debt: 450, cash: 120, nci: 70, pref: 0, assoc: 30, pension: 90 }); near("evBridge", "with a pension deficit", r.equity, 1040);
 // WACC: 70% × 10% + 30% × 6% × 75% = 7% + 1.35% = 8.35%; shield 30% × 6% × 25% = 0.45%
 r = run("wacc", {}); near("wacc", "wacc", r.wacc, 0.0835); near("wacc", "shield", r.shield, 0.0045); near("wacc", "equity part", r.eq, 0.07);
 // Compounding at 8% for 10 years: 1.08^10 = 2.158925; rule of 72 = 9.0 years; exact = ln 2 / ln 1.08 = 9.00647 years

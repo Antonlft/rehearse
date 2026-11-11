@@ -864,3 +864,25 @@ Bank.calc("acc", {
   why(i) { const { r, k, t, d } = i, kd = k * (1 - t); return `After-tax cost of debt = ${R.pct(k)} × (1 − ${R.pct(t, 0)}) = ${R.pct(kd, 2)}. ROE = ROCE + (ROCE − after-tax cost of debt) × net debt ÷ equity = ${R.pct(r)} + (${R.pct(r)} − ${R.pct(kd, 2)}) × ${R.num(d, 1)} = ${R.pct(this.solve(i))}.`; },
   fmt: v => R.pct(v)
 });
+
+// Valuation: enterprise value from equity value with non-controlling interests, associates and a pension deficit. Same redraw guard (mnaFar).
+Bank.calc("val", {
+  lv: 2, unit: "US$m", tolerance: 0.05, dp: 1, prompt: "in US$m, to 1 decimal place",
+  make() {
+    for (;;) {
+      const E = R.step(300, 1200, 10), D = R.step(100, 500, 10), C = R.step(20, 150, 5), N = R.step(30, 200, 5), A = R.step(40, 250, 5), P = R.step(60, 320, 10), t = R.pick([0.21, 0.25, 0.3]);
+      const i = { E, D, C, N, A, P, t }, ws = this.wrongs(i).map(w => w.value);
+      if (ws.some(w => w <= 0)) continue;
+      if (mnaFar(this.solve(i), ws, 0.12, 1)) return i;
+    }
+  },
+  solve: ({ E, D, C, N, A, P, t }) => E + D - C + N - A + P * (1 - t),
+  wrongs: ({ E, D, C, N, A, P, t }) => [
+    { value: E + D - C + N + A + P * (1 - t), trap: "sign", note: "Associates are subtracted: EBITDA leaves their profits out, so their value comes out of EV." },
+    { value: E + D - C + N - A, trap: "missed-step", note: "That leaves out the pension deficit. An unfunded defined-benefit deficit is a debt-like claim, added after tax." },
+    { value: E + D - C - N - A + P * (1 - t), trap: "sign", note: "Non-controlling interests are added: EBITDA includes 100% of the subsidiaries, including the part outsiders own." }
+  ],
+  ask: ({ E, D, C, N, A, P, t }) => `A company has a market capitalisation of ${R.m(E)}, gross debt of ${R.m(D)}, cash of ${R.m(C)}, non-controlling interests of ${R.m(N)} and stakes in associates worth ${R.m(A)}. Its defined-benefit pension plan has a deficit of ${R.m(P)} before tax, and the tax rate is ${R.pct(t, 0)}. What is its enterprise value?`,
+  why(i) { const { E, D, C, N, A, P, t } = i; return `Pension deficit after tax = ${P} × (1 − ${R.pct(t, 0)}) = ${R.m(P * (1 - t), 1)}. EV = equity value + debt − cash + NCI − associates + pension deficit = ${E} + ${D} − ${C} + ${N} − ${A} + ${R.num(P * (1 - t), 1)} = ${R.m(this.solve(i), 1)}.`; },
+  fmt: v => R.m(v, 1)
+});
