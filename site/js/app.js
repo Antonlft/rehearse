@@ -443,12 +443,6 @@ function go(v) {
   render();
 }
 function render() {
-  // The Lessons button is hidden during a round or sprint, so it can't pull you out of one by accident.
-  const lessonsLink = document.getElementById("lessonsLink");
-  if (lessonsLink) {
-    lessonsLink.hidden = view.name === "quiz" || (view.name === "sprint" && !view.result && !view.overview); // shown on sprint results and the overview
-    if (view.name === "lessons") lessonsLink.setAttribute("aria-current", "page"); else lessonsLink.removeAttribute("aria-current");
-  }
   app.classList.toggle("wide", view.name === "lessons"); // the lessons grid uses the full header width
   if (view.name === "quiz") renderQuiz();
   else if (view.name === "results") renderResults();
@@ -1803,7 +1797,6 @@ document.addEventListener("keydown", e => {
 });
 
 document.getElementById("homeLink").onclick = () => go({ name: "home" });
-document.getElementById("lessonsLink").onclick = () => go({ name: "lessons" });
 
 /* Light/dark toggle. Follows the device until clicked; the choice is then remembered in this browser.
    Kept under its own key so "Reset my progress" doesn't change the look. */

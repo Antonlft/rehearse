@@ -118,11 +118,6 @@ h1, h2, h3, p { margin: 0; }
 .logo small { font-size: 8px; letter-spacing: 0.55em; margin-right: -0.55em; color: var(--muted); }
 .top-meta { grid-column: 3; justify-self: end; display: flex; gap: 14px; align-items: center; font-size: 12px; color: var(--muted); }
 .top-left { grid-column: 1; grid-row: 1; justify-self: start; display: flex; align-items: center; gap: 8px; }
-.nav-pill { display: inline-flex; align-items: center; gap: 7px; height: 32px; padding: 0 12px 0 10px; border: 1px solid var(--rule-strong); border-radius: 16px; background: var(--page); color: var(--ink); font-size: 12px; font-weight: 500; cursor: pointer; }
-.nav-pill:hover { border-color: var(--navy); }
-.nav-pill[aria-current="page"] { background: var(--navy); border-color: var(--navy); color: var(--navy-ink); }
-.nav-pill svg { width: 15px; height: 15px; flex: none; }
-.nav-pill[hidden] { display: none; }
 .theme-toggle { grid-column: 1; grid-row: 1; justify-self: start; display: inline-flex; align-items: center; gap: 7px; height: 32px; padding: 0 12px 0 10px; border: 1px solid var(--rule-strong); border-radius: 16px; background: var(--page); color: var(--ink); font-size: 12px; font-weight: 500; cursor: pointer; }
 .theme-toggle:hover { border-color: var(--navy); }
 .theme-toggle svg { width: 15px; height: 15px; flex: none; }
@@ -527,7 +522,6 @@ sup { font-size: 0.72em; line-height: 0; vertical-align: super; }
 .lesson-card-name { font-size: 15px; font-weight: 600; line-height: 1.3; }
 .lesson-card-desc { font-size: 12.5px; color: var(--muted); line-height: 1.45; flex: 1; }
 .lesson-card-foot { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-top: 6px; font-size: 11.5px; color: var(--muted); }
-@media (max-width: 480px) { .nav-pill { width: 32px; padding: 0; justify-content: center; } .nav-pill span { display: none; } }
 @media (max-width: 900px) { .lesson-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
 @media (max-width: 520px) { .lesson-grid { grid-template-columns: minmax(0, 1fr); } }
 
