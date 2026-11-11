@@ -1,9 +1,9 @@
 // Lesson: Hotel operating models. Status "draft": written by Claude, to be reviewed; change to "reviewed" once checked.
-// Fields: method (paragraphs or coloured blocks { kind, title?, text, note? }), example (question, working steps, answer), source (text, optional url), widget (interactive "Try it").
+// Fields: method (sections { section } and coloured blocks { kind, title?, text, note? }, in the order of Lessons.ORDER), example (question, working steps, answer), source (text, optional url), widget (interactive "Try it").
 Lessons.add("hom", {
   "status": "draft",
   "method": [
-    {"kind": "idea", "text": "Who owns a hotel and who runs it are often different."},
+    {"kind": "idea", "text": "Who owns a hotel and who runs it are often different. The structure decides who keeps the profit and who bears the risk."},
     {"kind": "how", "title": "Lease", "text": "The operator pays the owner rent and keeps the trading profit and the risk."},
     {"kind": "how", "title": "Management contract", "text": "The owner keeps the profit and risk and pays the operator fees: a base fee (often 2–4% of revenue) plus an incentive fee linked to profit."},
     {"kind": "how", "title": "Franchise", "text": "The owner, or a manager it hires, runs the hotel and pays a brand for its name, standards and distribution."},

@@ -1,14 +1,15 @@
 // Lesson: ECM & DCM. Status "draft": written by Claude, to be reviewed; change to "reviewed" once checked.
-// Fields: method (paragraphs or coloured blocks { kind, title?, text, note? }), example (question, working steps, answer), source (text, optional url), widget (interactive "Try it").
+// Fields: method (sections { section } and coloured blocks { kind, title?, text, note? }, in the order of Lessons.ORDER), example (question, working steps, answer), source (text, optional url), widget (interactive "Try it").
 Lessons.add("cm", {
   "status": "draft",
   "method": [
-    {"kind": "idea", "text": "Equity capital markets (ECM) raise money through IPOs, follow-on offerings, block trades and rights issues; debt capital markets (DCM) do it through bonds."},
-    {"kind": "how", "title": "Rights issues", "text": "In a rights issue, existing shareholders get the right to buy new shares in proportion to what they hold, usually at a discount, so they can avoid being diluted."},
-    {"kind": "formula", "title": "TERP", "text": "TERP = (N × old price + subscription price) ÷ (N + 1)", "note": "For 1 new share per N held. A right is worth TERP minus the subscription price."},
+    {"section": "Rights issues"},
+    {"kind": "idea", "text": "Equity capital markets (ECM) raise money through IPOs, follow-on offerings, block trades and rights issues; debt capital markets (DCM) do it through bonds. In a rights issue, existing shareholders can buy new shares in proportion to what they hold, usually at a discount, so they can avoid being diluted."},
+    {"kind": "formula", "text": "TERP = {{N × old price + subscription price // N + 1}}", "note": "For 1 new share per N held. A right is worth TERP minus the subscription price."},
     {"kind": "read", "text": "Shareholders who take up their rights, or sell them, lose nothing; those who do neither lose value."},
-    {"kind": "formula", "title": "Venture rounds", "text": "Post-money = pre-money + new money · investor's stake = new money ÷ post-money", "note": "US$5m at US$20m pre-money buys 20% of a US$25m post-money company."},
-    {"kind": "how", "title": "Venture terms", "text": "Investors usually get preferred shares. A 1x non-participating liquidation preference pays them the larger of their money back or their share of the sale proceeds; participating preferred takes both."},
+    {"section": "Venture rounds"},
+    {"kind": "formula", "text": "Post-money = pre-money + new money\nInvestor's stake = {{new money // post-money}}", "note": "US$5m at US$20m pre-money buys 20% of a US$25m post-money company."},
+    {"kind": "how", "text": "Investors usually get preferred shares. A 1x non-participating liquidation preference pays them the larger of their money back or their share of the sale proceeds; participating preferred takes both."},
     {"kind": "watch", "text": "Anti-dilution protects investors in a down round: full ratchet is harsh on founders, broad-based weighted average is the norm. An option pool created inside the pre-money dilutes only the existing holders."}
   ],
   "example": {

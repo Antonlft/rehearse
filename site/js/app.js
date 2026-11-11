@@ -133,7 +133,10 @@ let reviewFilter = "all";
 const esc = s => String(s).replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
 // Escaped text with powers shown as superscripts: "2.73^(1/5)" → 2.73<sup>1/5</sup>, "1.08^5" → 1.08<sup>5</sup>.
 // Content keeps plain "^" text; only the display changes. Used for explanations and lessons.
-const rich = s => esc(s).replace(/\^\(([^()]+)\)/g, "<sup>$1</sup>").replace(/\^(\d+(?:\.\d+)?|[A-Za-z]\w*)/g, "<sup>$1</sup>");
+// In formulas, {{a // b}} is shown as a stacked fraction (a over b).
+const rich = s => esc(s)
+  .replace(/\{\{(.+?)\s\/\/\s(.+?)\}\}/g, '<span class="frac"><span class="frac-n">$1</span><span class="frac-d">$2</span></span>')
+  .replace(/\^\(([^()]+)\)/g, "<sup>$1</sup>").replace(/\^(\d+(?:\.\d+)?|[A-Za-z]\w*)/g, "<sup>$1</sup>");
 const fmt = ms => { const t = Math.max(0, Math.ceil(ms / 1000)); return String(Math.floor(t / 60)).padStart(2, "0") + ":" + String(t % 60).padStart(2, "0"); };
 const shuffle = arr => { const a = [...arr]; for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; };
 const pick = arr => arr[Math.floor(Math.random() * arr.length)];
@@ -1163,23 +1166,25 @@ function renderSprintResults() {
   document.getElementById("sprintHome").onclick = document.getElementById("sprintBack").onclick = () => go({ name: "home" });
 }
 
-// A lesson's method: plain paragraphs stay paragraphs; typed blocks become coloured cards (Lessons.BLOCKS).
-// Two short blocks in a row share a line on wider screens; a long block takes the full width.
+// A lesson's method: plain paragraphs stay paragraphs; typed blocks become coloured cards (Lessons.BLOCKS), and
+// { section } items start a named section. Formulas always take the full width (one per line, "\n" for more lines);
+// two other short blocks in a row share a line on wider screens.
 const METHOD_SHORT = 190;
 function methodHtml(items) {
   const block = b => `<div class="mblock mb-${esc(b.kind)}">
       <span class="mb-label">${esc(Lessons.BLOCKS[b.kind] || b.kind)}${b.title ? ` · ${esc(b.title)}` : ""}</span>
-      <p class="${b.kind === "formula" ? "mb-eq" : "mb-text"}">${rich(b.text)}</p>
+      ${b.kind === "formula" ? `<p class="mb-eq">${b.text.split("\n").map(line => `<span class="mb-line">${rich(line)}</span>`).join("")}</p>` : `<p class="mb-text">${rich(b.text)}</p>`}
       ${b.note ? `<p class="mb-note">${rich(b.note)}</p>` : ""}
     </div>`;
-  const short = b => b && typeof b === "object" && (b.text.length + (b.note || "").length + (b.title || "").length) <= METHOD_SHORT;
-  let html = "", run = [];
-  const flush = () => { if (run.length) html += `<div class="mb-grid">${run.map(b => short(b) && run.length > 1 ? block(b) : block({ ...b, wide: true })).join("")}</div>`; run = []; };
+  const isBlock = b => b && typeof b === "object" && b.kind;
+  const short = b => isBlock(b) && b.kind !== "formula" && (b.text.length + (b.note || "").length + (b.title || "").length) <= METHOD_SHORT;
+  let html = "";
   for (let i = 0; i < items.length; i++) {
     const b = items[i];
-    if (typeof b === "string") { flush(); html += `<p>${rich(b)}</p>`; continue; }
-    if (short(b) && short(items[i + 1])) { flush(); run = [b, items[i + 1]]; flush(); i++; continue; }
-    flush(); run = [b]; flush();
+    if (typeof b === "string") { html += `<p>${rich(b)}</p>`; continue; }
+    if (b && b.section) { html += `<h3 class="mb-section">${esc(b.section)}</h3>`; continue; }
+    if (short(b) && short(items[i + 1])) { html += `<div class="mb-grid">${block(b)}${block(items[i + 1])}</div>`; i++; continue; }
+    html += `<div class="mb-grid">${block(b)}</div>`;
   }
   return html;
 }

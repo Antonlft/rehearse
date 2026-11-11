@@ -1,16 +1,20 @@
 // Lesson: M&A process & documents. Status "draft": written by Claude, to be reviewed; change to "reviewed" once checked.
-// Fields: method (paragraphs or coloured blocks { kind, title?, text, note? }), example (question, working steps, answer), source (text, optional url), widget (interactive "Try it"), widgets (optional extra ones).
+// Fields: method (sections { section } and coloured blocks { kind, title?, text, note? }, in the order of Lessons.ORDER), example (question, working steps, answer), source (text, optional url), widget (interactive "Try it"), widgets (optional extra ones).
 Lessons.add("mna", {
   "status": "draft",
   "method": [
-    {"kind": "idea", "text": "Accretion/dilution asks whether the buyer's earnings per share (EPS) go up or down after a deal."},
-    {"kind": "how", "title": "The quick test", "text": "Compare the earnings the buyer acquires with what it costs to pay for them. Paying in shares costs the buyer its own earnings yield (1 ÷ its P/E); paying in cash or new debt costs the after-tax interest given up or paid."},
-    {"kind": "read", "text": "So an all-stock deal adds to EPS when the buyer's P/E is higher than the P/E it pays for the target. Synergies make a deal more accretive; extra amortisation from the purchase and deal costs make it less so."},
+    {"section": "1. Will the deal add to earnings per share?"},
+    {"kind": "idea", "text": "Accretion/dilution asks whether the buyer's earnings per share (EPS) go up or down after a deal: compare the earnings it buys with what it costs to pay for them."},
+    {"kind": "formula", "text": "Earnings yield = {{1 // P/E}}", "note": "Paying in shares costs the buyer its own earnings yield; paying in cash or new debt costs the after-tax interest. The target's earnings yield at the price paid is what the buyer gets."},
+    {"kind": "read", "text": "So an all-stock deal adds to EPS when the buyer's P/E is higher than the P/E it pays. Synergies make a deal more accretive; amortisation of written-up intangibles and deal costs make it less so."},
     {"kind": "watch", "text": "Accretion isn't the same as value creation: a buyer can overpay and still report higher EPS."},
-    {"kind": "how", "title": "Exchange ratios", "text": "In a stock deal, the exchange ratio sets how many buyer shares each target share receives. A fixed ratio fixes the share count, so the target's holders bear the risk of the buyer's price falling; a floating ratio fixes the value and moves that risk to the buyer; a collar shares it."},
-    {"kind": "formula", "title": "Exchange ratio", "text": "Exchange ratio = offer price ÷ buyer's share price", "note": "The target's holders then own new shares ÷ (buyer's existing shares + new shares) of the combined company."},
-    {"kind": "how", "title": "Purchase price allocation", "text": "After completion, the purchase price allocation (IFRS 3; ASC 805 in the US) restates the target's identifiable assets and liabilities at fair value, including intangibles such as brands and customer relationships. Where the tax base doesn't change, as in most share deals, the write-ups create a deferred tax liability."},
-    {"kind": "formula", "title": "Goodwill", "text": "Goodwill = price − fair value of net identifiable assets", "note": "Goodwill isn't amortised, only tested for impairment; written-up assets are depreciated or amortised, which lowers future EPS."},
+    {"section": "2. Paying in shares: the exchange ratio"},
+    {"kind": "formula", "text": "Exchange ratio = {{offer price per target share // buyer's share price}}", "note": "The target's holders then own new shares ÷ (buyer's existing shares + new shares) of the combined company."},
+    {"kind": "how", "text": "A fixed ratio fixes the number of shares, so the target's holders bear the risk of the buyer's price falling. A floating ratio fixes the value and moves that risk to the buyer. A collar shares it."},
+    {"section": "3. After completion: goodwill"},
+    {"kind": "formula", "text": "Goodwill = price − fair value of net identifiable assets"},
+    {"kind": "how", "text": "The purchase price allocation (IFRS 3; ASC 805 in the US) restates the target's assets and liabilities at fair value, including intangibles such as brands and customer relationships. Where the tax base doesn't change, as in most share deals, the write-ups create a deferred tax liability, which adds to goodwill."},
+    {"kind": "read", "text": "Goodwill isn't amortised, only tested for impairment, but written-up assets are depreciated or amortised, which lowers future EPS. That links back to step 1."},
     {"kind": "practice", "text": "Paying US$700m for book net assets of US$370m, with US$120m of write-ups at a 25% tax rate: deferred tax liability US$30m, net assets at fair value US$460m, goodwill US$240m."}
   ],
   "example": {

@@ -458,7 +458,13 @@ sup { font-size: 0.72em; line-height: 0; vertical-align: super; }
 .mb-label { display: block; font-size: 11px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: var(--mb); margin-bottom: 4px; }
 .lesson .mblock p { max-width: none; margin: 0; }
 .mb-text { font-size: 14px; line-height: 1.55; }
-.mb-eq { font-size: 16px; font-weight: 500; line-height: 1.5; }
+.mb-eq { font-size: 16px; font-weight: 500; line-height: 1.5; display: grid; gap: 8px; }
+.mb-line { display: block; }
+.frac { display: inline-flex; flex-direction: column; align-items: center; vertical-align: middle; margin: 0 3px; font-size: 0.92em; line-height: 1.3; }
+.frac-n { padding: 0 4px 2px; border-bottom: 1.5px solid currentColor; }
+.frac-d { padding: 2px 4px 0; }
+.lesson .mb-section { font-size: 15px; font-weight: 600; margin: 22px 0 10px; padding-bottom: 6px; border-bottom: 1px solid var(--rule); }
+.lesson .mb-section:first-of-type { margin-top: 4px; }
 .lesson .mblock .mb-note { margin-top: 4px; font-size: 12.5px; color: var(--muted); }
 .mb-idea { --mb: var(--navy); --mb-bg: var(--navy-bg); --mb-line: var(--navy-line); }
 .mb-how { --mb: var(--good); --mb-bg: var(--good-bg); --mb-line: var(--good-line); }
@@ -544,7 +550,7 @@ sup { font-size: 0.72em; line-height: 0; vertical-align: super; }
 .w-stat span { font-size: 11.5px; color: var(--muted); }
 .w-stat b { font-size: 14px; font-weight: 600; font-variant-numeric: tabular-nums; }
 .w-stat.big b { font-size: 18px; color: var(--navy); }
-.w-chart { width: 100%; max-width: 460px; height: auto; display: block; }
+.w-chart { width: 100%; max-width: 460px; height: auto; display: block; margin-inline: auto; }
 .w-chart .w-lbl { font: 10.5px var(--font); fill: var(--muted); }
 .w-chart .w-val { font: 600 10.5px var(--font); fill: var(--ink); }
 .w-chart .w-val.on { fill: var(--navy-ink); }

@@ -1,13 +1,18 @@
 // Lesson: Credit & debt. Status "draft": written by Claude, to be reviewed; change to "reviewed" once checked.
-// Fields: method (paragraphs or coloured blocks { kind, title?, text, note? }), example (question, working steps, answer), source (text, optional url), widget (interactive "Try it"), widgets (optional extra ones).
+// Fields: method (sections { section } and coloured blocks { kind, title?, text, note? }, in the order of Lessons.ORDER), example (question, working steps, answer), source (text, optional url), widget (interactive "Try it"), widgets (optional extra ones).
 Lessons.add("credit", {
   "status": "draft",
   "method": [
+    {"section": "Bond prices"},
     {"kind": "idea", "text": "A bond's price is the present value of its coupons and principal, discounted at the market yield. When yields rise, prices fall, and vice versa."},
-    {"kind": "read", "title": "Par, discount, premium", "text": "A bond trades at par when its yield equals its coupon, below par (at a discount) when the yield is higher than the coupon, and above par (at a premium) when it's lower."},
-    {"kind": "how", "title": "Duration and convexity", "text": "Modified duration is roughly the % price change for a one-point move in yield. Longer maturities and lower coupons mean higher duration. The price–yield line curves (convexity), so prices rise more when yields fall than they drop when yields rise by the same amount."},
+    {"kind": "read", "text": "A bond trades at par when its yield equals its coupon, below par (at a discount) when the yield is higher than the coupon, and above par (at a premium) when it's lower."},
+    {"section": "Duration and convexity"},
+    {"kind": "formula", "text": "% price change ≈ − modified duration × change in yield"},
+    {"kind": "how", "text": "Longer maturities and lower coupons mean higher duration. The price–yield line curves (convexity), so prices rise more when yields fall than they drop when yields rise by the same amount."},
+    {"section": "Loans, bonds and yields"},
+    {"kind": "formula", "text": "Current yield = {{annual coupon // price}}"},
+    {"kind": "how", "text": "Yield to maturity also counts the move to 100; yield to call assumes repayment at the call price on the call date; and yield to worst, the lowest of these, is what's quoted for callable bonds."},
     {"kind": "practice", "title": "Loans vs bonds", "text": "Leveraged loans (a revolver plus term loans) are usually secured, float at SOFR plus a margin and can be repaid early. High-yield bonds usually pay a fixed coupon, are often unsecured and have a non-call period followed by call premiums."},
-    {"kind": "how", "title": "Yield measures", "text": "Current yield = coupon ÷ price; yield to maturity also counts the move to 100; yield to call assumes repayment at the call price on the call date; and yield to worst, the lowest of these, is what's quoted for callable bonds."},
     {"kind": "practice", "title": "Example", "text": "An 8% bond at 108 with eight years left, callable in three years at 102: current yield 7.41%, yield to maturity 6.68%, yield to call 5.66%, so its yield to worst is 5.66%."}
   ],
   "example": {

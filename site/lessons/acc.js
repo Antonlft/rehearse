@@ -1,13 +1,17 @@
 // Lesson: Accounting & statements. Status "draft": written by Claude, to be reviewed; change to "reviewed" once checked.
-// Fields: method (paragraphs or coloured blocks { kind, title?, text, note? }), example (question, working steps, answer), source (text, optional url), widget (interactive "Try it").
+// Fields: method (sections { section } and coloured blocks { kind, title?, text, note? }, in the order of Lessons.ORDER), example (question, working steps, answer), source (text, optional url), widget (interactive "Try it").
 Lessons.add("acc", {
   "status": "draft",
   "method": [
+    {"section": "How the statements link"},
     {"kind": "idea", "text": "The three statements are linked: net income from the income statement starts the cash flow statement, and closing cash and retained earnings carry into the balance sheet."},
-    {"kind": "how", "title": "The links", "text": "Non-cash items such as depreciation are added back and working capital changes adjusted to reach operating cash flow. Closing cash goes to the balance sheet, and net income flows into retained earnings within equity."},
-    {"kind": "how", "title": "The depreciation test", "text": "Under IFRS (IAS 16), depreciation spreads an asset's cost over its useful life; it isn't a cash payment. Higher depreciation lowers profit and tax, so cash rises by the tax saved, PP&E falls by the depreciation, and equity falls by the after-tax amount."},
+    {"kind": "how", "text": "Non-cash items such as depreciation are added back and working capital changes adjusted to reach operating cash flow. Closing cash goes to the balance sheet, and net income flows into retained earnings within equity."},
+    {"section": "The depreciation test"},
+    {"kind": "formula", "text": "Change in cash = depreciation × tax rate", "note": "Net income falls by depreciation × (1 − tax rate)."},
+    {"kind": "how", "text": "Under IFRS (IAS 16), depreciation spreads an asset's cost over its useful life; it isn't a cash payment. Higher depreciation lowers profit and tax, so cash rises by the tax saved, PP&E falls by the depreciation, and equity falls by the after-tax amount."},
     {"kind": "read", "text": "The balance sheet still balances: assets fall by the depreciation less the tax saved, and equity falls by the same after-tax amount."},
-    {"kind": "how", "title": "Deferred tax", "text": "Deferred tax (IAS 12) appears when the accounts and the tax return recognise the same item in different years. If tax depreciation runs ahead of book depreciation, the company pays less tax now and more later: a deferred tax liability."},
+    {"section": "Deferred tax"},
+    {"kind": "how", "text": "Deferred tax (IAS 12) appears when the accounts and the tax return recognise the same item in different years. If tax depreciation runs ahead of book depreciation, the company pays less tax now and more later: a deferred tax liability."},
     {"kind": "watch", "text": "Tax losses carried forward (in the US, NOLs) create a deferred tax asset only if future taxable profit to use them is probable. Deferred taxes move tax between years; they don't remove it."}
   ],
   "example": {

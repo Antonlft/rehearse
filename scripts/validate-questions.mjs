@@ -12,8 +12,8 @@
 //    Fields belonging to one type (`tolerance`, `unit`, `o`, `rows`, ...) are rejected on the others.
 //  - every category has a lesson (site/lessons/<category>.js, loaded by index.html); a "stub" may be empty, but a
 //    "draft" or "reviewed" lesson needs a method, a worked example (question, working, answer) and a source;
-//    method items are paragraphs or blocks { kind, title?, text, note? } whose kind is one of Lessons.BLOCKS in bank.js,
-//    and a kind used more than once in a lesson needs a title on each of those blocks;
+//    method items are paragraphs, { section } headings or blocks { kind, title?, text, note? } (kinds: Lessons.BLOCKS);
+//    within each section blocks follow Lessons.ORDER, and a kind repeated in a section needs a title on each block;
 //    a lesson's optional widget (and any extra ones in `widgets`) must be defined in site/js/widgets.js, with starting values only for its own inputs
 // Exits with code 1 on any violation.
 import { readFileSync, readdirSync } from "node:fs";
@@ -190,12 +190,25 @@ for (const [cat, l] of Object.entries(Lessons)) {
   if (!categoryIds.includes(cat)) fail(`${where}: no such category in app.js`);
   if (!["stub", "draft", "reviewed"].includes(l.status)) { fail(`${where}: status must be "stub", "draft" or "reviewed", got ${JSON.stringify(l.status)}`); continue; }
   const BLOCKS = ctx.Lessons?.BLOCKS || {};
-  const okItem = p => text(p) || (p && typeof p === "object" && Object.hasOwn(BLOCKS, p.kind) && text(p.text) && (p.note == null || text(p.note)) && (p.title == null || text(p.title)) && Object.keys(p).every(k => ["kind", "title", "text", "note"].includes(k)));
-  if (l.method != null && (!Array.isArray(l.method) || l.method.some(p => !okItem(p)))) fail(`${where}: method must list paragraphs or blocks { kind: ${Object.keys(BLOCKS).join(" | ")}, title?, text, note? }`);
+  const ORDER = ctx.Lessons?.ORDER || [];
+  const isSection = p => p && typeof p === "object" && Object.keys(p).length === 1 && text(p.section);
+  const okItem = p => text(p) || isSection(p) || (p && typeof p === "object" && Object.hasOwn(BLOCKS, p.kind) && text(p.text) && (p.note == null || text(p.note)) && (p.title == null || text(p.title)) && Object.keys(p).every(k => ["kind", "title", "text", "note"].includes(k)));
+  if (l.method != null && (!Array.isArray(l.method) || l.method.some(p => !okItem(p)))) fail(`${where}: method must list paragraphs, { section: "Title" } headings or blocks { kind: ${Object.keys(BLOCKS).join(" | ")}, title?, text, note? }`);
   else if (Array.isArray(l.method)) {
-    // A kind used more than once needs a title on each of those blocks, so the labels say what each one covers.
-    const blocks = l.method.filter(p => p && typeof p === "object"), count = k => blocks.filter(b => b.kind === k).length;
-    blocks.forEach((b, n) => { if (count(b.kind) > 1 && !text(b.title)) fail(`${where}: method block ${n + 1} ("${BLOCKS[b.kind]}") needs a title, because that kind appears more than once`); });
+    // Split into sections (one implicit section if there are none). Within a section, blocks follow Lessons.ORDER,
+    // and a kind used more than once needs a title on each of those blocks.
+    const usesSections = l.method.some(isSection);
+    if (usesSections && !isSection(l.method[0])) fail(`${where}: a method with sections must start with a { section } heading`);
+    const sections = [];
+    for (const p of l.method) { if (isSection(p)) sections.push({ name: p.section, blocks: [] }); else if (p && typeof p === "object") { if (!sections.length) sections.push({ name: "(whole lesson)", blocks: [] }); sections[sections.length - 1].blocks.push(p); } }
+    for (const sec of sections) {
+      if (!sec.blocks.length) fail(`${where}: section "${sec.name}" has no blocks`);
+      sec.blocks.forEach((b, n) => {
+        const prev = sec.blocks[n - 1];
+        if (prev && ORDER.indexOf(b.kind) < ORDER.indexOf(prev.kind)) fail(`${where}: in "${sec.name}", "${BLOCKS[b.kind]}" comes after "${BLOCKS[prev.kind]}"; blocks follow the order ${ORDER.map(k => BLOCKS[k]).join(" → ")}`);
+        if (sec.blocks.filter(x => x.kind === b.kind).length > 1 && !text(b.title)) fail(`${where}: in "${sec.name}", block ${n + 1} ("${BLOCKS[b.kind]}") needs a title, because that kind appears more than once in the section`);
+      });
+    }
   }
   if (l.example != null) {
     const e = l.example;
