@@ -128,5 +128,15 @@ Bank.addFormat("credit", [
     why: "Loans: floating-rate, secured, prepayable and largely held by CLOs. Bonds: fixed-rate, call-protected and sold through the capital markets." },
   { id: "cr-ord-01", lv: 1, type: "order", q: "Rank these claims from first to be repaid to last in a typical insolvency.",
     answer: ["First-lien term loan and revolver", "Second-lien term loan", "Senior unsecured notes", "Subordinated notes", "Preferred equity", "Common equity"],
-    why: "Secured debt is repaid from its collateral first, in lien order. Unsecured creditors come next, subordinated debt after them, and shareholders last, preferred before common. Real cases can differ, for example through structural subordination or a super-senior revolver." }
+    why: "Secured debt is repaid from its collateral first, in lien order. Unsecured creditors come next, subordinated debt after them, and shareholders last, preferred before common. Real cases can differ, for example through structural subordination or a super-senior revolver." },
+  // Walk-through cards: answer out loud, then grade yourself against the model answer.
+  { id: "cr-walk-01", lv: 2, type: "walk", q: "How would you assess a company's creditworthiness?",
+    points: [
+      "Business risk: the industry, competitive position, size, diversification and how cyclical the cash flows are.",
+      "Leverage: debt (or net debt) ÷ EBITDA, now and after the proposed financing.",
+      "Coverage: EBITDA (or EBIT) ÷ interest, and fixed-charge cover including leases.",
+      "Liquidity and maturities: cash, the undrawn revolver and when the debt falls due.",
+      "Structure and protection: security, seniority, covenants and guarantees, and the recovery value if things go wrong."
+    ],
+    why: "Lenders care about two questions: will the company pay, and what do I get back if it doesn't? Cover both." }
 ]);

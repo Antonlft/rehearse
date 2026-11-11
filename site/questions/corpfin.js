@@ -56,3 +56,17 @@ Bank.add("cf", [
     why: "Permanent debt saves t × r × D in tax every year. Discounted at r as a perpetuity, that's worth t × D.",
     x: ["That formula has no economic meaning.", "The saving recurs every year the debt is outstanding, not just once.", "With taxes, interest deductibility has real value."] }
 ]);
+
+// New-format questions (shown only when "new formats" is on).
+Bank.addFormat("cf", [
+  // Walk-through cards: answer out loud, then grade yourself against the model answer.
+  { id: "cf-walk-01", lv: 2, type: "walk", q: "How do you calculate WACC, and why does each input matter?",
+    points: [
+      "WACC = E/V × cost of equity + D/V × cost of debt × (1 − tax rate), with market values for the weights.",
+      "Cost of equity from CAPM: risk-free rate + beta × equity risk premium, with beta usually relevered from comparable companies at the target capital structure.",
+      "Cost of debt: the yield the company would pay on new debt today, not the coupon on its old debt.",
+      "Interest is tax-deductible, so the cost of debt is taken after tax.",
+      "The weights use a target or market capital structure, because WACC applies to future cash flows."
+    ],
+    why: "Explain that WACC is the average return all capital providers require, which is why it discounts unlevered free cash flow to enterprise value." }
+]);

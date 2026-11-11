@@ -76,3 +76,17 @@ Bank.add("cm", [
     why: "In a firm commitment the banks guarantee the proceeds. In a best-efforts deal the issuer bears the risk.",
     x: ["The issuer bears the risk in a best-efforts deal.", "Exchanges don't take risk on offerings.", "Regulators don't take risk on offerings."] }
 ]);
+
+// New-format questions (shown only when "new formats" is on).
+Bank.addFormat("cm", [
+  // Walk-through cards: answer out loud, then grade yourself against the model answer.
+  { id: "cm-walk-01", lv: 1, type: "walk", q: "Walk me through an IPO.",
+    points: [
+      "Preparation: appoint banks and lawyers, prepare audited accounts and the prospectus (an S-1 in the US), and get ready for public-company governance.",
+      "The regulator reviews the prospectus, while the syndicate banks' analysts publish research to educate investors early.",
+      "Set a price range and run the roadshow and bookbuilding, where investors give orders at different prices.",
+      "Price the deal and allocate the shares, usually leaving a small discount so they trade up; the greenshoe lets the banks stabilise the price.",
+      "Trading starts, and insiders are held by a lock-up, typically 180 days."
+    ],
+    why: "Show you know the trade-off: a higher price raises more money, but a deal priced too tightly can trade badly and hurt the company's reputation with investors." }
+]);

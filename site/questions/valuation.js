@@ -100,5 +100,14 @@ Bank.addFormat("val", [
       "Bridge to equity value: subtract net debt and other claims such as non-controlling interests and preferred shares, and add non-operating assets.",
       "Divide by diluted shares for a value per share, and test it with sensitivity tables on WACC and the growth rate or exit multiple."
     ],
-    why: "Interviewers listen for the order (cash flows, terminal value, discounting, bridge, per share) and for unlevered cash flows being matched with WACC. The terminal value is often 60–80% of the total, so say how you'd sanity-check it." }
+    why: "Interviewers listen for the order (cash flows, terminal value, discounting, bridge, per share) and for unlevered cash flows being matched with WACC. The terminal value is often 60–80% of the total, so say how you'd sanity-check it." },
+  { id: "val-walk-02", lv: 1, type: "walk", q: "How would you value a company?",
+    points: [
+      "Comparable companies: apply the trading multiples of similar listed companies (EV/EBITDA, P/E) to the company's own figures.",
+      "Precedent transactions: the multiples paid in past acquisitions of similar businesses, which include a control premium.",
+      "DCF: discount projected unlevered free cash flows and a terminal value at WACC.",
+      "Use more than one method and show the ranges on a 'football field' chart, weighting them by the purpose: precedents matter more for a sale, for example.",
+      "Use sector methods where relevant: P/TBV for banks, NAV or cap rates for property, sum-of-the-parts for conglomerates."
+    ],
+    why: "Interviewers want the three core methods, what each one captures (market pricing, control, intrinsic value) and the judgement that no single method is right." }
 ]);

@@ -64,3 +64,17 @@ Bank.add("rx", [
     why: "Restructuring preserves going-concern value. If piecemeal asset sales would raise more, liquidation is the better outcome for creditors.",
     x: ["Owing money doesn't settle the choice; relative value does.", "A company without debt has nothing to restructure.", "Shareholder wishes carry little weight in insolvency."] }
 ]);
+
+// New-format questions (shown only when "new formats" is on).
+Bank.addFormat("rx", [
+  // Walk-through cards: answer out loud, then grade yourself against the model answer.
+  { id: "rx-walk-01", lv: 2, type: "walk", q: "What happens when a company files for Chapter 11?",
+    points: [
+      "An automatic stay halts creditors' collection actions and lawsuits.",
+      "Management usually keeps running the business as 'debtor in possession', and can raise DIP financing that ranks ahead of existing debt.",
+      "The company can reject burdensome contracts and leases, and sell assets, for example in a Section 363 sale.",
+      "It proposes a plan of reorganisation; creditors vote by class, and the court can confirm it if the legal tests are met, even over a dissenting class (cramdown).",
+      "On emergence, debt is usually cut and old creditors often become the new owners: the fulcrum security converts into equity."
+    ],
+    why: "Chapter 11 is US law. The UK equivalents are administration, schemes of arrangement and restructuring plans, but the logic of a stay, new money and a creditor vote is similar." }
+]);

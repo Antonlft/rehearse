@@ -158,5 +158,15 @@ Bank.addFormat("lbo", [
       "Exit: exit multiple × final-year EBITDA gives the exit enterprise value; subtract remaining net debt to get exit equity.",
       "Returns: MOIC = exit equity ÷ entry equity, and the IRR over the holding period, then sensitivities on the entry and exit multiples and on leverage."
     ],
-    why: "Finish with why it works: debt lets the sponsor put in less equity, and returns come from EBITDA growth, debt paydown and any change in the multiple." }
+    why: "Finish with why it works: debt lets the sponsor put in less equity, and returns come from EBITDA growth, debt paydown and any change in the multiple." },
+  { id: "lbo-walk-02", lv: 1, type: "walk", q: "What makes a good LBO candidate?",
+    points: [
+      "Stable, predictable cash flows to service the debt.",
+      "Low capital intensity, so free cash flow can repay debt.",
+      "A strong market position and defensible margins.",
+      "Room to improve: cost savings, pricing, add-on acquisitions.",
+      "Little existing debt and assets that can support leverage.",
+      "A solid management team, a reasonable entry price and a credible exit route (a strategic buyer, another sponsor or an IPO)."
+    ],
+    why: "Tie each point back to the debt: the best candidates can carry a lot of it safely and pay it down." }
 ]);

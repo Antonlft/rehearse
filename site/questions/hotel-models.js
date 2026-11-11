@@ -86,5 +86,15 @@ Bank.addFormat("hom", [
       { text: "The owner pays for the brand, standards and reservation system, and runs the hotel itself", answer: 2, note: "Paying for the brand while running the hotel is a franchise." },
       { text: "Fees are mainly charged on room revenue for use of the brand", answer: 2, note: "Franchise fees are typically a share of room revenue." }
     ],
-    why: "In a lease the operator pays rent and takes the trading risk. In a management contract the owner keeps the risk and pays the operator fees. In a franchise the owner (or its manager) runs the hotel and pays the brand for its name and systems." }
+    why: "In a lease the operator pays rent and takes the trading risk. In a management contract the owner keeps the risk and pays the operator fees. In a franchise the owner (or its manager) runs the hotel and pays the brand for its name and systems." },
+  // Walk-through cards: answer out loud, then grade yourself against the model answer.
+  { id: "hom-walk-01", lv: 2, type: "walk", q: "Compare owning, leasing, managing and franchising a hotel.",
+    points: [
+      "Owner-operator: the owner runs the hotel and keeps all the profit and the risk.",
+      "Lease: the operator pays the owner a rent (fixed, or fixed plus variable) and keeps the operating profit, so the owner gets bond-like income.",
+      "Management contract: the owner keeps the profit and the risk and pays the operator fees, usually a base fee on revenue and an incentive fee on profit.",
+      "Franchise: the owner, or a third-party manager, runs the hotel under a brand and pays fees, mainly on rooms revenue, for the brand, systems and distribution.",
+      "Brands increasingly prefer management and franchise models ('asset-light'): little capital and steadier fee income."
+    ],
+    why: "Frame it as who bears the operating risk: the owner in owned, managed and franchised hotels, the operator in a lease." }
 ]);

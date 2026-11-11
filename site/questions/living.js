@@ -73,3 +73,17 @@ Bank.add("liv", [
     why: "On 44-week contracts, beds are free in the summer; operators can let them short-term, adding modest extra income.",
     x: ["Universities pay under nominations, not as a summer bonus.", "Advance rent is next year's income.", "Deposit interest is minor and unrelated."] }
 ]);
+
+// New-format questions (shown only when "new formats" is on).
+Bank.addFormat("liv", [
+  // Walk-through cards: answer out loud, then grade yourself against the model answer.
+  { id: "liv-walk-01", lv: 2, type: "walk", q: "How would you underwrite a purpose-built student accommodation (PBSA) scheme?",
+    points: [
+      "Demand: the universities nearby, student numbers and growth, international students, and students per available bed.",
+      "Supply: existing and planned PBSA beds, and competition from shared rented houses.",
+      "Income: rent per bed per week, tenancy length (for example 44 or 51 weeks), occupancy, nomination agreements and summer income.",
+      "Costs and NOI: operating costs (often 25–35% of revenue), management fees and lifecycle capex.",
+      "Value and returns: NOI ÷ a yield from comparable deals, or a DCF, with sensitivities to rent growth and occupancy and a view on the operator's quality."
+    ],
+    why: "Lead with demand against supply: PBSA income depends on filling every bed for the next academic year." }
+]);

@@ -85,5 +85,15 @@ Bank.addFormat("pf", [
       { text: "Debt service coverage ratio (DSCR)", answer: 1, note: "Income ÷ interest and principal is a cover test." },
       { text: "Rent cover (EBITDAR ÷ rent)", answer: 1, note: "It tests whether profit before rent covers the rent." }
     ],
-    why: "Leverage tests compare the amount of debt with value or earnings. Cover tests compare income with what has to be paid out of it each period." }
+    why: "Leverage tests compare the amount of debt with value or earnings. Cover tests compare income with what has to be paid out of it each period." },
+  // Walk-through cards: answer out loud, then grade yourself against the model answer.
+  { id: "pf-walk-01", lv: 2, type: "walk", q: "How does a lender size a loan on a property?",
+    points: [
+      "Loan-to-value: the loan as a percentage of the appraised value, for example 55–65% for a stabilised asset.",
+      "Cover tests: NOI ÷ interest (ICR) or ÷ interest plus amortisation (DSCR) must stay above a minimum, which caps the loan at today's rates.",
+      "Debt yield: NOI ÷ loan, a floor that ignores both interest rates and valuations.",
+      "The loan is the lowest amount the tests allow, and which test binds changes with rates and cap rates.",
+      "Then the qualitative side: the sponsor's track record, asset quality, lease profile, business plan and exit (refinancing or sale)."
+    ],
+    why: "Show that the tests bind at different times: when rates are high, the cover test usually binds; when values are low, LTV does." }
 ]);

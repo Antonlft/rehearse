@@ -162,5 +162,13 @@ Bank.addFormat("acc", [
       "Net income flows into retained earnings within equity, and also starts the cash flow statement.",
       "Closing cash from the cash flow statement is the balance sheet cash; D&A reduces PP&E and capex adds to it; raising or repaying debt moves both debt and cash."
     ],
-    why: "Define each statement in a sentence, then spend most of the answer on the links. Under IFRS the income statement is often called the statement of profit or loss." }
+    why: "Define each statement in a sentence, then spend most of the answer on the links. Under IFRS the income statement is often called the statement of profit or loss." },
+  { id: "acc-walk-02", lv: 2, type: "walk", q: "Depreciation rises by US$10 and the tax rate is 25%. Walk me through the effect on the three statements.",
+    points: [
+      "Income statement: pre-tax profit falls by 10, tax falls by 2.5, so net income falls by 7.5.",
+      "Cash flow statement: net income −7.5, plus the non-cash depreciation added back +10, so operating cash flow and cash rise by 2.5.",
+      "Balance sheet assets: cash +2.5 and PP&E −10, so total assets fall by 7.5.",
+      "Balance sheet liabilities and equity: retained earnings fall by 7.5, so equity falls by 7.5 and the balance sheet still balances."
+    ],
+    why: "State the tax assumption first, go statement by statement, and finish by showing both sides of the balance sheet move by the same amount. Cash rises only because of the tax saving." }
 ]);

@@ -147,5 +147,24 @@ Bank.addFormat("mna", [
       { text: "The parent raises cash but keeps control and still consolidates the subsidiary", answer: 1, note: "A carve-out raises cash and leaves the parent in control." },
       { text: "The parent no longer owns any of the business and keeps the sale proceeds", answer: 2, note: "The business has been sold: a divestiture." }
     ],
-    why: "Spin-off: shares to existing shareholders, no cash. Carve-out: shares to new investors for cash, parent keeps control. Divestiture: the business is sold outright." }
+    why: "Spin-off: shares to existing shareholders, no cash. Carve-out: shares to new investors for cash, parent keeps control. Divestiture: the business is sold outright." },
+  // Walk-through cards: answer out loud, then grade yourself against the model answer.
+  { id: "mna-walk-01", lv: 2, type: "walk", q: "Walk me through an accretion/dilution analysis.",
+    points: [
+      "Start with the buyer's and the target's projected net income, and the buyer's share count and share price.",
+      "Set the purchase price and how it's paid: new shares, cash on hand, new debt or a mix.",
+      "Adjust combined net income: add synergies, subtract after-tax interest on new debt and the interest lost on cash used, and subtract amortisation of written-up intangibles.",
+      "Add the new shares issued to the buyer's share count.",
+      "Pro forma EPS = adjusted combined net income ÷ new share count. Above the buyer's standalone EPS is accretive; below is dilutive."
+    ],
+    why: "Mention the shortcut too: an all-stock deal is accretive when the buyer's P/E is above the P/E it pays. And say that accretion doesn't by itself mean the deal creates value." },
+  { id: "mna-walk-02", lv: 1, type: "walk", q: "Walk me through a sell-side M&A process.",
+    points: [
+      "Preparation: hire advisers, prepare the information memorandum, a model and often vendor due diligence, and draw up a list of buyers.",
+      "Marketing: send teasers, sign NDAs and send out the information memorandum.",
+      "First round: buyers submit non-binding indicative bids, and the seller picks a shortlist.",
+      "Second round: shortlisted buyers get data room access, management presentations and the draft purchase agreement, then submit binding bids with their mark-up.",
+      "Negotiation, signing and completion: agree the purchase agreement with the preferred bidder, sign, then complete once regulatory and other conditions are met."
+    ],
+    why: "Show you know why it's staged: competition keeps price tension while information is released gradually to fewer, more serious buyers." }
 ]);
