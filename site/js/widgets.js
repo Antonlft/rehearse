@@ -272,6 +272,26 @@
       note("Shares cost the acquirer's earnings yield (1 ÷ its P/E); cash or debt cost the after-tax interest. The deal adds to EPS if the target's earnings yield is higher.")
   });
 
+  define("goodwill", {
+    title: "Purchase price allocation: what's left is goodwill",
+    inputs: [
+      { k: "price", label: "Price paid for 100%", min: 100, max: 2000, step: 10, value: 700, fmt: usd },
+      { k: "book", label: "Book net assets", min: 0, max: 1500, step: 10, value: 370, fmt: usd },
+      { k: "writeUp", label: "Write-ups to fair value", min: 0, max: 600, step: 10, value: 120, fmt: usd },
+      { k: "t", label: "Tax rate", min: 0, max: 0.4, step: 0.01, value: 0.25, fmt: v => pct(v, 0) }
+    ],
+    compute: v => { const dtl = v.writeUp * v.t, fv = v.book + v.writeUp - dtl, goodwill = v.price - fv; return { dtl, fv, goodwill, bargain: goodwill < 0 }; },
+    render: (v, r) => stats([r.bargain ? stat("Bargain purchase gain", usd(-r.goodwill, 1), true) : stat("Goodwill", usd(r.goodwill, 1), true), stat("Net assets at fair value", usd(r.fv, 1)), stat("Deferred tax on write-ups", usd(r.dtl, 1))]) +
+      waterfall([{ label: "Book", sub: "value", value: v.book, kind: "total", text: num(v.book, 0) },
+        { label: "Write-", sub: "ups", value: v.writeUp, kind: "up", text: "+" + num(v.writeUp, 0) },
+        { label: "DTL", value: r.dtl, kind: "down", text: "−" + num(r.dtl, 0) },
+        { label: "Fair", sub: "value", value: r.fv, kind: "total", text: num(r.fv, 0) },
+        { label: "Good-", sub: "will", value: Math.abs(r.goodwill), kind: r.bargain ? "down" : "up", text: (r.bargain ? "−" : "+") + num(Math.abs(r.goodwill), 0) },
+        { label: "Price", value: v.price, kind: "total", text: num(v.price, 0) }]) +
+      note("Chart in US$ millions, rounded. The write-ups create a deferred tax liability (DTL) because their tax base doesn't change, as in most share deals.") +
+      (r.bargain ? note("The price is below the fair value of the net assets: after rechecking the values, IFRS 3 books the difference as a bargain purchase gain in profit.") : "")
+  });
+
   define("montyHall", {
     title: "Monty Hall: switch or stay?",
     inputs: [{ k: "games", label: "Games to simulate", min: 10, max: 5000, step: 10, value: 1000, fmt: v => num(v, 0) }],

@@ -73,6 +73,10 @@ r = run("dilutedShares", {}); near("dilutedShares", "bought back", r.buyback, 6.
 near("dilutedShares", "diluted", r.diluted, 203.75); near("dilutedShares", "dilution", r.dilution, 0.01875);
 r = run("dilutedShares", { price: 20 }); near("dilutedShares", "out of the money adds nothing", r.net, 0); near("dilutedShares", "OTM diluted", r.diluted, 200);
 r = run("dilutedShares", { price: 25 }); near("dilutedShares", "at the money adds nothing", r.net, 0);
+// Goodwill: 700 − (370 + 120 − 120 × 25%) = 700 − 460 = 240; at 0% tax 210; paying 300 gives a bargain purchase of −160
+r = run("goodwill", {}); near("goodwill", "DTL", r.dtl, 30); near("goodwill", "fair value", r.fv, 460); near("goodwill", "goodwill", r.goodwill, 240); is("goodwill", "not a bargain", r.bargain, false);
+r = run("goodwill", { t: 0 }); near("goodwill", "no tax", r.goodwill, 210);
+r = run("goodwill", { price: 300 }); near("goodwill", "bargain amount", r.goodwill, -160); is("goodwill", "bargain", r.bargain, true);
 
 // Every widget's default view must compute and render without NaN.
 for (const [name, w] of Object.entries(W)) {
