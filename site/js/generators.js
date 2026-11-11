@@ -1341,3 +1341,63 @@ Bank.calc("fig", {
   why(i) { const { RWA, K, t } = i; return `CET1 needed = ${R.pct(t, 2)} × ${R.num(RWA)} = ${R.m(t * RWA)}. Excess = ${R.num(K)} − ${R.num(t * RWA)} = ${R.m(this.solve(i))}. That's the capital it could pay out through dividends or buybacks, if the regulator agrees.`; },
   fmt: v => R.m(v, 0)
 });
+
+// Case study: valuing a bank, from net interest income to value per share, via ROTE and the justified P/TBV.
+Bank.case("fig", {
+  lv: 3,
+  make() {
+    for (;;) {
+      const A = R.step(20000, 200000, 1000), nim = R.step(0.015, 0.035, 0.0005), NII = +(A * nim).toFixed(1), F = Math.round(NII * R.step(0.3, 0.6, 0.05));
+      const ci = R.step(0.5, 0.65, 0.01), LL = Math.round(A * R.step(0.002, 0.006, 0.0005)), t = R.pick([0.21, 0.25, 0.3]);
+      const PBT = (NII + F) * (1 - ci) - LL, NI = +(PBT * (1 - t)).toFixed(1);
+      const TBV = Math.round(A * R.step(0.06, 0.09, 0.005) / 10) * 10, GW = Math.round(TBV * R.step(0.1, 0.3, 0.05) / 10) * 10;
+      const k = R.step(0.09, 0.13, 0.005), g = R.step(0.02, 0.035, 0.005), S = R.step(200, 3000, 10);
+      const rote = +(NI / TBV).toFixed(3);
+      if (NI <= 0 || rote < 0.06 || rote > 0.22) continue;
+      const pt = +((rote - g) / (k - g)).toFixed(2), V = Math.round(pt * TBV), ps = V / S;
+      if (ps < 2) continue;
+      return { A, nim, NII, F, ci, LL, t, PBT, NI, TBV, GW, k, g, S, rote, pt, V, ps };
+    }
+  },
+  intro: ({ A, nim, F, ci, LL, t, TBV, GW, k, g, S }) => `A bank has average interest-earning assets of ${R.m(A)} and a net interest margin (NIM) of ${R.pct(nim, 2)}. It earns ${R.m(F)} of fees. Its cost/income ratio is ${R.pct(ci, 0)} (operating costs ÷ revenue, where revenue = net interest income + fees), loan losses are ${R.m(LL)} and the tax rate is ${R.pct(t, 0)}. Shareholders' equity is ${R.m(TBV + GW)}, of which ${R.m(GW)} is goodwill. Its cost of equity is ${R.pct(k, 1)}, long-run growth is ${R.pct(g, 1)}, and it has ${R.num(S)} million shares.`,
+  why: () => "A bank's value comes from what it earns on its tangible equity compared with what shareholders require. Margin, fees, cost discipline and loan losses set the return; the cost of equity sets the multiple.",
+  steps: [
+    { unit: "US$m", dp: 1, tolerance: 0.1, prompt: "in US$m, to 1 decimal place",
+      ask: () => "What is its net interest income?",
+      solve: i => i.NII,
+      wrongs: ({ NII, F }) => [{ value: NII + F, trap: "double-count", note: "That adds the fees. Net interest income is the interest margin alone: assets × NIM." }],
+      why: ({ A, nim, NII }) => `Net interest income = ${R.num(A)} × ${R.pct(nim, 2)} = ${R.m(NII, 1)}.` },
+    { unit: "US$m", dp: 1, tolerance: 0.15, prompt: "in US$m, to 1 decimal place",
+      ask: ({ NII, F, ci, LL, t }) => `Net interest income is ${R.m(NII, 1)} and fees are ${R.m(F)}. With a ${R.pct(ci, 0)} cost/income ratio, ${R.m(LL)} of loan losses and a ${R.pct(t, 0)} tax rate, what is net income?`,
+      solve: i => i.NI,
+      wrongs: ({ PBT, NII, F, ci, LL, t }) => [
+        { value: PBT, trap: "missed-step", note: "That's profit before tax. Take tax off for net income." },
+        { value: (NII + F) * (1 - ci) * (1 - t), trap: "missed-step", note: "That leaves out the loan losses, which come off after operating costs." },
+        { value: (NII * (1 - ci) - LL) * (1 - t), trap: "missed-step", note: "That leaves out fee income, which is part of revenue." }],
+      why: ({ NII, F, ci, LL, PBT, t, NI }) => `Revenue = ${R.num(NII, 1)} + ${R.num(F)} = ${R.m(NII + F, 1)}. Costs = ${R.pct(ci, 0)} of that = ${R.m((NII + F) * ci, 1)}. Pre-tax profit = ${R.num(NII + F, 1)} − ${R.num((NII + F) * ci, 1)} − ${R.num(LL)} = ${R.m(PBT, 1)}. Net income = × (1 − ${R.pct(t, 0)}) = ${R.m(NI, 1)}.` },
+    { unit: "%", dp: 1, tolerance: 0.1, prompt: "as a percentage, to 1 decimal place",
+      ask: ({ NI, TBV, GW }) => `Net income is ${R.m(NI, 1)}. Equity is ${R.m(TBV + GW)}, including ${R.m(GW)} of goodwill. What is the return on tangible equity (ROTE)?`,
+      solve: i => i.NI / i.TBV,
+      wrongs: ({ NI, TBV, GW }) => [{ value: NI / (TBV + GW), trap: "wrong-measure", note: "That's return on equity. ROTE takes goodwill out of equity first." }],
+      why: ({ NI, TBV, GW }) => `Tangible equity = ${R.num(TBV + GW)} − ${R.num(GW)} = ${R.m(TBV)}. ROTE = ${R.num(NI, 1)} ÷ ${R.num(TBV)} = ${R.pct(NI / TBV)}.` },
+    { unit: "x", dp: 2, tolerance: 0.02, prompt: "as a multiple, to 2 decimal places",
+      ask: ({ rote, k, g }) => `ROTE is ${R.pct(rote, 1)}, the cost of equity ${R.pct(k, 1)} and long-run growth ${R.pct(g, 1)}. What price to tangible book (P/TBV) does that justify?`,
+      solve: ({ rote, k, g }) => (rote - g) / (k - g),
+      wrongs: ({ rote, k, g }) => [
+        { value: rote / k, trap: "missed-step", note: "That leaves out growth. Take g off both the return and the cost of equity." },
+        { value: (k - g) / (rote - g), trap: "inverted", note: "That's flipped: returns go on top, the cost of equity underneath." }],
+      why: ({ rote, k, g }) => `P/TBV = (${R.pct(rote, 1)} − ${R.pct(g, 1)}) ÷ (${R.pct(k, 1)} − ${R.pct(g, 1)}) = ${R.x((rote - g) / (k - g), 2)}.` },
+    { unit: "US$m", dp: 0, tolerance: 1, prompt: "in US$m, to the nearest million",
+      ask: ({ pt, TBV }) => `The justified P/TBV is ${R.x(pt, 2)} and tangible equity is ${R.m(TBV)}. What market value does that imply for the bank's equity?`,
+      solve: i => i.pt * i.TBV,
+      wrongs: ({ pt, TBV, GW }) => [
+        { value: pt * (TBV + GW), trap: "wrong-measure", note: "That applies the multiple to book equity including goodwill. P/TBV applies to tangible equity." },
+        { value: TBV, trap: "missed-step", note: "That's tangible book itself. Multiply by the P/TBV." }],
+      why: ({ pt, TBV, V }) => `Implied value = ${R.x(pt, 2)} × ${R.num(TBV)} = ${R.m(V)}.` },
+    { unit: "US$", dp: 2, tolerance: 0.02, prompt: "in US$ per share, to 2 decimal places",
+      ask: ({ V, S }) => `The equity is worth ${R.m(V)} and there are ${R.num(S)} million shares. What is that per share?`,
+      solve: i => i.V / i.S,
+      wrongs: ({ TBV, S }) => [{ value: TBV / S, trap: "wrong-measure", note: "That's tangible book value per share. Use the implied market value." }],
+      why: ({ V, S }) => `Value per share = ${R.num(V)} ÷ ${R.num(S)} = US$${R.num(V / S, 2)}.` }
+  ]
+});
