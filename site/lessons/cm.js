@@ -4,8 +4,8 @@ Lessons.add("cm", {
   "status": "draft",
   "method": [
     {"section": "Rights issues"},
-    {"kind": "idea", "text": "Equity capital markets (ECM) raise money through IPOs, follow-on offerings, block trades and rights issues; debt capital markets (DCM) do it through bonds. In a rights issue, existing shareholders can buy new shares in proportion to what they hold, usually at a discount, so they can avoid being diluted."},
-    {"kind": "formula", "text": "TERP = {{N × old price + subscription price // N + 1}}", "note": "For 1 new share per N held. A right is worth TERP minus the subscription price."},
+    {"kind": "idea", "text": "Equity capital markets (ECM) raise money through initial public offerings (IPOs), follow-on offerings, block trades and rights issues; debt capital markets (DCM) do it through bonds. In a rights issue, existing shareholders can buy new shares in proportion to what they hold, usually at a discount, so they can avoid being diluted."},
+    {"kind": "formula", "title": "Theoretical ex-rights price (TERP)", "text": "TERP = {{N × old price + subscription price // N + 1}}", "note": "For 1 new share per N held. A right is worth TERP minus the subscription price."},
     {"kind": "read", "text": "Shareholders who take up their rights, or sell them, lose nothing; those who do neither lose value."},
     {"section": "Venture rounds"},
     {"kind": "formula", "text": "Post-money = pre-money + new money\nInvestor's stake = {{new money // post-money}}", "note": "US$5m at US$20m pre-money buys 20% of a US$25m post-money company."},
@@ -22,7 +22,7 @@ Lessons.add("cm", {
     "answer": "TERP US$11.00; each right to a new share is worth US$3.00 (US$1.00 per existing share)."
   },
   "source": {
-    "text": "Investor.gov (US SEC), Rights offering",
+    "text": "Investor.gov (the US Securities and Exchange Commission, SEC), Rights offering",
     "url": "https://www.investor.gov/introduction-investing/investing-basics/glossary/rights-offering"
   },
   "widget": {

@@ -3,12 +3,12 @@
 Lessons.add("pf", {
   "status": "draft",
   "method": [
-    {"kind": "idea", "text": "Property lenders size a loan using several tests and lend the lowest result."},
-    {"kind": "formula", "text": "LTV = {{loan // property value}}\nICR = {{NOI // annual interest}}\nDSCR = {{NOI // annual interest + principal repayments}}\nDebt yield = {{NOI // loan}}", "note": "LTV = loan-to-value; ICR = interest cover ratio; DSCR = debt service cover ratio; NOI = net operating income."},
+    {"kind": "idea", "text": "Property lenders size a loan using several tests and lend the lowest result: loan-to-value (LTV), interest cover ratio (ICR), debt service cover ratio (DSCR) and debt yield.\nThe income tests use net operating income (NOI): rent less the owner's operating costs."},
+    {"kind": "formula", "text": "LTV = {{loan // property value}}\nICR = {{NOI // annual interest}}\nDSCR = {{NOI // annual interest + principal repayments}}\nDebt yield = {{NOI // loan}}"},
     {"kind": "read", "title": "What each test protects", "text": "LTV caps the loan against the property's value; ICR and DSCR check that income covers the payments; debt yield shows the lender's return on income if it had to take the property."},
     {"kind": "read", "title": "Positive and negative leverage", "text": "Leverage is positive when the property's yield is above the cost of debt, and negative when it's below."},
     {"kind": "watch", "text": "Higher rates hit twice: they shrink the loan the ICR test allows, and they push yields up and so values down."},
-    {"kind": "practice", "text": "Floating-rate loans are priced at a benchmark (SOFR in the US, SONIA in the UK) plus a margin; swaps or caps fix or limit the cost."}
+    {"kind": "practice", "text": "Floating-rate loans are priced at a benchmark (the Secured Overnight Financing Rate, SOFR, in the US; the Sterling Overnight Index Average, SONIA, in the United Kingdom) plus a margin; swaps or caps fix or limit the cost."}
   ],
   "example": {
     "question": "A property worth US$80m earns NOI of US$4.8m. The lender allows 65% LTV, a minimum ICR of 1.6x and a minimum 8% debt yield, at a 6.5% interest rate. What's the maximum loan?",

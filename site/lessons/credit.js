@@ -12,7 +12,7 @@ Lessons.add("credit", {
     {"section": "Loans, bonds and yields"},
     {"kind": "formula", "text": "Current yield = {{annual coupon // price}}"},
     {"kind": "how", "text": "Current yield: the coupon as a % of the price, ignoring the move to 100.\nYield to maturity (YTM): the full return if held to maturity, including the gain or loss as the price moves to 100.\nYield to call: the same, assuming the issuer repays early at the call price on the call date.\nYield to worst: the lowest of these, which is what's quoted for callable bonds."},
-    {"kind": "practice", "title": "Loans vs bonds", "text": "Leveraged loans (a revolver plus term loans) are usually secured, float at SOFR (the US overnight benchmark rate) plus a margin, and can be repaid early.\nHigh-yield bonds usually pay a fixed coupon, are often unsecured, and have a non-call period followed by call premiums."},
+    {"kind": "practice", "title": "Loans vs bonds", "text": "Leveraged loans (a revolver plus term loans) are usually secured, float at SOFR (the Secured Overnight Financing Rate, the US overnight benchmark) plus a margin, and can be repaid early.\nHigh-yield bonds usually pay a fixed coupon, are often unsecured, and have a non-call period followed by call premiums."},
     {"kind": "practice", "title": "Example", "text": "An 8% bond at 108 with eight years left, callable in three years at 102: current yield 7.41%, yield to maturity 6.68%, yield to call 5.66%, so its yield to worst is 5.66%."}
   ],
   "example": {
@@ -25,7 +25,7 @@ Lessons.add("credit", {
     "answer": "97.28: below par, because the yield (5%) is above the coupon (4%)."
   },
   "source": {
-    "text": "Investor.gov (US SEC), Bonds; Frank Fabozzi, Bond Markets, Analysis, and Strategies (Pearson)",
+    "text": "Investor.gov (the US Securities and Exchange Commission, SEC), Bonds; Frank Fabozzi, Bond Markets, Analysis, and Strategies (Pearson)",
     "url": "https://www.investor.gov/introduction-investing/investing-basics/investment-products/bonds-or-fixed-income-products/bonds"
   },
   "widget": {

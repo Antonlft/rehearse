@@ -7,11 +7,11 @@ Lessons.add("econ", {
     {"kind": "idea", "text": "Central banks set short-term interest rates (in the US, the Federal Reserve's federal funds rate) to keep inflation near target: they raise rates to cool demand and cut them to support it."},
     {"kind": "how", "text": "Longer-term yields reflect the short rates markets expect over the bond's life, plus a term premium: extra yield for tying money up for longer."},
     {"kind": "read", "text": "The yield curve plots yields by maturity and normally slopes up. When short rates rise above long rates it's inverted, usually because markets expect rate cuts; in the US an inversion has often come before a recession."},
-    {"kind": "practice", "text": "Central banks steer short-term rates day to day through repo operations: short-term loans to banks against government bonds.\nThe VIX index shows how much volatility the options market expects for US shares over the next 30 days (the 'fear gauge')."},
+    {"kind": "practice", "text": "Central banks steer short-term rates day to day through repo operations: short-term loans to banks against government bonds.\nThe VIX (the Chicago Board Options Exchange's Volatility Index) shows how much volatility the options market expects for US shares over the next 30 days (the 'fear gauge')."},
     {"section": "Inflation and real rates"},
     {"kind": "formula", "title": "Real rate", "text": "Real rate = {{1 + nominal rate // 1 + inflation}} − 1", "note": "Roughly the nominal rate minus inflation."},
-    {"kind": "formula", "title": "Breakeven inflation", "text": "Breakeven inflation = nominal Treasury yield − TIPS real yield", "note": "TIPS are US Treasuries whose principal rises with inflation, so they pay a real yield. A 4.3% Treasury and a 1.9% TIPS imply expected inflation of about 2.4% a year."},
-    {"kind": "read", "text": "Headline CPI covers everything; core strips out food and energy to show the trend."},
+    {"kind": "formula", "title": "Breakeven inflation, from Treasury Inflation-Protected Securities (TIPS)", "text": "Breakeven inflation = nominal Treasury yield − TIPS real yield", "note": "TIPS are US Treasuries whose principal rises with inflation, so they pay a real yield. A 4.3% Treasury and a 1.9% TIPS imply expected inflation of about 2.4% a year."},
+    {"kind": "read", "text": "Headline consumer price index (CPI) inflation covers everything; core strips out food and energy to show the trend."},
     {"kind": "watch", "text": "When policy rates are already near zero, further cuts can stop working (a liquidity trap), so central banks turn to quantitative easing and forward guidance."}
   ],
   "example": {

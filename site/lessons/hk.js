@@ -3,10 +3,10 @@
 Lessons.add("hk", {
   "status": "draft",
   "method": [
-    {"kind": "idea", "text": "Hotel performance starts with three rooms metrics: occupancy, ADR and RevPAR. TRevPAR adds F&B and other revenue."},
+    {"kind": "idea", "text": "Hotel performance starts with three rooms metrics: occupancy, average daily rate (ADR) and revenue per available room (RevPAR). Total revenue per available room (TRevPAR) adds food and beverage (F&B) and other revenue."},
     {"kind": "formula", "title": "Rooms metrics", "text": "Occupancy = {{rooms sold // rooms available}}\nADR = {{rooms revenue // rooms sold}}\nRevPAR = {{rooms revenue // rooms available}} = occupancy × ADR"},
-    {"kind": "formula", "title": "Splitting growth", "text": "RevPAR growth = (1 + ADR growth) × (1 + occupancy growth) − 1\nFlow-through = {{change in GOP // change in revenue}}"},
-    {"kind": "how", "text": "Gross operating profit (GOP) = total revenue − departmental costs (rooms, F&B…) − undistributed costs (admin, sales, maintenance, utilities), before management fees and fixed charges such as rent, insurance and property tax. This follows USALI, the Uniform System of Accounts for the Lodging Industry."},
+    {"kind": "formula", "title": "Splitting growth, and flow-through to gross operating profit (GOP)", "text": "RevPAR growth = (1 + ADR growth) × (1 + occupancy growth) − 1\nFlow-through = {{change in GOP // change in revenue}}"},
+    {"kind": "how", "text": "GOP = total revenue − departmental costs (rooms, F&B…) − undistributed costs (admin, sales, maintenance, utilities), before management fees and fixed charges such as rent, insurance and property tax. This follows USALI, the Uniform System of Accounts for the Lodging Industry."},
     {"kind": "read", "text": "Growth from rate is worth more than growth from occupancy: a higher ADR mostly drops to profit, while extra occupied rooms bring cleaning, laundry and commission costs."}
   ],
   "example": {
@@ -19,7 +19,7 @@ Lessons.add("hk", {
     "answer": "RevPAR is up 9.4%: roughly half from rate (+5.0%) and half from occupancy (+4.2%)."
   },
   "source": {
-    "text": "Uniform System of Accounts for the Lodging Industry (USALI), published by HFTP and the American Hotel & Lodging Association"
+    "text": "Uniform System of Accounts for the Lodging Industry (USALI), published by Hospitality Financial and Technology Professionals (HFTP) and the American Hotel & Lodging Association"
   },
   "widget": {
     "type": "revpar",

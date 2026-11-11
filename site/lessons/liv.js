@@ -4,9 +4,9 @@ Lessons.add("liv", {
   "status": "draft",
   "method": [
     {"kind": "idea", "text": "The living sectors are operational real estate let to individuals."},
-    {"kind": "formula", "text": "Gross income = beds × weekly rent × weeks × occupancy", "note": "NOI = gross income − operating costs; value = NOI ÷ yield, compared per bed or per unit."},
-    {"kind": "how", "title": "PBSA", "text": "Purpose-built student accommodation is let per bed on academic-year tenancies (often 44–51 weeks), sometimes backed by university nomination agreements."},
-    {"kind": "how", "title": "BTR and co-living", "text": "Build-to-rent is single-owner rental housing with on-site management; co-living offers small private rooms with shared spaces and all-inclusive rents."},
+    {"kind": "formula", "text": "Gross income = beds × weekly rent × weeks × occupancy", "note": "NOI (net operating income) = gross income − operating costs; value = NOI ÷ yield, compared per bed or per unit."},
+    {"kind": "how", "title": "Purpose-built student accommodation (PBSA)", "text": "Let per bed on academic-year tenancies (often 44–51 weeks), sometimes backed by university nomination agreements."},
+    {"kind": "how", "title": "Build-to-rent (BTR) and co-living", "text": "BTR is single-owner rental housing with on-site management; co-living offers small private rooms with shared spaces and all-inclusive rents."},
     {"kind": "read", "text": "Schemes in strong university cities with limited new supply, and stabilised assets, trade at lower yields than developments still letting up."},
     {"kind": "practice", "text": "Operating costs (the 'gross-to-net') are often around 25–35% of income for PBSA and 20–30% for BTR."}
   ],
@@ -20,7 +20,7 @@ Lessons.add("liv", {
     "answer": "About US$165,000 per bed (US$66.0m in total)."
   },
   "source": {
-    "text": "British Property Federation and Savills, UK Build to Rent market updates; RICS Valuation – Global Standards for valuation practice"
+    "text": "British Property Federation and Savills, UK Build to Rent market updates; the Royal Institution of Chartered Surveyors (RICS), RICS Valuation – Global Standards for valuation practice"
   },
   "widget": {
     "type": "rentRoll",

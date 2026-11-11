@@ -7,11 +7,11 @@ Lessons.add("hom", {
     {"kind": "how", "title": "Lease", "text": "The operator pays the owner rent and keeps the trading profit and the risk."},
     {"kind": "how", "title": "Management contract", "text": "The owner keeps the profit and risk and pays the operator fees: a base fee (often 2–4% of revenue) plus an incentive fee linked to profit."},
     {"kind": "how", "title": "Franchise", "text": "The owner, or a manager it hires, runs the hotel and pays a brand for its name, standards and distribution."},
-    {"kind": "read", "text": "The structure drives value and the pool of buyers. A leased hotel gives bond-like income, valued on its rent at a lower yield; a managed hotel passes the full EBITDA swings to the owner and is valued at a higher yield."},
-    {"kind": "practice", "text": "An OpCo/PropCo split separates the property from the operating business. Under IFRS 16, a lease goes on the operator's balance sheet."}
+    {"kind": "read", "text": "The structure drives value and the pool of buyers. A leased hotel gives bond-like income, valued on its rent at a lower yield; a managed hotel passes the full swings in EBITDA (earnings before interest, tax, depreciation and amortisation) to the owner and is valued at a higher yield."},
+    {"kind": "practice", "text": "A split into an operating company (OpCo) and a property company (PropCo) separates the property from the operating business. Under IFRS 16 (the International Financial Reporting Standard on leases), a lease goes on the operator's balance sheet."}
   ],
   "example": {
-    "question": "A managed hotel has revenue of US$30m and GOP of US$9m. The contract sets a 3% base fee on revenue and an incentive fee of 10% of GOP. What does the owner keep, before other fixed charges?",
+    "question": "A managed hotel has revenue of US$30m and gross operating profit (GOP) of US$9m. The contract sets a 3% base fee on revenue and an incentive fee of 10% of GOP. What does the owner keep, before other fixed charges?",
     "working": [
       "Base fee: 3% × 30 = US$0.9m",
       "Incentive fee: 10% × 9 = US$0.9m",
