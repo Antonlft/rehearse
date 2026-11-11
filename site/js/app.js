@@ -119,7 +119,12 @@ db.formatsOnly ??= false;
 //      (null for steps not answered), a round in progress can have caseDone[] (how many steps of each case have been
 //      checked), and their answer log entries have type: "case", given (each step's reading, or null) and stepsRight,
 //      plus cause / trap from the first wrong step. A case counts as correct only if every step is. No new top-level fields.
-const SCHEMA_VERSION = 14;
+//  15: confidence ratings. Added db.askConfidence (default true, ??=): ask "Sure / Think so / Guess" before showing an
+//      answer. A round in progress can have askConf (the setting when it started) and conf[] (each question's rating);
+//      a finished round in history can have conf[]; answer log entries can have confidence: "sure" | "think" | "guess".
+//      Only multiple choice, typed answers, ordering and grids are rated (not walk-throughs or case studies).
+db.askConfidence ??= true;
+const SCHEMA_VERSION = 15;
 db.schemaVersion = Math.max(db.schemaVersion || 1, SCHEMA_VERSION);
 let saveWarned = false;
 const persist = () => {
@@ -260,7 +265,15 @@ function grade(it, ans) {
 }
 // Learning mode reveals an answer once it's final: multiple choice on click, typed answers on "Check".
 const needsCheck = it => it.type === "numeric" || it.type === "order" || it.type === "grid" || it.type === "case"; // cases are checked step by step (caseDone)
-const isRevealed = (at, i) => !!at.learning && !isBlank(at.answers[i]) && (!needsCheck(at.items[i]) || !!(at.checked && at.checked[i]));
+// Confidence ratings: rated formats, and whether this round asks (decided when it started, so old rounds are unchanged).
+const CONF = [["sure", "Sure"], ["think", "Think so"], ["guess", "Guess"]];
+const confLabel = k => (CONF.find(c => c[0] === k) || [, ""])[1];
+const isRated = it => !it.type || it.type === "mcq" || it.type === "numeric" || it.type === "order" || it.type === "grid";
+const confNeeded = (at, i) => !!at.askConf && isRated(at.items[i]);
+const confOf = (at, i) => (at.conf && at.conf[i]) || null;
+// Learning mode shows the answer once it's final: chosen (and checked, for typed, ordering and grids) and, when the
+// round asks for it, rated, so the rating is always given before the answer is seen.
+const isRevealed = (at, i) => !!at.learning && !isBlank(at.answers[i]) && (!needsCheck(at.items[i]) || !!(at.checked && at.checked[i])) && (!confNeeded(at, i) || !!confOf(at, i));
 const causeText = g => g.unreadable ? "Your answer couldn't be read as a number."
   : g.note ? g.note
   : g.cause === "calculation-slip" ? "You were close (within 10%), so this looks like a calculation slip."
@@ -392,7 +405,7 @@ function buildRound(mode, cats) {
 
 function beginAttempt(mode, items, sub, learning = false, calc = false) {
   db.attempts[mode] = { mode, sub, items, answers: Array(items.length).fill(null), marked: Array(items.length).fill(false),
-    cur: 0, start: Date.now(), deadline: Date.now() + (learning ? LEARNING_MS : (items.length + items.filter(it => it.type === "walk").length + items.reduce((s, it) => s + (it.type === "case" ? it.steps.length - 1 : 0), 0)) * 60000), ...(learning ? { learning: true } : {}), ...(calc ? { calc: true } : {}) };
+    cur: 0, start: Date.now(), deadline: Date.now() + (learning ? LEARNING_MS : (items.length + items.filter(it => it.type === "walk").length + items.reduce((s, it) => s + (it.type === "case" ? it.steps.length - 1 : 0), 0)) * 60000), ...(learning ? { learning: true } : {}), ...(calc ? { calc: true } : {}), ...(db.askConfidence ? { askConf: true } : {}) };
   persist();
   reviewFilter = "all";
   go({ name: "quiz", mode });
@@ -748,6 +761,10 @@ function renderProgressTab() {
         </div>
         <p class="style-note">${practiceSummary()}. Applies when you practise one category; the main test has its own settings on its setup screen.</p>
       </section>
+      <section class="style-bar">
+        <label class="switch small"><input type="checkbox" role="switch" id="askConf" ${db.askConfidence ? "checked" : ""}><span>Ask how sure I am before showing the answer</span></label>
+        <p class="style-note">Sure, Think so or Guess on each question (not walk-throughs or case studies). Your weak spots then show the answers you were sure of but got wrong. Applies from your next round.</p>
+      </section>
     </section>
     ${srsPanel()}`;
 }
@@ -783,6 +800,8 @@ function wireHome() {
     db.calcPrefs[calcKey("practice", db.roundModes.practice === "learning")] = practiceCalc.checked;
     persist(); renderHome(); document.getElementById("practiceCalc").focus();
   };
+  const askConf = document.getElementById("askConf");
+  if (askConf) askConf.onchange = () => { db.askConfidence = askConf.checked; persist(); renderHome(); document.getElementById("askConf").focus(); };
   app.querySelectorAll("[data-practice-mode]").forEach(b => b.onclick = () => {
     db.roundModes.practice = b.dataset.practiceMode; persist(); renderHome();
     document.querySelector(`[data-practice-mode="${b.dataset.practiceMode}"]`).focus();
@@ -871,6 +890,8 @@ function renderQuiz() {
         ${ans !== it.a && it.x[ans] ? `<p>${esc(it.x[ans])}</p>` : ""}
         <p>${rich(it.why)}</p>
       </div>` : ""}`}
+      ${confNeeded(at, at.cur) && !revealed ? confBar(at, at.cur) : ""}
+      ${confNeeded(at, at.cur) && revealed ? `<p class="conf-note">You said: <b>${esc(confLabel(confOf(at, at.cur)))}</b>.${confOf(at, at.cur) === "sure" && !grade(it, ans).ok ? " A confident mistake: worth reviewing first, because it's the one you'd repeat in an interview." : ""}</p>` : ""}
       <div class="actions">
         <button class="btn" id="prevBtn" type="button" ${at.cur === 0 ? "disabled" : ""}>Previous</button>
         <button class="btn primary" id="nextBtn" type="button" ${at.cur === n - 1 ? "disabled" : ""}>Next</button>
@@ -879,7 +900,7 @@ function renderQuiz() {
         <span class="spacer"></span>
         <button class="btn" id="submitBtn" type="button">Submit test</button>
       </div>
-      <p class="shortcuts">Keyboard: <kbd>1</kbd>–<kbd>4</kbd> answer · <kbd>←</kbd> <kbd>→</kbd> previous / next · <kbd>M</kbd> mark for review</p>
+      <p class="shortcuts">Keyboard: <kbd>1</kbd>–<kbd>4</kbd> answer${confNeeded(at, at.cur) ? ` · <kbd>S</kbd> <kbd>T</kbd> <kbd>G</kbd> how sure` : ""} · <kbd>←</kbd> <kbd>→</kbd> previous / next · <kbd>M</kbd> mark for review</p>
     </section>
     <section class="tray" aria-label="Question navigator">
       <p>Go to a question · filled = answered · amber ring = marked for review · outline = current</p>
@@ -892,6 +913,7 @@ function renderQuiz() {
     </section>`;
 
   app.querySelectorAll("[data-opt]").forEach(b => b.onclick = () => choose(+b.dataset.opt));
+  app.querySelectorAll("[data-conf]").forEach(b => b.onclick = () => setConf(b.dataset.conf));
   app.querySelectorAll("[data-go]").forEach(b => b.onclick = () => move(+b.dataset.go));
   document.getElementById("prevBtn").onclick = () => move(at.cur - 1);
   document.getElementById("nextBtn").onclick = () => move(at.cur + 1);
@@ -1174,6 +1196,27 @@ function renderExpired(at) {
   confirmModal("Time's up", "Time ran out while you were away. Your round will be scored with the answers you'd saved.", "See your results", finish);
 }
 
+/* Confidence ratings on the quiz screen */
+function confBar(at, i) {
+  const c = confOf(at, i), waiting = !!at.learning && !isBlank(at.answers[i]) && (!needsCheck(at.items[i]) || !!(at.checked && at.checked[i]));
+  return `<div class="conf${waiting ? " waiting" : ""}">
+      <span class="conf-label" id="confLabel">How sure are you?</span>
+      <span class="conf-choices" role="radiogroup" aria-labelledby="confLabel">
+        ${CONF.map(([k, l]) => `<button type="button" class="grid-choice" role="radio" aria-checked="${c === k}" data-conf="${k}" aria-keyshortcuts="${k[0].toUpperCase()}">${l}</button>`).join("")}
+      </span>
+      ${waiting ? `<span class="conf-hint" role="status">Pick one to see the answer.</span>` : ""}
+    </div>`;
+}
+function setConf(k) {
+  const at = db.attempts[view.mode];
+  if (!at || !confNeeded(at, at.cur) || isRevealed(at, at.cur)) return;
+  (at.conf ||= [])[at.cur] = k;
+  persist(); renderQuiz();
+  const fb = document.getElementById("feedback");
+  if (isRevealed(at, at.cur) && fb) fb.focus({ preventScroll: true });
+  else app.querySelector(`[data-conf="${k}"]`)?.focus();
+}
+
 function choose(i) {
   const at = db.attempts[view.mode];
   const cur = at.items[at.cur];
@@ -1182,7 +1225,7 @@ function choose(i) {
     return walkPick(at, WALK_GRADES[i][0]);
   }
   if (cur.type) return; // typed and ordering questions aren't answered with 1–4
-  if (at.learning && at.answers[at.cur] !== null) return; // Learning mode: the answer locks once it's revealed
+  if (at.learning && isRevealed(at, at.cur)) return; // Learning mode: the answer locks once it's revealed
   ensureTiming(at); at.answers[at.cur] = i; at.answeredAt[at.cur] = Date.now(); persist(); renderQuiz();
   if (at.learning) document.getElementById("feedback")?.focus({ preventScroll: true });
 }
@@ -1221,6 +1264,7 @@ function submit(timedOut) {
       if (it.type === "walk") { entry.type = "walk"; entry.given = at.answers[i]; }
       if (it.type === "case") { entry.type = "case"; entry.given = g.steps.map(s => s.value ?? null); entry.stepsRight = g.right; if (firstWrong && firstWrong.cause) entry.cause = firstWrong.cause; }
       if (trap) entry.trap = trap;
+      if (confOf(at, i) && isRated(it)) entry.confidence = confOf(at, i);
       if (at.learning) entry.learning = true;
       if (at.calc) entry.calc = true;
       db.log.push(entry);
@@ -1233,7 +1277,7 @@ function submit(timedOut) {
     if (it.id && !isBlank(at.answers[i])) scheduleAnswer(db.schedule, it.id, ok, submittedAt);
   });
   const pct = Math.round(correct / at.items.length * 100);
-  const result = { at: submittedAt, mode, items: at.items, answers: at.answers, marked: at.marked, correct, total: at.items.length, pct,
+  const result = { at: submittedAt, mode, items: at.items, answers: at.answers, marked: at.marked, ...(at.conf ? { conf: at.conf } : {}), correct, total: at.items.length, pct,
     usedMs: Math.min(Date.now(), at.deadline) - at.start, timedOut, ...(at.learning ? { learning: true } : {}), ...(at.calc ? { calc: true } : {}) };
   db.history[mode] = [...(db.history[mode] || []), result].slice(-5);
   const t = (db.totals[mode] ||= { rounds: 0, sum: 0, best: 0 });
@@ -1262,7 +1306,10 @@ function diagnose() {
   const cats = {}, cat = id => (cats[id] ||= { n: 0, ok: 0, tpN: 0, tpOk: 0, tpWrong: 0, misread: 0 });
   const all = { n: 0, ok: 0 }, tp = { n: 0, ok: 0 }, calm = { n: 0, ok: 0 }, traps = {};
   let tagged = 0, misreads = 0, slips = 0, gaps = 0;
+  const conf = { sure: { n: 0, ok: 0 }, think: { n: 0, ok: 0 }, guess: { n: 0, ok: 0 } }, sureWrongBy = {};
   for (const e of answers) {
+    // Confidence: how often each rating was right (mistakes practice left out, as for accuracy).
+    if (e.mode !== RETRY && conf[e.confidence]) { conf[e.confidence].n++; if (e.ok) conf[e.confidence].ok++; else if (e.confidence === "sure") sureWrongBy[e.cat] = (sureWrongBy[e.cat] || 0) + 1; }
     // Mistakes practice re-asks known misses, so it's left out of accuracy (as in category accuracy on the home page).
     if (e.mode !== RETRY) {
       const c = cat(e.cat);
@@ -1298,11 +1345,16 @@ function diagnose() {
     found.push([slips / typedWrong * 40, `${slips} of your ${typedWrong} wrong typed answers were close (within 10%): mostly calculation slips, so double-check the final arithmetic.`]);
   else if (typedWrong >= 4 && gaps / typedWrong >= 0.6)
     found.push([gaps / typedWrong * 40, `${gaps} of your ${typedWrong} wrong typed answers were far off, which points to the method rather than the arithmetic.`]);
+  const sureWrong = conf.sure.n - conf.sure.ok;
+  if (conf.sure.n >= 5 && sureWrong >= 3) {
+    const most = Object.entries(sureWrongBy).sort((a, b) => b[1] - a[1])[0];
+    found.push([sureWrong / conf.sure.n * 80, `You were sure but wrong on ${sureWrong} of your ${conf.sure.n} "Sure" answers${most && most[1] >= 2 ? `, most often in ${name(most[0])}` : ""}. Review those first: a confident mistake is the one you'd repeat in an interview.`]);
+  }
   const insights = found.sort((a, b) => b[0] - a[0]).slice(0, 3).map(f => f[1]);
   const empty = answers.length < 10
     ? `Patterns appear once you've answered a few more questions (${answers.length} logged so far).`
     : `No clear weak spots in your last ${answers.length} answers. This updates after every round.`;
-  return { insights, empty, cats, traps, tagged, answers: answers.length, tp, calm, slips, gaps };
+  return { insights, empty, cats, traps, tagged, answers: answers.length, tp, calm, slips, gaps, conf, sureWrongBy };
 }
 
 function insightsBox(withLink) {
@@ -1332,6 +1384,12 @@ function renderReport() {
       <thead><tr><th scope="col">Mistake</th><th scope="col">Times</th></tr></thead>
       <tbody>${traps.map(([k, v]) => `<tr><th scope="row">${esc(TRAPS[k] ? TRAPS[k][0].toUpperCase() + TRAPS[k].slice(1) : k)}</th><td>${v}</td></tr>`).join("")}</tbody>
     </table></div>` : `<div class="card"><p class="muted">No tagged mistakes yet. When you pick a wrong option, the kind of slip it represents (a sign error, a flipped ratio, a missed step…) is counted here.</p></div>`}
+    ${(() => { const rated = CONF.reduce((s, [k]) => s + d.conf[k].n, 0); return rated ? `<div class="section-head"><h2>How sure you were</h2><p>${rated} rated answers · a good sense of confidence means "Sure" is right far more often than "Guess"</p></div>
+    <div class="table-wrap"><table class="report-table">
+      <thead><tr><th scope="col">You said</th><th scope="col">Answers</th><th scope="col">Right</th></tr></thead>
+      <tbody>${CONF.map(([k, l]) => `<tr><th scope="row">${l}</th><td>${d.conf[k].n}</td><td>${d.conf[k].n ? `${pctOf(d.conf[k].ok, d.conf[k].n)}%` : `<span class="muted">–</span>`}</td></tr>`).join("")}</tbody>
+    </table></div>
+    ${Object.keys(d.sureWrongBy).length ? `<p class="muted report-note">Sure but wrong, by category: ${Object.entries(d.sureWrongBy).sort((a, b) => b[1] - a[1]).map(([c, n]) => `${esc(catById(c)?.name || c)} ${n}`).join(" · ")}</p>` : ""}` : ""; })()}
     ${d.slips + d.gaps ? `<div class="section-head"><h2>Typed answers</h2><p>Wrong typed answers, by how far off they were</p></div>
     <div class="table-wrap"><table class="report-table">
       <thead><tr><th scope="col">Kind of miss</th><th scope="col">Times</th></tr></thead>
@@ -1764,7 +1822,7 @@ function renderResults() {
       ${[["all", `All ${r.total}`], ["wrong", `Wrong or skipped ${wrongN + skipN}`], ["marked", `Marked ${markN}`]].map(([k, l]) => `<button type="button" class="filter" data-filter="${k}" aria-pressed="${reviewFilter === k}">${l}</button>`).join("")}
     </div>
     <div class="review">
-      ${shown.length ? shown.map(i => reviewItem(r.items[i], i, r.answers[i], r.marked[i], logged.has(i) ? misread(i) : null)).join("") :`<div class="card"><p class="muted">Nothing to show for this filter.</p></div>`}
+      ${shown.length ? shown.map(i => reviewItem(r.items[i], i, r.answers[i], r.marked[i], logged.has(i) ? misread(i) : null, r.conf ? r.conf[i] : null)).join("") :`<div class="card"><p class="muted">Nothing to show for this filter.</p></div>`}
     </div>`;
 
   const againBtn = document.getElementById("againBtn"), retryBtn = document.getElementById("retryBtn");
@@ -1799,7 +1857,7 @@ function renderResults() {
 }
 
 // misread: true/false when the "I read it wrong" button applies (logged wrong answer), null otherwise.
-function reviewItem(it, i, ans, marked, misread) {
+function reviewItem(it, i, ans, marked, misread, conf = null) {
   const learnLink = () => `<p class="review-learn"><button class="link" type="button" data-learn="${it.cat}" data-from="${i}">Review the method: ${esc(catById(it.cat).name)}</button></p>`;
   const g = grade(it, ans);
   const st = isBlank(ans) ? ["skip", "Unanswered"] : it.type === "walk" ? [g.ok ? "ok" : "no", walkLabel(ans)] : g.ok ? ["ok", "Correct"] : ["no", "Incorrect"];
@@ -1809,7 +1867,7 @@ function reviewItem(it, i, ans, marked, misread) {
     <article class="card item" id="r-${i}">
       <div class="item-top">
         <p class="label">${esc(catById(it.cat).name)} · Question ${i + 1}${it.lv ? ` · ${LEVELS[it.lv]}` : ""}${it.gen ? " · Calculation" : ""}${it.type === "numeric" ? " · Typed answer" : it.type === "order" ? " · Ordering" : it.type === "grid" ? " · Classification" : it.type === "walk" ? " · Walk-through (self-graded)" : it.type === "case" ? " · Case study" : ""}</p>
-        <span class="pills">${misreadBtn}<span class="pill ${st[0]}">${st[1]}</span>${marked ? `<span class="pill flagged">Marked</span>` : ""}</span>
+        <span class="pills">${misreadBtn}<span class="pill ${st[0]}">${st[1]}</span>${conf && st[0] === "no" && conf === "sure" ? `<span class="pill sure-wrong">Sure but wrong</span>` : conf ? `<span class="pill conf-pill">You said: ${esc(confLabel(conf))}</span>` : ""}${marked ? `<span class="pill flagged">Marked</span>` : ""}</span>
       </div>
       <p class="prompt">${esc(it.q)}</p>
       ${it.type === "case" ? `
@@ -1885,6 +1943,7 @@ document.addEventListener("keydown", e => {
   else if (e.key === "ArrowRight") move(at.cur + 1);
   else if (e.key === "ArrowLeft") move(at.cur - 1);
   else if (e.key.toLowerCase() === "m") toggleMark();
+  else { const k = { s: "sure", t: "think", g: "guess" }[e.key.toLowerCase()]; if (k) setConf(k); }
 });
 
 document.getElementById("homeLink").onclick = () => go({ name: "home" });

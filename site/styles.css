@@ -502,6 +502,18 @@ sup { font-size: 0.72em; line-height: 0; vertical-align: super; }
 
 /* Question style selector (home) */
 .style-bar { margin-bottom: 14px; }
+/* Confidence ratings */
+.conf { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; margin: 14px 0; padding: 10px 12px; border: 1px dashed var(--rule-strong); border-radius: 6px; }
+.conf.waiting { border-style: solid; border-color: var(--navy); background: var(--navy-bg); }
+.conf-label { font-size: 13px; font-weight: 600; }
+.conf-choices { display: inline-flex; flex-wrap: wrap; gap: 6px; }
+.conf-hint { font-size: 12.5px; color: var(--navy); }
+.conf-note { margin: 10px 0 14px; font-size: 13px; color: var(--muted); }
+.conf-note b { color: var(--ink); }
+.pill.sure-wrong { background: var(--bad-bg); border-color: var(--bad-line); color: var(--bad); }
+.pill.conf-pill { color: var(--muted); }
+.report-note { margin-top: 8px; font-size: 13px; }
+
 /* Glossary: marked terms, the definition box and the Glossary page */
 .gl { border-bottom: 1px dotted var(--muted); cursor: help; }
 .gl:focus-visible { outline: 2px solid var(--navy); outline-offset: 1px; border-radius: 2px; }
