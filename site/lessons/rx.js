@@ -11,7 +11,7 @@ Lessons.add("rx", {
     {"section": "Restructuring in and out of court"},
     {"kind": "formula", "text": "Liquidation value = each asset × its expected recovery − wind-down costs", "note": "The best-interests test: anyone who votes against a plan must get at least this much."},
     {"kind": "how", "title": "Inside Chapter 11", "text": "A company can sell assets quickly through a Section 363 sale, where secured lenders may 'credit bid' their debt instead of cash. To confirm a plan, the court checks that it's feasible (unlikely to fail again) and in the best interests of creditors."},
-    {"kind": "how", "title": "Outside court", "text": "Exchange offers face holdouts, which exit consents help overcome; restructuring support agreements lock in key creditors before a filing."}
+    {"kind": "how", "title": "Outside court", "text": "Exchange offers swap old bonds for new ones, but some holders refuse (holdouts); exit consents, which strip covenants from the old bonds, make holding out less attractive.\nRestructuring support agreements (RSAs) lock in key creditors before a filing, so a quick pre-packaged plan can follow."}
   ],
   "example": {
     "question": "A restructured company is worth US$700m. It owes US$400m of senior secured loans, US$500m of senior unsecured notes and US$150m of subordinated notes. What does each class recover?",

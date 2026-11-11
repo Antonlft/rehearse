@@ -4,7 +4,7 @@ Lessons.add("pf", {
   "status": "draft",
   "method": [
     {"kind": "idea", "text": "Property lenders size a loan using several tests and lend the lowest result."},
-    {"kind": "formula", "text": "LTV = {{loan // value}}\nICR = {{NOI // interest}}\nDebt yield = {{NOI // loan}}", "note": "DSCR is like ICR but also counts principal repayments."},
+    {"kind": "formula", "text": "LTV = {{loan // property value}}\nICR = {{NOI // annual interest}}\nDSCR = {{NOI // annual interest + principal repayments}}\nDebt yield = {{NOI // loan}}", "note": "LTV = loan-to-value; ICR = interest cover ratio; DSCR = debt service cover ratio; NOI = net operating income."},
     {"kind": "read", "title": "What each test protects", "text": "LTV caps the loan against the property's value; ICR and DSCR check that income covers the payments; debt yield shows the lender's return on income if it had to take the property."},
     {"kind": "read", "title": "Positive and negative leverage", "text": "Leverage is positive when the property's yield is above the cost of debt, and negative when it's below."},
     {"kind": "watch", "text": "Higher rates hit twice: they shrink the loan the ICR test allows, and they push yields up and so values down."},

@@ -136,6 +136,7 @@ const esc = s => String(s).replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;"
 // In formulas, {{a // b}} is shown as a stacked fraction (a over b).
 const rich = s => esc(s)
   .replace(/\{\{(.+?)\s\/\/\s(.+?)\}\}/g, '<span class="frac"><span class="frac-n">$1</span><span class="frac-d">$2</span></span>')
+  .replace(/\((<span class="frac">.*?<\/span><\/span>)\)/g, '<span class="big-paren">(</span>$1<span class="big-paren">)</span>') // brackets as tall as the fraction
   .replace(/\^\(([^()]+)\)/g, "<sup>$1</sup>").replace(/\^(\d+(?:\.\d+)?|[A-Za-z]\w*)/g, "<sup>$1</sup>");
 const fmt = ms => { const t = Math.max(0, Math.ceil(ms / 1000)); return String(Math.floor(t / 60)).padStart(2, "0") + ":" + String(t % 60).padStart(2, "0"); };
 const shuffle = arr => { const a = [...arr]; for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; };
@@ -1173,7 +1174,7 @@ const METHOD_SHORT = 190;
 function methodHtml(items) {
   const block = b => `<div class="mblock mb-${esc(b.kind)}">
       <span class="mb-label">${esc(Lessons.BLOCKS[b.kind] || b.kind)}${b.title ? ` · ${esc(b.title)}` : ""}</span>
-      ${b.kind === "formula" ? `<p class="mb-eq">${b.text.split("\n").map(line => `<span class="mb-line">${rich(line)}</span>`).join("")}</p>` : `<p class="mb-text">${rich(b.text)}</p>`}
+      ${b.kind === "formula" ? `<p class="mb-eq">${b.text.split("\n").map(line => `<span class="mb-line">${rich(line)}</span>`).join("")}</p>` : `<p class="mb-text">${b.text.split("\n").map(line => `<span class="mb-line">${rich(line)}</span>`).join("")}</p>`}
       ${b.note ? `<p class="mb-note">${rich(b.note)}</p>` : ""}
     </div>`;
   const isBlock = b => b && typeof b === "object" && b.kind;

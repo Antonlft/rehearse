@@ -5,7 +5,7 @@ Lessons.add("lbo", {
   "method": [
     {"section": "The deal"},
     {"kind": "idea", "text": "In a leveraged buyout (LBO), a private equity sponsor buys a company mostly with debt, repays that debt from the company's own cash flow, and sells after three to seven years."},
-    {"kind": "formula", "text": "MOIC = {{exit equity // entry equity}}", "note": "IRR = MOIC^(1 ÷ years) − 1, when there are no cash flows in between."},
+    {"kind": "formula", "text": "MOIC = {{exit equity // entry equity}}\nIRR = MOIC^(1/n) − 1", "note": "MOIC = multiple on invested capital. Equity = enterprise value − net debt, at entry and at exit. n = years held; the IRR formula assumes no cash flows in between."},
     {"kind": "how", "text": "Equity returns come from three sources: growing EBITDA, selling at a higher multiple than was paid, and paying down debt so that more of the exit value belongs to the equity."},
     {"kind": "read", "text": "Debt magnifies returns because the sponsor puts in less equity for the same business, and it magnifies losses too. The same MOIC over more years means a lower IRR."},
     {"kind": "watch", "text": "Don't rely on selling at a higher multiple. Conservative models exit at the entry multiple, so the deal has to work through EBITDA growth and debt paydown alone."},

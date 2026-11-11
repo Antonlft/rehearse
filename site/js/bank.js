@@ -100,8 +100,8 @@ window.Lessons = {
   // Each kind has one label and one colour, the same in every lesson.
   BLOCKS: { idea: "Key idea", how: "How it works", formula: "Formula", read: "How to read it", watch: "Watch out", practice: "In practice" },
   // Blocks always appear in this order. A lesson that covers several topics splits into sections ({ section: "Title" }),
-  // and each section follows the order on its own. Formulas can show fractions as {{numerator // denominator}} and
-  // span several lines with "\n".
+  // and each section follows the order on its own. Formulas can show fractions as {{numerator // denominator}}, and
+  // any block can start a new line with "\n" (one point per line).
   ORDER: ["idea", "formula", "how", "read", "watch", "practice"],
   add(cat, lesson) { this.all[cat] = lesson; }
 };

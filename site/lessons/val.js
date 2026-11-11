@@ -13,8 +13,8 @@ Lessons.add("val", {
     {"kind": "how", "text": "Diluted shares add every claim that will become a share. In-the-money options are assumed exercised, and the proceeds buy back shares at the current price, so only the difference is new. Out-of-the-money options add nothing, RSUs add one share each, and an in-the-money convertible adds its shares and stops counting as debt."},
     {"kind": "practice", "text": "10m options at US$25 with shares at US$40 bring in US$250m, which buys back 6.25m shares: 3.75m net new shares."},
     {"section": "Cross-checks"},
-    {"kind": "watch", "text": "Check what the terminal value implies: a Gordon growth value divided by final-year EBITDA should land near peers' multiples. A big gap means the growth rate or WACC is out of line."},
-    {"kind": "practice", "text": "Calendarise peers' figures to the same 12 months before comparing multiples; adjust P/E for growth with the PEG ratio (P/E ÷ growth in percentage points); use EV/(EBITDA − capex) or EV/EBIT for capital-heavy businesses; and apply a discount for lack of marketability to a private company."}
+    {"kind": "watch", "text": "Check what the terminal value implies. A Gordon growth terminal value = final-year FCF × (1 + g) ÷ (WACC − g); divide it by final-year EBITDA and the multiple should land near peers' multiples. A big gap means the growth rate or WACC is out of line."},
+    {"kind": "practice", "text": "Calendarise: restate peers' figures to the same 12 months before comparing multiples.\nPEG ratio = P/E ÷ expected EPS growth in percentage points, to adjust the P/E for growth.\nCapital-heavy businesses: compare EV/(EBITDA − capex) or EV/EBIT, since EBITDA ignores the investment needed.\nPrivate companies: apply a discount for lack of marketability, often 20–30%."}
   ],
   "example": {
     "question": "A business is worth US$1,500m (EV). It has debt of US$450m, cash of US$120m, non-controlling interests of US$70m, a stake in an associate worth US$30m and 100m diluted shares. What is it worth per share?",

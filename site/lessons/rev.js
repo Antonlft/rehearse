@@ -11,8 +11,8 @@ Lessons.add("rev", {
     {"kind": "watch", "text": "Price per key or per bed is a cross-check, not a valuation."},
     {"kind": "practice", "text": "Hotels are valued on EBITDA after an FF&E reserve, at a higher yield because the income is operational."},
     {"section": "Listed property (REITs)"},
-    {"kind": "formula", "text": "NAV per share = {{property value + cash − debt // shares}}", "note": "Property value = NOI ÷ market cap rate."},
-    {"kind": "how", "text": "US REITs must pay out at least 90% of taxable income and trade on P/FFO. FFO is net income plus real estate depreciation minus gains on property sales; AFFO also deducts recurring capex and straight-line rent."},
+    {"kind": "formula", "text": "NAV per share = {{property value + cash − debt // shares}}\nFFO = net income + real estate depreciation − gains on property sales", "note": "Property value = NOI ÷ market cap rate. FFO (funds from operations) is the REIT version of earnings; AFFO also deducts recurring capex and straight-line rent."},
+    {"kind": "how", "text": "US REITs must pay out at least 90% of their taxable income as dividends, so they trade on P/FFO rather than P/E: depreciation on buildings that hold their value makes net income misleading."},
     {"kind": "practice", "title": "Example", "text": "NOI of US$60m at a 6% cap rate is worth US$1,000m. With US$400m of debt, US$20m of cash and 50m shares, NAV is US$12.40 a share; at a US$10.00 share price the stock trades at a 19% discount, implying a 6.8% cap rate."},
     {"kind": "practice", "title": "Europe", "text": "Where IFRS (IAS 40) holds property at fair value, as in Europe, listed companies report EPRA earnings and EPRA NTA instead of FFO."}
   ],
