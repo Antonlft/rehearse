@@ -659,7 +659,15 @@ function dueTile() {
       </section>`;
 }
 
-// Browse categories: the category table.
+// Browse categories: the category table, each group sorted A–Z by name.
+// Sort options considered (only A–Z is built; a future sort switch could add the others):
+//  - Alphabetical (A–Z): shipped. The simplest and most predictable to scan.
+//  - Weakest first: by the user's own accuracy (db.catStats ok ÷ n, ascending). Needs a deliberate rule for
+//    categories never attempted (first, as most in need of attention, or last) before it's built.
+//  - By difficulty: not defined at category level yet. `lv` (1–3) exists per written question, not per category,
+//    so this first needs an aggregation rule (e.g. the average lv of a category's written questions, or its share of
+//    lv-3 questions). Decide that rule rather than invent one when this is revisited.
+const byName = (a, b) => a.name.localeCompare(b.name, "en", { sensitivity: "base" });
 function renderBrowseTab() {
   return `
     <div class="section-head">
@@ -674,7 +682,7 @@ function renderBrowseTab() {
     </div>
     <div class="cat-table">
       <div class="cat-row cat-head" aria-hidden="true"><span>Category</span><span>Question bank</span><span>Your accuracy</span><span></span></div>
-      ${GROUPS.map(g => `<div class="cat-group">${esc(g.name)}</div>` + CATEGORIES.filter(c => c.group === g.id).map(catRow).join("")).join("")}
+      ${GROUPS.map(g => `<div class="cat-group">${esc(g.name)}</div>` + CATEGORIES.filter(c => c.group === g.id).sort(byName).map(catRow).join("")).join("")}
     </div>`;
 }
 
