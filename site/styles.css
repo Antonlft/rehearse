@@ -411,6 +411,12 @@ main { padding-block: 30px 48px; }
 .grid-choice:hover:not(:disabled) { border-color: var(--navy); }
 .grid-choice[aria-checked="true"] { background: var(--navy); border-color: var(--navy); color: var(--navy-ink); }
 .grid-choice:disabled { cursor: default; }
+
+/* Walk-through cards */
+.walk { display: grid; gap: 8px; }
+.walk-points { margin: 0; padding-left: 20px; display: grid; gap: 4px; font-size: 14px; }
+.walk-grade { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+.walk-ask { font-size: 13.5px; font-weight: 600; margin-right: 4px; }
 .grid-choice.correct:not([aria-checked="true"]) { border-color: var(--good); color: var(--good); }
 .grid-row.wrong .grid-choice[aria-checked="true"] { background: var(--bad); border-color: var(--bad); color: var(--status-ink); }
 .grid-row.right .grid-choice[aria-checked="true"] { background: var(--good); border-color: var(--good); color: var(--status-ink); }

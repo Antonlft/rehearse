@@ -148,5 +148,15 @@ Bank.addFormat("lbo", [
     why: "LPs are passive investors with limited liability; the GP runs the fund and is paid through the management fee and carried interest." },
   { id: "lbo-ord-01", lv: 2, type: "order", q: "Put the tiers of a typical whole-fund distribution waterfall in order, first to last.",
     answer: ["Return of LPs' contributed capital", "Preferred return to LPs (e.g. 8% a year)", "GP catch-up", "80/20 split of the remaining profit"],
-    why: "LPs first get back everything they put in, then the preferred return. The catch-up then lets the GP reach its 20% share of profits, and everything after that is split 80/20." }
+    why: "LPs first get back everything they put in, then the preferred return. The catch-up then lets the GP reach its 20% share of profits, and everything after that is split 80/20." },
+  // Walk-through cards: answer out loud, then grade yourself against the model answer.
+  { id: "lbo-walk-01", lv: 2, type: "walk", q: "Walk me through an LBO model.",
+    points: [
+      "Entry: the purchase price (entry multiple × EBITDA) and a sources and uses table, with the debt tranches and sponsor equity as sources and fees as a use.",
+      "Operating model: revenue, EBITDA and free cash flow over the holding period, usually about five years.",
+      "Debt schedule: interest, scheduled repayments and a cash sweep that pays debt down from free cash flow.",
+      "Exit: exit multiple × final-year EBITDA gives the exit enterprise value; subtract remaining net debt to get exit equity.",
+      "Returns: MOIC = exit equity ÷ entry equity, and the IRR over the holding period, then sensitivities on the entry and exit multiples and on leverage."
+    ],
+    why: "Finish with why it works: debt lets the sponsor put in less equity, and returns come from EBITDA growth, debt paydown and any change in the multiple." }
 ]);

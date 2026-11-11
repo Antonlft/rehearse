@@ -7,7 +7,8 @@
 //  - every generator, sampled RUNS times with the same 30-try retry the app uses, always yields a valid question
 //  - each question is checked by its `type`: multiple choice (no type, or "mcq"), "numeric" (typed answer: a number
 //    `answer`, a `tolerance` ≥ 0, an optional `unit`, optional known `wrongs`) or "order" (an `answer` list of 3–8
-//    unique steps) or "grid" (2–4 unique `columns`, 3–8 `rows` of { text, answer: column number, note }).
+//    unique steps) or "grid" (2–4 unique `columns`, 3–8 `rows` of { text, answer: column number, note }) or "walk"
+//    (a self-graded walk-through card: 3–8 unique `points` in its model answer).
 //    Fields belonging to one type (`tolerance`, `unit`, `o`, `rows`, ...) are rejected on the others.
 //  - every category has a lesson (site/lessons/<category>.js, loaded by index.html); a "stub" may be empty, but a
 //    "draft" or "reviewed" lesson needs a method, a worked example (question, working, answer) and a source;
@@ -61,8 +62,9 @@ const checkShape = (where, q) => {
   if (type === "numeric") return checkNumeric(where, q);
   if (type === "order") return checkOrder(where, q);
   if (type === "grid") return checkGrid(where, q);
-  if (type !== "mcq") return fail(`${where}: unknown type "${type}" (expected mcq, numeric, order or grid)`);
-  notAllowed(where, q, "a multiple-choice", ["answer", "tolerance", "unit", "wrongs", "dp", "columns", "rows"]);
+  if (type === "walk") return checkWalk(where, q);
+  if (type !== "mcq") return fail(`${where}: unknown type "${type}" (expected mcq, numeric, order, grid or walk)`);
+  notAllowed(where, q, "a multiple-choice", ["answer", "tolerance", "unit", "wrongs", "dp", "columns", "rows", "points"]);
   if (!Array.isArray(q.o) || q.o.length !== 4) fail(`${where}: needs exactly 4 options, has ${q.o?.length}`);
   else {
     if (new Set(q.o).size !== 4) fail(`${where}: options aren't unique: ${JSON.stringify(q.o)}`);
@@ -77,7 +79,7 @@ const checkShape = (where, q) => {
 };
 
 function checkNumeric(where, q) {
-  notAllowed(where, q, "a typed-answer", ["o", "x", "trap", "columns", "rows"]);
+  notAllowed(where, q, "a typed-answer", ["o", "x", "trap", "columns", "rows", "points"]);
   if (!isNum(q.answer)) fail(`${where}: answer must be a number, got ${JSON.stringify(q.answer)}`);
   if (!isNum(q.tolerance) || q.tolerance < 0) fail(`${where}: tolerance must be a number ≥ 0, got ${JSON.stringify(q.tolerance)}`);
   if (q.dp !== undefined && !(Number.isInteger(q.dp) && q.dp >= 0 && q.dp <= 6)) fail(`${where}: dp must be a whole number from 0 to 6, got ${JSON.stringify(q.dp)}`);
@@ -94,14 +96,21 @@ function checkNumeric(where, q) {
   }
 }
 function checkOrder(where, q) {
-  notAllowed(where, q, "an ordering", ["o", "x", "trap", "tolerance", "unit", "wrongs", "dp", "columns", "rows"]);
+  notAllowed(where, q, "an ordering", ["o", "x", "trap", "tolerance", "unit", "wrongs", "dp", "columns", "rows", "points"]);
   if (!Array.isArray(q.answer) || q.answer.length < 3 || q.answer.length > 8) return fail(`${where}: answer must list 3–8 steps in the right order, has ${Array.isArray(q.answer) ? q.answer.length : JSON.stringify(q.answer)}`);
   if (q.answer.some(s => typeof s !== "string" || !s.trim())) fail(`${where}: every step must be non-empty text`);
   if (new Set(q.answer).size !== q.answer.length) fail(`${where}: steps must be unique`);
 }
 
+function checkWalk(where, q) {
+  notAllowed(where, q, "a walk-through", ["o", "x", "trap", "tolerance", "unit", "wrongs", "dp", "answer", "columns", "rows"]);
+  if (!Array.isArray(q.points) || q.points.length < 3 || q.points.length > 8) return fail(`${where}: points must list 3–8 parts of a model answer, has ${Array.isArray(q.points) ? q.points.length : JSON.stringify(q.points)}`);
+  if (q.points.some(p => typeof p !== "string" || !p.trim())) fail(`${where}: every point must be non-empty text`);
+  if (new Set(q.points).size !== q.points.length) fail(`${where}: points must be unique`);
+}
+
 function checkGrid(where, q) {
-  notAllowed(where, q, "a grid", ["o", "x", "trap", "tolerance", "unit", "wrongs", "dp", "answer"]);
+  notAllowed(where, q, "a grid", ["o", "x", "trap", "tolerance", "unit", "wrongs", "dp", "answer", "points"]);
   const cols = q.columns;
   if (!Array.isArray(cols) || cols.length < 2 || cols.length > 4) return fail(`${where}: columns must list 2–4 choices, has ${Array.isArray(cols) ? cols.length : JSON.stringify(cols)}`);
   if (cols.some(c => typeof c !== "string" || !c.trim())) fail(`${where}: every column label must be non-empty text`);

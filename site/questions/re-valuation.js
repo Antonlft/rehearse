@@ -149,5 +149,15 @@ Bank.addFormat("rev", [
       { text: "A newly built hospital that has never been sold or let", answer: 2, note: "No sales and no rent: estimate replacement cost plus land." },
       { text: "A church", answer: 2, note: "Special-purpose buildings rarely trade or earn rent." }
     ],
-    why: "Income-producing assets use the income approach; assets with no income but frequent similar sales use comparable sales; special-purpose assets with neither use the cost approach." }
+    why: "Income-producing assets use the income approach; assets with no income but frequent similar sales use comparable sales; special-purpose assets with neither use the cost approach." },
+  // Walk-through cards: answer out loud, then grade yourself against the model answer.
+  { id: "rev-walk-01", lv: 2, type: "walk", q: "How would you value an income-producing office building?",
+    points: [
+      "Start from net operating income: rent from the leases (and market rent for any vacant space) less the owner's non-recoverable operating costs.",
+      "Direct capitalisation: NOI ÷ a market cap rate taken from comparable sales.",
+      "Or a DCF: project the rents lease by lease over about 10 years, with lease expiries, re-letting assumptions, capex and incentives, plus an exit value at an exit cap rate, discounted at a target return.",
+      "Adjust for lease quality: the tenants' credit, the remaining lease term (WALT) and how the rent compares with market rent.",
+      "Cross-check against price per square foot from comparable sales; replacement cost acts as a ceiling."
+    ],
+    why: "Income drives the value of let property, so lead with NOI and the cap rate, then show you understand the lease detail behind them." }
 ]);

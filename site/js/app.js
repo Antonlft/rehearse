@@ -106,7 +106,10 @@ const NUMERIC_SHARE = 0.5; // with new formats on, half the calculation slots in
 //      their answer log entries have type: "order" and given (that ordering). No new top-level fields.
 //  10: classification grids: a round's answers[] can hold one column number (or null) per grid row; their answer
 //      log entries have type: "grid", given (those picks) and rowsRight. No new top-level fields.
-const SCHEMA_VERSION = 10;
+//  11: walk-through cards (self-graded): a round's answers[] can hold "got" | "partly" | "missed", a round in progress
+//      can have walkShown[] (cards whose model answer was revealed), and their answer log entries have type: "walk" and
+//      given (the self-grade). Only "got" counts as correct. No new top-level fields.
+const SCHEMA_VERSION = 11;
 db.schemaVersion = Math.max(db.schemaVersion || 1, SCHEMA_VERSION);
 let saveWarned = false;
 const persist = () => {
@@ -138,7 +141,9 @@ const selectedCats = () => {
 const selectionLabel = ids => ids.length === CATEGORIES.length ? "all categories" : `${ids.length} of ${CATEGORIES.length} categories`;
 // New-format written questions (e.g. ordering) join a category's pool only when new formats are on.
 const formatQs = cat => db.newFormats ? (Bank.formats[cat] || []) : [];
-const capacity = cat => gens(cat).length ? Infinity : written(cat).length + formatQs(cat).length;
+// Walk-through cards only ever replace a question (at most one per 10 in a round), so they never add to capacity.
+const capacity = cat => gens(cat).length ? Infinity : written(cat).length + formatQs(cat).filter(q => q.type !== "walk").length;
+const WALK_EVERY = 10; // at most one walk-through card per this many questions in a round
 
 /* Round building */
 function generated(fn) {
@@ -162,6 +167,8 @@ function materialize(src, cat) {
     return { cat, id: src.id, gen: false, lv: src.lv || null, type: "order", q: src.q, why: src.why, answer: src.answer, start: orderStart(src.answer.length) };
   if (src.type === "grid") // rows are shown in a shuffled order; answers are kept by original row number
     return { cat, id: src.id, gen: false, lv: src.lv || null, type: "grid", q: src.q, why: src.why, columns: src.columns, rows: src.rows, rowOrder: shuffle([...src.rows.keys()]) };
+  if (src.type === "walk") // walk-through card: answered out loud, then self-graded against the model answer
+    return { cat, id: src.id, gen: false, lv: src.lv || null, type: "walk", q: src.q, why: src.why, points: src.points };
   const perm = shuffle([0, 1, 2, 3]);
   const item = { cat, id: src.id || null, gen: !!src.gen, lv: src.lv || null, q: src.q, why: src.why,
     o: perm.map(i => src.o[i]), a: perm.indexOf(0), x: perm.map(i => i === 0 ? null : src.x[i - 1]) };
@@ -190,6 +197,7 @@ function grade(it, ans) {
     const right = it.rows.filter((r, k) => Array.isArray(ans) && ans[k] === r.answer).length;
     return { ok: right === it.rows.length, right };
   }
+  if (it.type === "walk") return { ok: ans === "got", self: ans }; // self-graded: only "Got it" counts as correct
   return { ok: ans === it.a };
 }
 // Learning mode reveals an answer once it's final: multiple choice on click, typed answers on "Check".
@@ -211,7 +219,8 @@ function pickWeighted(pool) {
 }
 
 function draw(cat, used) {
-  const w = db.newFormats ? [...written(cat), ...formatQs(cat)] : written(cat), g = gens(cat);
+  const fq = formatQs(cat).filter(q => q.type !== "walk" || used.walkLeft > 0); // [] when new formats are off
+  const w = db.newFormats ? [...written(cat), ...fq] : written(cat), g = gens(cat);
   if (w.length && !(g.length && Math.random() < GEN_SHARE)) {
     // Spaced repetition: a question that's due comes first (most overdue first, ties broken at random).
     // When it's off for this category, this block is skipped and everything below runs exactly as before.
@@ -221,6 +230,7 @@ function draw(cat, used) {
       if (due.length) {
         const q = shuffle(due).reduce((a, b) => db.schedule[b.id].dueAt < db.schedule[a.id].dueAt ? b : a);
         used.add(q.id);
+        if (q.type === "walk") used.walkLeft--;
         const seenList = (db.seen[cat] ||= []);
         if (!seenList.includes(q.id)) seenList.push(q.id);
         return materialize(q, cat);
@@ -233,6 +243,7 @@ function draw(cat, used) {
     if (pool.length) {
       const q = pickWeighted(pool);
       used.add(q.id);
+      if (q.type === "walk") used.walkLeft--;
       if (!db.seen[cat].includes(q.id)) db.seen[cat].push(q.id);
       return materialize(q, cat);
     }
@@ -268,6 +279,7 @@ function allocate(cats, n) {
 
 function buildRound(mode, cats) {
   const used = new Set();
+  used.walkLeft = Math.floor(modeInfo(mode).n / WALK_EVERY);
   const items = allocate(cats, modeInfo(mode).n).map(cat => draw(cat, used));
   // Single-category practice runs from basic to advanced when the category has levels. Questions without a level
   // (e.g. some calculation questions) sort as intermediate; the sort is stable, so fully levelled rounds are unchanged.
@@ -277,7 +289,7 @@ function buildRound(mode, cats) {
 
 function beginAttempt(mode, items, sub, learning = false, calc = false) {
   db.attempts[mode] = { mode, sub, items, answers: Array(items.length).fill(null), marked: Array(items.length).fill(false),
-    cur: 0, start: Date.now(), deadline: Date.now() + (learning ? LEARNING_MS : items.length * 60000), ...(learning ? { learning: true } : {}), ...(calc ? { calc: true } : {}) };
+    cur: 0, start: Date.now(), deadline: Date.now() + (learning ? LEARNING_MS : (items.length + items.filter(it => it.type === "walk").length) * 60000), ...(learning ? { learning: true } : {}), ...(calc ? { calc: true } : {}) };
   persist();
   reviewFilter = "all";
   go({ name: "quiz", mode });
@@ -301,6 +313,7 @@ function startRetry(items) {
     if (it.type === "numeric") return { ...it }; // typed answers have no options to reshuffle
     if (it.type === "order") return { ...it, start: orderStart(it.answer.length) }; // a fresh starting order
     if (it.type === "grid") return { ...it, rowOrder: shuffle([...it.rows.keys()]) }; // rows in a new order
+    if (it.type === "walk") return { ...it }; // walk-through cards are asked again as they are
     const wrong = [0, 1, 2, 3].filter(j => j !== it.a);
     return materialize({ id: it.id, gen: it.gen, lv: it.lv, q: it.q, why: it.why,
       o: [it.o[it.a], ...wrong.map(j => it.o[j])], x: wrong.map(j => it.x[j]),
@@ -592,7 +605,7 @@ function renderQuiz() {
     <section class="card question" aria-labelledby="qtext">
       <p class="label">${esc(catById(it.cat).name)} · Question ${at.cur + 1} of ${n}${it.lv ? ` · ${LEVELS[it.lv]}` : ""}</p>
       <p class="prompt" id="qtext">${esc(it.q)}</p>
-      ${it.type === "numeric" ? typedArea(at, it, ans, revealed) : it.type === "order" ? orderArea(at, it, ans, revealed) : it.type === "grid" ? gridArea(at, it, ans, revealed) : `
+      ${it.type === "numeric" ? typedArea(at, it, ans, revealed) : it.type === "order" ? orderArea(at, it, ans, revealed) : it.type === "grid" ? gridArea(at, it, ans, revealed) : it.type === "walk" ? walkArea(at, it, ans, revealed) : `
       <div class="options" role="radiogroup" aria-labelledby="qtext">
         ${it.o.map((o, i) => `<button type="button" class="opt${optClass(i)}" role="radio" aria-checked="${ans === i}" data-opt="${i}" ${revealed ? "disabled" : ""}><span class="radio"></span><span>${esc(o)}</span></button>`).join("")}
       </div>
@@ -629,6 +642,7 @@ function renderQuiz() {
   if (it.type === "numeric" && !revealed) wireTyped(at, it);
   if (it.type === "order" && !revealed) wireOrder(at, it);
   if (it.type === "grid" && !revealed) wireGrid(at, it);
+  if (it.type === "walk" && !revealed) wireWalk(at, it);
   // Calculator: only in rounds that allow it (decided when the round started).
   const calcBtn = document.getElementById("calcBtn");
   if (calcBtn) calcBtn.onclick = () => { CalcUI.toggle(); calcBtn.setAttribute("aria-expanded", CalcUI.isOpen()); };
@@ -781,6 +795,44 @@ function wireGrid(at, it) {
   };
 }
 
+/* Walk-through cards on the quiz screen: answer out loud, reveal the model answer, then grade yourself.
+   The self-grade is the answer; Learning mode locks it and shows the summary. */
+const WALK_GRADES = [["got", "Got it"], ["partly", "Partly"], ["missed", "Missed"]];
+const walkLabel = g => (WALK_GRADES.find(w => w[0] === g) || [, ""])[1];
+function walkArea(at, it, ans, revealed) {
+  const shown = revealed || !!(at.walkShown && at.walkShown[at.cur]);
+  if (!shown) return `<div class="walk">
+      <p class="typed-hint">Answer out loud, as you would in an interview, then reveal the model answer and grade yourself.</p>
+      <div class="order-foot"><button class="btn primary" id="walkShow" type="button">Show model answer</button></div>
+    </div>`;
+  return `<div class="walk">
+      <p class="label" id="walkModel" tabindex="-1">A strong answer covers</p>
+      <ul class="walk-points">${it.points.map(p => `<li>${esc(p)}</li>`).join("")}</ul>
+      ${revealed ? `<div class="feedback ${ans === "got" ? "ok" : "no"}" id="feedback" role="status" tabindex="-1">
+        <p class="feedback-title">You marked: ${esc(walkLabel(ans))}</p>
+        <p>${esc(it.why)}</p>
+      </div>` : `<p class="note-block">${esc(it.why)}</p>
+      <div class="walk-grade" role="radiogroup" aria-label="How did you do?">
+        <span class="walk-ask">How did you do?</span>
+        ${WALK_GRADES.map(([k, l], n) => `<button type="button" class="grid-choice" role="radio" aria-checked="${ans === k}" data-walk="${k}" aria-keyshortcuts="${n + 1}">${l}</button>`).join("")}
+      </div>
+      <p class="typed-hint">Got it = you covered the main points in a sensible order. Partly and Missed bring the card back sooner.</p>`}
+    </div>`;
+}
+function walkPick(at, k) {
+  ensureTiming(at); at.answers[at.cur] = k; at.answeredAt[at.cur] = Date.now(); persist(); renderQuiz();
+  if (at.learning) document.getElementById("feedback")?.focus({ preventScroll: true });
+  else app.querySelector(`[data-walk="${k}"]`)?.focus();
+}
+function wireWalk(at, it) {
+  const show = document.getElementById("walkShow");
+  if (show) show.onclick = () => {
+    ensureTiming(at); (at.walkShown ||= [])[at.cur] = true; persist(); renderQuiz();
+    document.getElementById("walkModel")?.focus({ preventScroll: true });
+  };
+  app.querySelectorAll("[data-walk]").forEach(b => b.onclick = () => walkPick(at, b.dataset.walk));
+}
+
 function renderExpired(at) {
   const info = modeInfo(view.mode), done = at.answers.filter(a => !isBlank(a)).length;
   at.viewStart = null; at.viewIdx = null; // a visit left open while away isn't time spent on the question
@@ -803,7 +855,12 @@ function renderExpired(at) {
 
 function choose(i) {
   const at = db.attempts[view.mode];
-  if (at.items[at.cur].type) return; // typed and ordering questions aren't answered with 1–4
+  const cur = at.items[at.cur];
+  if (cur.type === "walk") { // 1–3 = Got it / Partly / Missed, once the model answer is showing
+    if (i > 2 || !(at.walkShown && at.walkShown[at.cur]) || (at.learning && at.answers[at.cur] !== null)) return;
+    return walkPick(at, WALK_GRADES[i][0]);
+  }
+  if (cur.type) return; // typed and ordering questions aren't answered with 1–4
   if (at.learning && at.answers[at.cur] !== null) return; // Learning mode: the answer locks once it's revealed
   ensureTiming(at); at.answers[at.cur] = i; at.answeredAt[at.cur] = Date.now(); persist(); renderQuiz();
   if (at.learning) document.getElementById("feedback")?.focus({ preventScroll: true });
@@ -839,6 +896,7 @@ function submit(timedOut) {
       if (it.type === "numeric") { entry.type = "numeric"; entry.given = g.value; if (!ok && g.cause) entry.cause = g.cause; }
       if (it.type === "order") { entry.type = "order"; entry.given = at.answers[i].slice(); }
       if (it.type === "grid") { entry.type = "grid"; entry.given = at.answers[i].slice(); entry.rowsRight = g.right; }
+      if (it.type === "walk") { entry.type = "walk"; entry.given = at.answers[i]; }
       if (trap) entry.trap = trap;
       if (at.learning) entry.learning = true;
       if (at.calc) entry.calc = true;
@@ -1081,17 +1139,20 @@ function renderResults() {
 function reviewItem(it, i, ans, marked, misread) {
   const learnLink = () => `<p class="review-learn"><button class="link" type="button" data-learn="${it.cat}" data-from="${i}">Review the method: ${esc(catById(it.cat).name)}</button></p>`;
   const g = grade(it, ans);
-  const st = isBlank(ans) ? ["skip", "Unanswered"] : g.ok ? ["ok", "Correct"] : ["no", "Incorrect"];
-  const misreadBtn = st[0] === "no" && misread !== null
+  const st = isBlank(ans) ? ["skip", "Unanswered"] : it.type === "walk" ? [g.ok ? "ok" : "no", walkLabel(ans)] : g.ok ? ["ok", "Correct"] : ["no", "Incorrect"];
+  const misreadBtn = st[0] === "no" && misread !== null && it.type !== "walk"
     ? `<button type="button" class="misread" data-misread="${i}" aria-pressed="${misread}">${misread ? "Marked as misread · undo" : "I read the question wrong"}</button>` : "";
   return `
     <article class="card item" id="r-${i}">
       <div class="item-top">
-        <p class="label">${esc(catById(it.cat).name)} · Question ${i + 1}${it.lv ? ` · ${LEVELS[it.lv]}` : ""}${it.gen ? " · Calculation" : ""}${it.type === "numeric" ? " · Typed answer" : it.type === "order" ? " · Ordering" : it.type === "grid" ? " · Classification" : ""}</p>
+        <p class="label">${esc(catById(it.cat).name)} · Question ${i + 1}${it.lv ? ` · ${LEVELS[it.lv]}` : ""}${it.gen ? " · Calculation" : ""}${it.type === "numeric" ? " · Typed answer" : it.type === "order" ? " · Ordering" : it.type === "grid" ? " · Classification" : it.type === "walk" ? " · Walk-through (self-graded)" : ""}</p>
         <span class="pills">${misreadBtn}<span class="pill ${st[0]}">${st[1]}</span>${marked ? `<span class="pill flagged">Marked</span>` : ""}</span>
       </div>
       <p class="prompt">${esc(it.q)}</p>
-      ${it.type === "grid" ? `
+      ${it.type === "walk" ? `
+      <p class="label">A strong answer covers</p>
+      <ul class="walk-points">${it.points.map(p => `<li>${esc(p)}</li>`).join("")}</ul>
+      <p class="note-block">${esc(it.why)}</p>` : it.type === "grid" ? `
       <p class="label">${g.ok ? `All ${it.rows.length} rows right` : `${g.right} of ${it.rows.length} rows right`}</p>
       <ul class="ans">${it.rowOrder.map(k => {
         const row = it.rows[k], pick = Array.isArray(ans) ? ans[k] ?? null : null, okRow = pick === row.answer;

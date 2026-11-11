@@ -88,3 +88,17 @@ Bank.add("val", [
     why: "The treasury stock method needs a share price to decide which options are in the money and how many shares are bought back, but the DCF's share price is what you're solving for. Models iterate, or start from the current price, until price and share count agree.",
     x: ["WACC uses the market values of equity and debt, not the share count as such.", "Enterprise value comes from the cash flows; dilution only changes how equity value is split per share.", "Net debt doesn't depend on the options."] }
 ]);
+
+// New-format questions (shown only when "new formats" is on).
+Bank.addFormat("val", [
+  // Walk-through cards: answer out loud, then grade yourself against the model answer.
+  { id: "val-walk-01", lv: 2, type: "walk", q: "Walk me through a DCF.",
+    points: [
+      "Project unlevered free cash flow for 5–10 years: EBIT × (1 − tax rate) + D&A − capex − increase in working capital.",
+      "Estimate a terminal value at the end of the forecast, with the Gordon growth formula (final FCF × (1 + g) ÷ (WACC − g)) or an exit multiple of EBITDA.",
+      "Discount the cash flows and the terminal value at WACC to get enterprise value.",
+      "Bridge to equity value: subtract net debt and other claims such as non-controlling interests and preferred shares, and add non-operating assets.",
+      "Divide by diluted shares for a value per share, and test it with sensitivity tables on WACC and the growth rate or exit multiple."
+    ],
+    why: "Interviewers listen for the order (cash flows, terminal value, discounting, bridge, per share) and for unlevered cash flows being matched with WACC. The terminal value is often 60–80% of the total, so say how you'd sanity-check it." }
+]);

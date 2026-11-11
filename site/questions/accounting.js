@@ -152,5 +152,15 @@ Bank.addFormat("acc", [
       { text: "Shareholders' equity", answer: 1, note: "Retained earnings −7.5." },
       { text: "Cash interest paid", answer: 2, note: "That's the point of PIK: no cash interest until the notes are repaid." }
     ],
-    why: "PIK interest is a real expense paid by growing the debt: profit falls, debt rises, and cash only gains the tax saving." }
+    why: "PIK interest is a real expense paid by growing the debt: profit falls, debt rises, and cash only gains the tax saving." },
+  // Walk-through cards: answer out loud, then grade yourself against the model answer.
+  { id: "acc-walk-01", lv: 1, type: "walk", q: "Walk me through the three financial statements and how they link.",
+    points: [
+      "Income statement: revenue less expenses over a period, down to net income.",
+      "Balance sheet: assets = liabilities + equity, at a point in time.",
+      "Cash flow statement: starts from net income, adds back non-cash items such as D&A, adjusts for working capital, then adds investing and financing flows to give the change in cash.",
+      "Net income flows into retained earnings within equity, and also starts the cash flow statement.",
+      "Closing cash from the cash flow statement is the balance sheet cash; D&A reduces PP&E and capex adds to it; raising or repaying debt moves both debt and cash."
+    ],
+    why: "Define each statement in a sentence, then spend most of the answer on the links. Under IFRS the income statement is often called the statement of profit or loss." }
 ]);
