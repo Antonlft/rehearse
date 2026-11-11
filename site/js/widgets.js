@@ -253,6 +253,36 @@
       note("Price falls as yield rises, and the curve bends (convexity): longer maturities make it steeper.")
   });
 
+  // Price of a bond with annual coupons: coupon c (per 100 of face), n years, repaid at R.
+  const bondPv = (y, c, n, R) => { let s = 0; for (let t = 1; t <= n; t++) s += c * 100 / (1 + y) ** t; return s + R / (1 + y) ** n; };
+  // The yield that reprices the bond to P (price falls as yield rises, so bisection always converges).
+  const bondYield = (P, c, n, R) => { let lo = -0.5, hi = 2; for (let k = 0; k < 200; k++) { const m = (lo + hi) / 2; if (bondPv(m, c, n, R) > P) lo = m; else hi = m; } return (lo + hi) / 2; };
+
+  define("yieldToWorst", {
+    title: "Callable bond: yield to maturity, to call and to worst",
+    inputs: [
+      { k: "price", label: "Price (per 100)", min: 60, max: 140, step: 0.5, value: 108, fmt: v => num(v, 1) },
+      { k: "c", label: "Annual coupon", min: 0, max: 0.12, step: 0.0025, value: 0.08, fmt: v => pct(v, 2) },
+      { k: "n", label: "Years to maturity", min: 2, max: 30, step: 1, value: 8, fmt: v => num(v, 0) },
+      { k: "callYr", label: "First call date (years)", min: 1, max: 29, step: 1, value: 3, fmt: v => num(v, 0) },
+      { k: "callPx", label: "Call price", min: 100, max: 110, step: 0.5, value: 102, fmt: v => num(v, 1) }
+    ],
+    compute: v => {
+      const cy = v.c * 100 / v.price, ytm = bondYield(v.price, v.c, v.n, 100);
+      const callable = v.callYr < v.n, ytc = callable ? bondYield(v.price, v.c, v.callYr, v.callPx) : null;
+      const ytw = callable ? Math.min(ytm, ytc) : ytm;
+      return { cy, ytm, ytc, ytw, callable, worstIsCall: callable && ytc < ytm };
+    },
+    render: (v, r) => stats([stat("Yield to worst", pct(r.ytw, 2), true), stat("Yield to maturity", pct(r.ytm, 2)), stat("Yield to call", r.callable ? pct(r.ytc, 2) : "n/a")]) +
+      bars([{ label: "Current yield", value: r.cy, cls: "pos", text: pct(r.cy, 2) },
+        { label: "To maturity", value: r.ytm, cls: r.worstIsCall ? "pos" : "total", text: pct(r.ytm, 2) },
+        ...(r.callable ? [{ label: "To call", value: r.ytc, cls: r.worstIsCall ? "total" : "pos", text: pct(r.ytc, 2) }] : [])]) +
+      note("Green marks the yield to worst. Annual coupons; the call is assumed on the first call date.") +
+      note(!r.callable ? "The call date is at or after maturity, so only the yield to maturity applies."
+        : r.worstIsCall ? "The yield to call is lower: at this price the issuer is likely to call the bond and refinance, so investors quote the yield to call."
+        : "The yield to maturity is lower: being called here would actually help the investor, which is typical for bonds trading at or below par.")
+  });
+
   define("ptbv", {
     title: "What a bank's P/TBV says about its returns",
     inputs: [

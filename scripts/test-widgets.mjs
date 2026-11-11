@@ -93,6 +93,15 @@ r = run("reitNav", {}); near("reitNav", "property value", r.gav, 1000); near("re
 near("reitNav", "discount", r.prem, 10 / 12.4 - 1); near("reitNav", "implied cap rate", r.impliedCap, 60 / 880);
 r = run("reitNav", { price: 12.4 }); near("reitNav", "at NAV", r.prem, 0); near("reitNav", "at NAV the implied cap rate is the market cap rate", r.impliedCap, 0.06);
 r = run("reitNav", { debt: 1100 }); is("reitNav", "negative NAV has no premium", r.prem, null);
+// Yield to worst: an 8% bond at 108, 8 years, callable in 3 years at 102 → YTM ≈ 6.68%, YTC ≈ 5.66%, YTW = YTC; current yield 8 ÷ 108
+const bpv = (y, c, n, R) => { let s = 0; for (let t = 1; t <= n; t++) s += c * 100 / (1 + y) ** t; return s + R / (1 + y) ** n; };
+r = run("yieldToWorst", {}); near("yieldToWorst", "current yield", r.cy, 8 / 108);
+near("yieldToWorst", "YTM reprices the bond", bpv(r.ytm, 0.08, 8, 100), 108, 1e-9); near("yieldToWorst", "YTC reprices the bond", bpv(r.ytc, 0.08, 3, 102), 108, 1e-9);
+checks++; if (!(Math.abs(r.ytm - 0.0668) < 0.0001 && Math.abs(r.ytc - 0.0566) < 0.0001)) fails.push(`yieldToWorst: YTM ${r.ytm}, YTC ${r.ytc}, expected about 6.68% and 5.66%`);
+is("yieldToWorst", "worst is the call", r.worstIsCall, true); near("yieldToWorst", "YTW", r.ytw, r.ytc);
+r = run("yieldToWorst", { price: 100, c: 0.06, callPx: 100 }); near("yieldToWorst", "par bond YTM = coupon", r.ytm, 0.06, 1e-9); near("yieldToWorst", "par bond YTC at par = coupon", r.ytc, 0.06, 1e-9);
+r = run("yieldToWorst", { price: 90 }); is("yieldToWorst", "discount bond: worst is maturity", r.worstIsCall, false); near("yieldToWorst", "discount YTW", r.ytw, r.ytm);
+r = run("yieldToWorst", { callYr: 8 }); is("yieldToWorst", "call at maturity is ignored", r.callable, false);
 
 // Every widget's default view must compute and render without NaN.
 for (const [name, w] of Object.entries(W)) {
