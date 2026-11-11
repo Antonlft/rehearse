@@ -337,6 +337,8 @@ main { padding-block: 30px 48px; }
 .feedback.no { border-color: var(--bad-line); background: var(--bad-bg); }
 .feedback-title { font-weight: 600; color: var(--good); }
 .feedback.no .feedback-title { color: var(--bad); }
+/* Same gap as below the options, so the feedback never touches the Previous / Next buttons. */
+.question .feedback { margin-bottom: 22px; }
 .feedback:focus { outline: none; }
 .feedback:focus-visible { outline: 2px solid var(--navy); outline-offset: 2px; }
 
