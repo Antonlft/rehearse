@@ -387,6 +387,32 @@
       note("Every step multiplies, so 10% more on any one assumption adds 10% to the answer. Spend your time on the assumption you're least sure of, and keep every number in the same time unit: the yearly bar is 52 times the weekly one.")
   });
 
+  // LBO value-creation bridge: entry equity → EBITDA growth → multiple change → debt paydown → exit equity.
+  define("lboBridge", {
+    title: "LBO value-creation bridge",
+    inputs: [
+      { k: "e0", label: "Entry EBITDA", min: 10, max: 200, step: 5, value: 50, fmt: usd },
+      { k: "m0", label: "Entry multiple", min: 4, max: 16, step: 0.5, value: 8, fmt: mult },
+      { k: "d0", label: "Entry net debt", min: 0, max: 1200, step: 10, value: 250, fmt: usd },
+      { k: "e1", label: "Exit EBITDA", min: 10, max: 300, step: 5, value: 70, fmt: usd },
+      { k: "m1", label: "Exit multiple", min: 4, max: 16, step: 0.5, value: 8, fmt: mult },
+      { k: "d1", label: "Exit net debt", min: 0, max: 1200, step: 10, value: 150, fmt: usd }
+    ],
+    compute: v => {
+      const eq0 = v.e0 * v.m0 - v.d0, eq1 = v.e1 * v.m1 - v.d1;
+      const growth = (v.e1 - v.e0) * v.m0, multiple = (v.m1 - v.m0) * v.e1, paydown = v.d0 - v.d1;
+      return { eq0, eq1, growth, multiple, paydown, gain: eq1 - eq0, moic: eq0 > 0 ? eq1 / eq0 : null };
+    },
+    render: (v, r) => {
+      const step = (label, x) => ({ label, value: Math.abs(x), kind: x < 0 ? "down" : "up", text: (x < 0 ? "−" : "+") + num(Math.abs(x), 0) });
+      return stats([stat("Equity gain", usd(r.gain)), stat("Money multiple", r.moic === null ? "–" : mult(r.moic, 2), true)]) +
+        waterfall([{ label: "Entry", value: r.eq0, kind: "total", text: num(r.eq0, 0) }, step("Growth", r.growth), step("Multiple", r.multiple), step("Debt", r.paydown),
+          { label: "Exit", value: r.eq1, kind: "total", text: num(r.eq1, 0) }]) +
+        note("Chart in US$ millions. Growth = (exit − entry EBITDA) × entry multiple; Multiple = (exit − entry multiple) × exit EBITDA; Debt = entry − exit net debt.") +
+        (r.eq0 <= 0 ? note("Entry equity is zero or negative: the debt is larger than the price, so the money multiple can't be measured.") : "");
+    }
+  });
+
   define("montyHall", {
     title: "Monty Hall: switch or stay?",
     inputs: [{ k: "games", label: "Games to simulate", min: 10, max: 5000, step: 10, value: 1000, fmt: v => num(v, 0) }],

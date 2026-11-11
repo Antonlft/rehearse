@@ -28,6 +28,10 @@ r = run("evBridge", { ev: 1500, debt: 450, cash: 120, nci: 70, pref: 0, assoc: 3
 r = run("marketSize", {}); near("marketSize", "buyers", r.buyers, 12); near("marketSize", "purchases", r.purchases, 1248); near("marketSize", "week", r.week, 120); near("marketSize", "month", r.month, 520); near("marketSize", "year", r.year, 6240);
 // 335m × 50% = 167.5m buyers × 1 a week × US$4 = US$670m a week; × 52 = US$34,840m a year
 r = run("marketSize", { pop: 335, share: 0.5, freq: 1, price: 4 }); near("marketSize", "US example year", r.year, 34840);
+// LBO bridge: entry 50 × 8 − 250 = 150; exit 70 × 8 − 150 = 410; growth 20 × 8 = 160, multiple 0, paydown 100 (sum 260)
+r = run("lboBridge", {}); near("lboBridge", "entry equity", r.eq0, 150); near("lboBridge", "exit equity", r.eq1, 410); near("lboBridge", "growth", r.growth, 160); near("lboBridge", "multiple", r.multiple, 0); near("lboBridge", "paydown", r.paydown, 100); near("lboBridge", "moic", r.moic, 410 / 150);
+// With a rerating 8x → 9x: growth 160, multiple 1 × 70 = 70, paydown 100; exit equity 630 − 150 = 480; the drivers sum to the gain 330
+r = run("lboBridge", { m1: 9 }); near("lboBridge", "multiple change", r.multiple, 70); near("lboBridge", "gain = sum of drivers", r.gain, r.growth + r.multiple + r.paydown); near("lboBridge", "gain", r.gain, 330);
 // WACC: 70% × 10% + 30% × 6% × 75% = 7% + 1.35% = 8.35%; shield 30% × 6% × 25% = 0.45%
 r = run("wacc", {}); near("wacc", "wacc", r.wacc, 0.0835); near("wacc", "shield", r.shield, 0.0045); near("wacc", "equity part", r.eq, 0.07);
 // Compounding at 8% for 10 years: 1.08^10 = 2.158925; rule of 72 = 9.0 years; exact = ln 2 / ln 1.08 = 9.00647 years

@@ -118,7 +118,19 @@ Bank.add("lbo", [
   { id: "lbo-30", lv: 2, trap: ["inverted", "missed-step", "wrong-measure"], q: "A fund has called US$100m, distributed US$60m and still holds investments valued at US$90m. What are its DPI and TVPI?",
     o: ["DPI 0.6x, TVPI 1.5x", "DPI 1.5x, TVPI 0.6x", "DPI 0.6x, TVPI 0.9x", "DPI 0.9x, TVPI 1.5x"],
     why: "DPI (distributions to paid-in) = 60 ÷ 100 = 0.6x: cash actually returned. TVPI (total value to paid-in) = (60 + 90) ÷ 100 = 1.5x, which also counts unrealised value. LPs watch DPI closely because the value of unsold investments is only an estimate.",
-    x: ["The two are swapped: DPI counts only cash returned.", "TVPI adds the distributions to the remaining value, not just the remaining value.", "DPI uses distributions, not the value of investments still held."] }
+    x: ["The two are swapped: DPI counts only cash returned.", "TVPI adds the distributions to the remaining value, not just the remaining value.", "DPI uses distributions, not the value of investments still held."] },
+  { id: "lbo-31", lv: 2, trap: ["concept", "concept", "wrong-measure"], q: "In an LBO value-creation bridge, why is EBITDA growth usually valued at the entry multiple?",
+    o: ["So the change in multiple is measured once, on exit EBITDA, and the three drivers add up exactly to the equity gain", "Because the exit multiple isn't known until the company is sold", "Because EBITDA growth should always look as small as possible", "Because the entry multiple is always lower than the exit multiple"],
+    why: "Growth × entry multiple + (exit − entry multiple) × exit EBITDA = exit enterprise value − entry enterprise value. Using the entry multiple for growth means each effect is counted once. Valuing growth at the exit multiple also works, but then the multiple change is measured on entry EBITDA; the total is the same, the split differs.",
+    x: ["The bridge is drawn after the exit, when both multiples are known.", "The convention isn't about making growth look small; it's about not counting any effect twice.", "Exit multiples can be lower than entry multiples; the convention works either way."] },
+  { id: "lbo-32", lv: 2, trap: ["concept", "concept", "concept"], q: "A sponsor's equity tripled over five years, yet EBITDA was flat and the company was sold at the same multiple it was bought at. Where did the gain come from?",
+    o: ["Paying down debt (and building cash) from the company's cash flow", "EBITDA growth", "Multiple expansion", "Nowhere: equity can't grow without EBITDA growth or a higher multiple"],
+    why: "With flat EBITDA and the same multiple, enterprise value didn't change. Equity = enterprise value − net debt, so all of the gain came from net debt falling. A highly levered deal can triple its equity this way, which is why the bridge matters: the return came from leverage, not from improving the business.",
+    x: ["EBITDA was flat, so growth added nothing.", "The exit multiple equalled the entry multiple, so multiple change added nothing.", "Equity also grows when net debt falls, even if enterprise value is unchanged."] },
+  { id: "lbo-33", lv: 2, trap: ["concept", "concept", "concept"], q: "Looking at a private equity firm's past deals, which part of the value-creation bridge do investors (LPs) usually credit most to the firm's own skill?",
+    o: ["EBITDA growth from operational improvements", "Multiple expansion", "Debt paydown", "The size of the management fees"],
+    why: "Operational EBITDA growth is the part the firm controls and can repeat. Multiple expansion often reflects rising markets, and debt paydown mostly reflects how much leverage the deal started with, so investors look through both.",
+    x: ["Multiple expansion often comes from the market rerating the sector, which the firm doesn't control.", "Debt paydown is real cash, but its size mainly reflects the starting leverage.", "Fees are a cost to investors, not value created."] }
 ]);
 
 // New-format questions (shown only when "new formats" is on).
@@ -168,5 +180,16 @@ Bank.addFormat("lbo", [
       "Little existing debt and assets that can support leverage.",
       "A solid management team, a reasonable entry price and a credible exit route (a strategic buyer, another sponsor or an IPO)."
     ],
-    why: "Tie each point back to the debt: the best candidates can carry a lot of it safely and pay it down." }
+    why: "Tie each point back to the debt: the best candidates can carry a lot of it safely and pay it down." },
+  { id: "lbo-grid-03", lv: 2, type: "grid", q: "Which driver of the equity return does each action mainly work through?",
+    columns: ["EBITDA growth", "Multiple change", "Debt paydown"],
+    rows: [
+      { text: "Raising prices at a business with loyal customers", answer: 0, note: "Higher prices with little lost volume lift EBITDA." },
+      { text: "Cutting overheads after a carve-out from a large group", answer: 0, note: "Lower costs lift EBITDA." },
+      { text: "Buying at 7x and selling to a trade buyer at 9x", answer: 1, note: "The same EBITDA is worth more at exit." },
+      { text: "The whole sector being rerated by the stock market", answer: 1, note: "Market multiples rose; the business didn't change." },
+      { text: "Using free cash flow to repay the term loan", answer: 2, note: "Net debt falls, so more of the enterprise value belongs to equity." },
+      { text: "Skipping a dividend to build up cash", answer: 2, note: "Cash reduces net debt just like a repayment does." }
+    ],
+    why: "Operations drive EBITDA growth, the market (and the buyer) drives the multiple, and cash flow drives the fall in net debt." }
 ]);

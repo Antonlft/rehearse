@@ -1401,3 +1401,48 @@ Bank.case("fig", {
       why: ({ V, S }) => `Value per share = ${R.num(V)} ÷ ${R.num(S)} = US$${R.num(V / S, 2)}.` }
   ]
 });
+
+// LBO: the value created by EBITDA growth in a value-creation bridge (at the entry multiple). Same redraw guard (mnaFar).
+Bank.calc("lbo", {
+  lv: 2, unit: "US$m", tolerance: 0.5, dp: 0, prompt: "in US$m, to the nearest million",
+  make() {
+    for (;;) {
+      const E0 = R.step(30, 150, 5), m0 = R.step(6, 12, 0.5), m1 = R.step(6, 13, 0.5), E1 = Math.round(E0 * R.step(1.15, 1.8, 0.05) / 5) * 5;
+      if (m1 === m0) continue;
+      const i = { E0, m0, m1, E1 };
+      if (mnaFar(this.solve(i), this.wrongs(i).map(w => w.value), 0.12, 5)) return i;
+    }
+  },
+  solve: ({ E0, m0, E1 }) => (E1 - E0) * m0,
+  wrongs: ({ E0, m0, m1, E1 }) => [
+    { value: (E1 - E0) * m1, trap: "wrong-measure", note: "That values the growth at the exit multiple. The usual convention uses the entry multiple, so the multiple change is counted separately." },
+    { value: Math.abs(E1 * m1 - E0 * m0), trap: "double-count", note: "That's the whole change in enterprise value, which also includes the change in multiple." },
+    { value: E1 - E0, trap: "missed-step", note: "That's the EBITDA increase itself. It's worth that increase × the entry multiple." }
+  ],
+  ask: ({ E0, m0, m1, E1 }) => `A sponsor bought a company at ${R.x(m0)} EBITDA of ${R.m(E0)} and sold it at ${R.x(m1)} EBITDA of ${R.m(E1)}. In a value-creation bridge, how much equity value came from EBITDA growth (valued at the entry multiple)?`,
+  why(i) { const { E0, m0, m1, E1 } = i; return `EBITDA growth = (${E1} − ${E0}) × ${R.x(m0)} = ${R.m(this.solve(i))}. The multiple change is counted separately: (${R.x(m1)} − ${R.x(m0)}) × ${E1} = ${(m1 - m0) < 0 ? "−" : ""}${R.m(Math.abs((m1 - m0) * E1))}.`; },
+  fmt: v => R.m(v, 0)
+});
+
+// LBO: the share of the equity gain that came from paying down debt. Same redraw guard (mnaFar).
+Bank.calc("lbo", {
+  lv: 2, unit: "%", tolerance: 0.5, dp: 0, prompt: "as a percentage, to the nearest whole number",
+  make() {
+    for (;;) {
+      const E0 = R.step(30, 150, 5), m0 = R.step(6, 11, 0.5), m1 = m0 + R.pick([0, 0.5, 1]), E1 = Math.round(E0 * R.step(1.1, 1.6, 0.05) / 5) * 5;
+      const D0 = Math.round(E0 * m0 * R.step(0.45, 0.65, 0.05) / 10) * 10, D1 = Math.round(D0 * R.step(0.35, 0.8, 0.05) / 10) * 10;
+      const i = { E0, m0, m1, E1, D0, D1 }, a = this.solve(i);
+      if (a < 0.08 || a > 0.8 || this.wrongs(i).some(w => w.value <= 0)) continue;
+      if (mnaFar(a, this.wrongs(i).map(w => w.value), 0.12, 0.02)) return i;
+    }
+  },
+  solve: ({ E0, m0, m1, E1, D0, D1 }) => (D0 - D1) / ((E1 * m1 - D1) - (E0 * m0 - D0)),
+  wrongs: ({ E0, m0, m1, E1, D0, D1 }) => [
+    { value: (D0 - D1) / (E1 * m1 - D1), trap: "wrong-measure", note: "That divides by exit equity. The share is of the gain: exit equity − entry equity." },
+    { value: (D0 - D1) / (E0 * m0 - D0), trap: "wrong-measure", note: "That divides by entry equity. The share is of the gain: exit equity − entry equity." },
+    { value: (D0 - D1) / (E1 * m1 - E0 * m0), trap: "wrong-measure", note: "That divides by the change in enterprise value, which leaves out the debt paydown itself. Divide by the change in equity." }
+  ],
+  ask: ({ E0, m0, m1, E1, D0, D1 }) => `A sponsor bought a company at ${R.x(m0)} EBITDA of ${R.m(E0)} with net debt of ${R.m(D0)}, and sold it at ${R.x(m1)} EBITDA of ${R.m(E1)} with net debt of ${R.m(D1)}. What share of the equity gain came from paying down debt?`,
+  why(i) { const { E0, m0, m1, E1, D0, D1 } = i, q0 = E0 * m0 - D0, q1 = E1 * m1 - D1; return `Entry equity = ${R.x(m0)} × ${E0} − ${D0} = ${R.m(q0)}. Exit equity = ${R.x(m1)} × ${E1} − ${D1} = ${R.m(q1)}. Gain = ${R.m(q1 - q0)}. Debt paydown = ${D0} − ${D1} = ${R.m(D0 - D1)}, so ${R.pct(this.solve(i), 0)} of the gain.`; },
+  fmt: v => R.pct(v, 0)
+});
