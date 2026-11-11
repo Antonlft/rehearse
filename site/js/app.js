@@ -1185,6 +1185,45 @@ function renderSprintOverview() {
     </div>`;
   document.getElementById("sprintStart").onclick = startSprint;
   document.getElementById("sprintHome").onclick = document.getElementById("sprintBack").onclick = () => go({ name: "home" });
+  wireSprintChart(runs.slice(-20));
+}
+
+let sprintChartOutside = null;
+// The hover label for one sprint in the progress chart.
+const sprintTipText = (r, k) => {
+  const skipped = r.n - r.answered, date = new Date(r.at).toLocaleDateString("en-GB", { day: "numeric", month: "short" });
+  return `Sprint ${k + 1} · ${date}: ${r.ok} right · ${r.answered - r.ok} wrong${skipped ? ` · ${skipped} skipped` : ""} · accuracy ${r.answered ? Math.round(r.ok / r.answered * 100) + "%" : "–"}`;
+};
+// Show a sprint's numbers while the mouse is over its column (or it has keyboard focus, or was tapped); hide them after.
+function wireSprintChart(runs) {
+  const wrap = app.querySelector(".sp-chart-wrap");
+  if (!wrap) return;
+  const tip = wrap.querySelector(".sp-tip"), hits = [...wrap.querySelectorAll(".sp-hit")];
+  const show = el => {
+    const k = +el.dataset.k, r = runs[k], skipped = r.n - r.answered;
+    hits.forEach(h => h.classList.toggle("on", h === el));
+    tip.innerHTML = `<span><b>Sprint ${k + 1}</b> · ${esc(new Date(r.at).toLocaleDateString("en-GB", { day: "numeric", month: "short" }))}</span>
+      <span><i class="sp-key right"></i>${r.ok} right · <i class="sp-key wrong"></i>${r.answered - r.ok} wrong${skipped ? ` · ${skipped} skipped` : ""}</span>
+      <span>Accuracy ${r.answered ? Math.round(r.ok / r.answered * 100) + "%" : "–"}</span>`;
+    tip.hidden = false;
+    // Centre the label above the column, kept inside the chart's box.
+    const box = wrap.getBoundingClientRect(), col = el.getBoundingClientRect();
+    const left = Math.min(Math.max(col.left + col.width / 2 - box.left - tip.offsetWidth / 2, 0), box.width - tip.offsetWidth);
+    tip.style.left = left + "px";
+    tip.style.top = Math.max(0, col.top - box.top - tip.offsetHeight - 6) + "px";
+  };
+  const hide = () => { tip.hidden = true; hits.forEach(h => h.classList.remove("on")); };
+  hits.forEach(h => {
+    h.addEventListener("mouseenter", () => show(h));
+    h.addEventListener("mouseleave", hide);
+    h.addEventListener("focus", () => show(h));
+    h.addEventListener("blur", hide);
+    h.addEventListener("click", e => { e.stopPropagation(); tip.hidden || !h.classList.contains("on") ? show(h) : hide(); }); // tap on phones
+  });
+  // Tapping anywhere else hides the label. One listener at a time: each new chart replaces the previous one's.
+  if (sprintChartOutside) document.removeEventListener("click", sprintChartOutside);
+  sprintChartOutside = e => { if (!wrap.contains(e.target)) hide(); };
+  document.addEventListener("click", sprintChartOutside);
 }
 
 // Progress chart: one bar per sprint (sums answered: right in green, wrong in red) and a line for accuracy.
@@ -1195,19 +1234,20 @@ function sprintChart(runs) {
   const y = v => T + plotH - v / maxY * plotH, yAcc = a => T + plotH - a * plotH, x = k => L + slot * (k + 0.5);
   const acc = runs.map(r => r.answered ? r.ok / r.answered : null); // null: nothing answered, so no accuracy point
   const label = k => k === 0 || k === n - 1 || (k + 1) % 5 === 0;
-  return `<svg class="w-chart sp-chart" viewBox="0 0 ${W} ${H}" role="img" aria-label="${esc(`Last ${n} sprints. Latest: ${runs[n - 1].ok} right of ${runs[n - 1].answered} answered${acc[n - 1] == null ? "" : `, ${Math.round(acc[n - 1] * 100)}% accuracy`}.`)}">
+  return `<div class="sp-chart-wrap"><svg class="w-chart sp-chart" viewBox="0 0 ${W} ${H}" role="img" aria-label="${esc(`Last ${n} sprints. Latest: ${runs[n - 1].ok} right of ${runs[n - 1].answered} answered${acc[n - 1] == null ? "" : `, ${Math.round(acc[n - 1] * 100)}% accuracy`}.`)}">
       <line x1="${L}" x2="${W - R}" y1="${T + plotH}" y2="${T + plotH}" class="w-axis"/>
       <text x="${L - 5}" y="${T + 4}" text-anchor="end" class="w-lbl">${maxY}</text><text x="${L - 5}" y="${T + plotH}" text-anchor="end" class="w-lbl">0</text>
       <text x="${W - R + 5}" y="${T + 4}" class="w-lbl">100%</text><text x="${W - R + 5}" y="${T + plotH}" class="w-lbl">0%</text>
+      ${runs.map((r, k) => `<rect x="${L + slot * k}" y="${T}" width="${slot}" height="${plotH}" class="sp-hit" data-k="${k}" tabindex="0" role="button" aria-label="${esc(sprintTipText(r, k))}"/>`).join("")}
       ${runs.map((r, k) => { const wrong = r.answered - r.ok;
         return `<rect x="${x(k) - bw / 2}" y="${y(r.ok)}" width="${bw}" height="${Math.max(0, T + plotH - y(r.ok))}" class="w-bar total"/>
           <rect x="${x(k) - bw / 2}" y="${y(r.answered)}" width="${bw}" height="${Math.max(0, y(r.ok) - y(r.answered))}" class="w-bar neg"/>
           ${label(k) ? `<text x="${x(k)}" y="${H - 8}" text-anchor="middle" class="w-lbl">${k + 1}</text>` : ""}`; }).join("")}
       ${acc.reduce((segs, a, k) => { if (a == null) segs.push([]); else segs[segs.length - 1].push(`${x(k).toFixed(1)},${yAcc(a).toFixed(1)}`); return segs; }, [[]]).filter(s => s.length > 1).map(s => `<polyline points="${s.join(" ")}" class="sp-acc"/>`).join("")}
       ${acc.map((a, k) => a == null ? "" : `<circle cx="${x(k)}" cy="${yAcc(a)}" r="2.8" class="sp-acc-dot"/>`).join("")}
-    </svg>
+    </svg><div class="sp-tip" role="status" hidden></div></div>
     <p class="sp-legend"><span class="sp-item"><span class="sp-key right"></span>Right</span><span class="sp-item"><span class="sp-key wrong"></span>Wrong</span><span class="sp-item"><span class="sp-key acc"></span>Accuracy (right axis)</span></p>
-    <p class="sp-legend sub">Bars show sums answered per sprint, oldest to newest.</p>`;
+    <p class="sp-legend sub">Bars show sums answered per sprint, oldest to newest. Point at (or tap) a bar for its numbers.</p>`;
 }
 
 function renderSprintResults() {
@@ -1257,6 +1297,7 @@ function renderSprintResults() {
     </div>`;
   document.getElementById("sprintAgain").onclick = startSprint;
   document.getElementById("sprintHome").onclick = document.getElementById("sprintBack").onclick = () => go({ name: "home" });
+  wireSprintChart(db.sprints.slice(-20));
 }
 
 // A lesson's method: plain paragraphs stay paragraphs; typed blocks become coloured cards (Lessons.BLOCKS), and
