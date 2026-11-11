@@ -357,12 +357,20 @@ function go(v) {
   render();
 }
 function render() {
+  // The Lessons button is hidden during a round or sprint, so it can't pull you out of one by accident.
+  const lessonsLink = document.getElementById("lessonsLink");
+  if (lessonsLink) {
+    lessonsLink.hidden = view.name === "quiz" || view.name === "sprint";
+    if (view.name === "lessons") lessonsLink.setAttribute("aria-current", "page"); else lessonsLink.removeAttribute("aria-current");
+  }
+  app.classList.toggle("wide", view.name === "lessons"); // the lessons grid uses the full header width
   if (view.name === "quiz") renderQuiz();
   else if (view.name === "results") renderResults();
   else if (view.name === "setup") renderSetup();
   else if (view.name === "report") renderReport();
   else if (view.name === "lesson") renderLesson();
   else if (view.name === "sprint") renderSprint();
+  else if (view.name === "lessons") renderLessons();
   else renderHome();
 }
 
@@ -1152,6 +1160,31 @@ function renderSprintResults() {
   document.getElementById("sprintHome").onclick = document.getElementById("sprintBack").onclick = () => go({ name: "home" });
 }
 
+/* Lessons page: every lesson as a card, grouped like the home page. */
+function renderLessons() {
+  meta.innerHTML = `<button class="link" id="lessonsHome" type="button">All assessments</button>`;
+  const tryCount = l => [l.widget, ...(Array.isArray(l.widgets) ? l.widgets : [])].filter(w => w && Widgets.registry[w.type]).length;
+  app.innerHTML = `
+    <div class="page-head">
+      <h1>Lessons</h1>
+      <p>A short method, a worked example and interactive "Try it" tools for every category. Open one before practising, or after a round to go deeper.</p>
+    </div>
+    ${GROUPS.map(g => `
+    <h2 class="lesson-group">${esc(g.name)}</h2>
+    <div class="lesson-grid">
+      ${CATEGORIES.filter(c => c.group === g.id).map(c => {
+        const l = Lessons.all[c.id] || { status: "stub" }, n = tryCount(l);
+        return `<button type="button" class="lesson-card" data-lesson="${c.id}">
+          <span class="lesson-card-name">${esc(c.name)}</span>
+          <span class="lesson-card-desc">${esc(c.desc)}</span>
+          <span class="lesson-card-foot"><span class="pill lesson-status ${esc(l.status)}">${esc(LESSON_STATUS[l.status] || l.status)}</span>${n ? `<span>Try it × ${n}</span>` : ""}</span>
+        </button>`;
+      }).join("")}
+    </div>`).join("")}`;
+  document.getElementById("lessonsHome").onclick = () => go({ name: "home" });
+  app.querySelectorAll("[data-lesson]").forEach(b => b.onclick = () => go({ name: "lesson", cat: b.dataset.lesson, back: { name: "lessons" } }));
+}
+
 /* Lessons: one page per category (content in site/lessons/<category>.js) */
 const LESSON_STATUS = { stub: "Not written yet", draft: "Draft", reviewed: "Reviewed" };
 function renderLesson() {
@@ -1351,6 +1384,7 @@ document.addEventListener("keydown", e => {
 });
 
 document.getElementById("homeLink").onclick = () => go({ name: "home" });
+document.getElementById("lessonsLink").onclick = () => go({ name: "lessons" });
 
 /* Light/dark toggle. Follows the device until clicked; the choice is then remembered in this browser.
    Kept under its own key so "Reset my progress" doesn't change the look. */

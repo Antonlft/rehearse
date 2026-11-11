@@ -47,7 +47,7 @@ The version stamp makes browsers fetch matching files after each deploy. Any new
 | `site/js/widgets.js` | Interactive "Try it" widgets for the lessons |
 | `site/js/sprint.js` | The mental maths sprint's sums (8 kinds, friendly numbers); the sprint screen itself is in `app.js` |
 | `site/js/app.js` | Everything else: categories, round building, quiz, results, saving |
-| `site/lessons/*.js` | One lesson (Learn page) per category |
+| `site/lessons/*.js` | One lesson (Learn page) per category, all listed on the Lessons page (header button) |
 | `scripts/validate-questions.mjs` | The question check |
 | `scripts/test-calculator.mjs` | The calculator check |
 | `scripts/test-widgets.mjs` | The lesson widget check |
