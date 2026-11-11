@@ -118,7 +118,31 @@ Bank.add("mna", [
   { id: "mna-30", lv: 2, trap: ["inverted", "concept", "concept"], q: "What is a reverse merger (reverse takeover)?",
     o: ["A private company becomes listed by merging into a listed company, whose shareholders end up in the minority", "A listed company buys a private company and keeps control", "A merger that is unwound after completion", "A target buying the company that bid for it"],
     why: "The listed company issues so many shares to the private company's owners that they take control. It's a route to a listing without a full IPO (SPAC mergers work in a similar way), and for accounting the private company is usually treated as the acquirer.",
-    x: ["That's an ordinary acquisition. In a reverse merger the private company's owners end up in control.", "Unwinding a deal isn't a reverse merger.", "That's the Pac-Man defence."] }
+    x: ["That's an ordinary acquisition. In a reverse merger the private company's owners end up in control.", "Unwinding a deal isn't a reverse merger.", "That's the Pac-Man defence."] },
+  { id: "mna-31", lv: 2, trap: ["missed-step", "concept", "inverted"], q: "A buyer can pay for an acquisition with cash that earns 3% interest, new debt costing 6%, or new shares at a P/E of 20. The tax rate is 25%. In earnings-per-share terms, which order runs from cheapest to most expensive?",
+    o: ["Cash (2.25% after tax), then debt (4.5% after tax), then shares (5%)", "Cash (3%), then shares (5%), then debt (6%)", "Shares first, because issuing them has no interest cost", "Debt (4.5% after tax), then cash (2.25% after tax), then shares (5%)"],
+    why: "Each way to pay costs the buyer earnings. Cash: the interest it no longer earns, after tax: 3% × 0.75 = 2.25%. Debt: the interest it pays, after tax: 6% × 0.75 = 4.5%. Shares: the earnings that now go to new shareholders, the earnings yield 1 ÷ P/E = 1 ÷ 20 = 5%.",
+    x: ["Interest is taxed (or tax-deductible), so compare after-tax costs: 2.25% and 4.5%, which puts debt ahead of shares.", "Shares have a cost too: the new holders take a share of all future earnings. That cost is the earnings yield, 1 ÷ P/E.", "That ranks debt ahead of cash, but 4.5% is more than 2.25%."] },
+  { id: "mna-32", lv: 1, trap: ["concept", "concept", "concept"], q: "A car maker buys one of its tyre suppliers. What kind of merger is this, and what's the usual rationale?",
+    o: ["Vertical: securing supply and keeping the supplier's margin in the group", "Horizontal: buying a competitor to gain market share and cut duplicated costs", "Conglomerate: diversifying into an unrelated business", "A reverse merger: the target ends up as the listed company"],
+    why: "A vertical merger joins companies at different stages of the same supply chain. A horizontal merger joins competitors at the same stage. A conglomerate merger joins unrelated businesses.",
+    x: ["A tyre supplier sells to the car maker; it doesn't compete with it. That's a different stage of the chain.", "Tyres are a direct input for cars, so the businesses are related, not unrelated.", "A reverse merger is a way for a private company to list by merging into a listed one. It says nothing about the businesses' relationship."] },
+  { id: "mna-33", lv: 2, trap: ["concept", "concept", "concept"], q: "In a sell-side auction, when do potential buyers usually receive the information memorandum?",
+    o: ["After signing a confidentiality agreement, before they submit indicative (non-binding) offers", "Before signing anything, attached to the teaser", "Only after binding offers, with access to the data room", "At signing, as part of the share purchase agreement"],
+    why: "The teaser is short and anonymous and goes to a wide list. Interested buyers sign a confidentiality agreement (NDA) and then receive the information memorandum: the business, its market, historical financials and the business plan. They base their indicative offers on it.",
+    x: ["The information memorandum is confidential, so buyers sign an NDA first. The teaser is what goes out unsigned.", "It comes earlier. The data room and management meetings come in the second round, before binding offers.", "It's a marketing document for the first round, not a contract document."] },
+  { id: "mna-34", lv: 2, trap: ["wrong-measure", "wrong-measure", "wrong-measure"], q: "What does a process letter set out in an M&A auction?",
+    o: ["The rules of the round: the bid deadline and what an offer must contain (price, financing, conditions, approvals needed)", "The seller's warranties to the buyer", "The company's business plan and historical financials", "The bank's fee and the scope of its mandate"],
+    why: "The seller's bank sends a process letter at each round. It sets the deadline, the format of offers and what they must cover (price and its basis, financing, conditions, approvals, due diligence still needed), and what happens next.",
+    x: ["Warranties are in the share purchase agreement, with exceptions listed in the disclosure letter.", "That's the information memorandum.", "That's the engagement letter between the seller and its bank."] },
+  { id: "mna-35", lv: 2, trap: ["wrong-measure", "concept", "concept"], q: "A bank is pitching to advise on the sale of a company. What does its pitch book usually contain?",
+    o: ["Why this bank (team, recent sector deals), its view of the company with a first valuation range, likely buyers, and a proposed process and timetable", "The detailed business plan and three years of accounts for buyers to review", "The draft share purchase agreement", "A fairness opinion on the expected price"],
+    why: "A pitch book wins the mandate. It shows the bank understands the company and its market, who might buy it (or, for a buy-side pitch, which targets fit), what it might be worth, and how the bank would run the sale.",
+    x: ["That's the information memorandum, prepared once the bank has been hired.", "Lawyers draft the share purchase agreement later in the process, once a buyer is chosen.", "A fairness opinion comes at the end, when a board approves a deal, and is often given by a bank that isn't running the sale."] },
+  { id: "mna-36", lv: 2, trap: ["concept", "inverted", "concept"], q: "Why can a trade (strategic) buyer often pay more than a private equity buyer for the same company?",
+    o: ["It can count on synergies with its existing business, and doesn't have to hit a fund's target return within a few years", "It always borrows more, so its cost of capital is lower", "Private equity buyers can't use debt", "Trade buyers don't need to do due diligence"],
+    why: "A trade buyer values the target plus the synergies it brings to its own business, and it can hold forever. A private equity buyer values the company on its own, needs an exit in about 3–7 years, and works back from its target return to a maximum price.",
+    x: ["Trade buyers usually use less debt than private equity buyers, not more. Their edge is synergies.", "It's the opposite: private equity relies heavily on debt (that's the leverage in a leveraged buyout).", "Every buyer does due diligence. Trade buyers often know the industry better, but that isn't why they can pay more."] }
 ]);
 
 // New-format questions (shown only when "new formats" is on). New IDs: the multiple-choice mna-09 above stays as it is.
@@ -166,5 +190,16 @@ Bank.addFormat("mna", [
       "Second round: shortlisted buyers get data room access, management presentations and the draft purchase agreement, then submit binding bids with their mark-up.",
       "Negotiation, signing and completion: agree the purchase agreement with the preferred bidder, sign, then complete once regulatory and other conditions are met."
     ],
-    why: "Show you know why it's staged: competition keeps price tension while information is released gradually to fewer, more serious buyers." }
+    why: "Show you know why it's staged: competition keeps price tension while information is released gradually to fewer, more serious buyers." },
+  { id: "mna-grid-03", lv: 2, type: "grid", q: "In due diligence, which workstream would most likely find each issue?",
+    columns: ["Financial", "Tax", "Legal", "Commercial"],
+    rows: [
+      { text: "EBITDA is flattered by one-off income booked last quarter", answer: 0, note: "The quality of earnings review strips out one-offs to find normal EBITDA." },
+      { text: "Working capital was unusually low on the reference date", answer: 0, note: "Financial due diligence sets a normal level of working capital, which feeds the price." },
+      { text: "Tax losses may be lost after the change of ownership", answer: 1, note: "Many countries limit the use of losses after a change of control (in the US, Section 382)." },
+      { text: "A key customer contract can be ended if the company changes owner", answer: 2, note: "A change-of-control clause, found by reviewing material contracts." },
+      { text: "A pending lawsuit over a faulty product", answer: 2, note: "Legal reviews litigation, permits and compliance." },
+      { text: "The market is shrinking and a new competitor is winning share", answer: 3, note: "Commercial due diligence tests the market and the business plan's assumptions." }
+    ],
+    why: "Financial checks the numbers (normal earnings, net debt, working capital); tax checks past exposures and the deal's tax effects; legal checks contracts, disputes and compliance; commercial checks the market and the plan." }
 ]);

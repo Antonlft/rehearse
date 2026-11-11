@@ -886,3 +886,73 @@ Bank.calc("val", {
   why(i) { const { E, D, C, N, A, P, t } = i; return `Pension deficit after tax = ${P} × (1 − ${R.pct(t, 0)}) = ${R.m(P * (1 - t), 1)}. EV = equity value + debt − cash + NCI − associates + pension deficit = ${E} + ${D} − ${C} + ${N} − ${A} + ${R.num(P * (1 - t), 1)} = ${R.m(this.solve(i), 1)}.`; },
   fmt: v => R.m(v, 1)
 });
+
+// M&A: the buyer's EPS after a deal paid partly in new shares and partly with new debt, as a percentage of its EPS before.
+// Asked as a percentage so the answer is always positive. Same redraw guard (mnaFar).
+Bank.calc("mna", {
+  lv: 3, unit: "%", tolerance: 0.1, dp: 1, prompt: "as a percentage, to 1 decimal place",
+  make() {
+    for (;;) {
+      const A = R.step(100, 500, 10), S = R.step(50, 400, 10), P = +(A * R.step(12, 25, 1) / S).toFixed(2);
+      const X = Math.round(S * P * R.step(0.4, 1, 0.05) / 10) * 10, B = +(X / R.step(10, 25, 1)).toFixed(1);
+      const s = R.pick([0.4, 0.5, 0.6]), k = R.step(0.05, 0.09, 0.005), t = R.pick([0.21, 0.25]);
+      const i = { A, S, P, X, B, s, k, t }, ws = this.wrongs(i).map(w => w.value);
+      if (ws.some(w => w <= 0)) continue;
+      if (mnaFar(this.solve(i), ws, 0.12, 0.005)) return i;
+    }
+  },
+  solve: ({ A, S, P, X, B, s, k, t }) => (A + B - (1 - s) * X * k * (1 - t)) / (S + s * X / P) / (A / S),
+  wrongs: ({ A, S, P, X, B, s, k, t }) => [
+    { value: (A + B - (1 - s) * X * k * (1 - t)) / S / (A / S), trap: "missed-step", note: "That divides by the buyer's old share count. The new shares issued to the target's holders share the earnings too." },
+    { value: (A + B) / (S + s * X / P) / (A / S), trap: "missed-step", note: "That leaves out the after-tax interest on the new debt, which reduces combined net income." },
+    { value: (A + B - X * k * (1 - t)) / (S + s * X / P) / (A / S), trap: "double-count", note: "That charges interest on the whole price, but only the part paid with debt is borrowed; the rest is paid in shares." }
+  ],
+  ask: ({ A, S, P, X, B, s, k, t }) => `A buyer earns net income of ${R.m(A)} on ${R.num(S)} million shares, which trade at US$${R.num(P, 2)}. It buys a target for ${R.m(X)} (equity value); the target earns ${R.m(B, 1)} of net income. It pays ${R.pct(s, 0)} in new shares at its current share price and the rest with new debt at ${R.pct(k)} before tax; the tax rate is ${R.pct(t, 0)}. With no synergies, what is the buyer's EPS after the deal as a percentage of its EPS before (above 100% means the deal adds to EPS)?`,
+  why(i) { const { A, S, P, X, B, s, k, t } = i, N = s * X / P, I = (1 - s) * X * k * (1 - t), NI = A + B - I;
+    return `EPS before = ${R.num(A)} ÷ ${R.num(S)} = US$${R.num(A / S, 3)}. New shares = ${R.pct(s, 0)} × ${R.num(X)} ÷ ${R.num(P, 2)} = ${R.num(N, 2)}m. After-tax interest = ${R.pct(1 - s, 0)} × ${R.num(X)} × ${R.pct(k)} × (1 − ${R.pct(t, 0)}) = ${R.m(I, 2)}. Combined net income = ${R.num(A)} + ${R.num(B, 1)} − ${R.num(I, 2)} = ${R.m(NI, 2)}. EPS after = ${R.num(NI, 2)} ÷ ${R.num(S + N, 2)} = US$${R.num(NI / (S + N), 3)}, which is ${R.pct(this.solve(i))} of EPS before${this.solve(i) >= 1 ? " (accretive)" : " (dilutive)"}.`; },
+  fmt: v => R.pct(v)
+});
+
+// M&A: pre-tax synergies needed for a deal not to dilute the buyer's EPS. Same redraw guard (mnaFar).
+Bank.calc("mna", {
+  lv: 2, unit: "US$m", tolerance: 0.05, dp: 1, prompt: "in US$m, to 1 decimal place",
+  make() {
+    for (;;) {
+      const E = R.step(1, 6, 0.05), Z = R.step(80, 500, 10), d = R.step(0.03, 0.2, 0.01), t = R.pick([0.21, 0.25, 0.3]);
+      const Y = Math.round(E * Z * (1 - d) * 10) / 10;
+      const i = { E, Z, Y, t };
+      if (E * Z - Y < 2) continue;
+      if (mnaFar(this.solve(i), this.wrongs(i).map(w => w.value), 0.12, 0.3)) return i;
+    }
+  },
+  solve: ({ E, Z, Y, t }) => (E * Z - Y) / (1 - t),
+  wrongs: ({ E, Z, Y, t }) => [
+    { value: E * Z - Y, trap: "missed-step", note: "That's the after-tax earnings gap. Synergies are taxed, so the pre-tax amount needed is the gap ÷ (1 − tax rate)." },
+    { value: (E * Z - Y) * (1 - t), trap: "sign", note: "That takes tax off the gap instead of grossing it up. Pre-tax synergies must be bigger than the after-tax gap." },
+    { value: (E * Z - Y) / t, trap: "inverted", note: "That divides by the tax rate. Divide by (1 − tax rate), the share of pre-tax synergies left after tax." }
+  ],
+  ask: ({ E, Z, Y, t }) => `A buyer's EPS is US$${R.num(E, 2)} before a deal. After the deal, with no synergies, the combined company will earn ${R.m(Y, 1)} of net income on ${R.num(Z)} million shares. The tax rate is ${R.pct(t, 0)}. What pre-tax synergies are needed for the deal not to reduce EPS?`,
+  why(i) { const { E, Z, Y, t } = i; return `Net income needed to keep EPS at US$${R.num(E, 2)} = ${R.num(E, 2)} × ${R.num(Z)} = ${R.m(E * Z, 1)}. After-tax gap = ${R.num(E * Z, 1)} − ${R.num(Y, 1)} = ${R.m(E * Z - Y, 1)}. Pre-tax synergies = ${R.num(E * Z - Y, 1)} ÷ (1 − ${R.pct(t, 0)}) = ${R.m(this.solve(i), 1)}.`; },
+  fmt: v => R.m(v, 1)
+});
+
+// M&A: the combined company's net debt after a deal paid partly in cash (borrowed) at a premium. Same redraw guard (mnaFar).
+Bank.calc("mna", {
+  lv: 2, unit: "US$m", tolerance: 0.05, dp: 1, prompt: "in US$m, to 1 decimal place",
+  make() {
+    for (;;) {
+      const NA = R.step(100, 800, 10), EB = R.step(200, 1000, 10), NB = R.step(50, 500, 10), p = R.step(0.2, 0.4, 0.05), c = R.pick([0.4, 0.5, 0.6]);
+      const i = { NA, EB, NB, p, c };
+      if (mnaFar(this.solve(i), this.wrongs(i).map(w => w.value), 0.12, 1)) return i;
+    }
+  },
+  solve: ({ NA, EB, NB, p, c }) => NA + NB + c * EB * (1 + p),
+  wrongs: ({ NA, EB, NB, p, c }) => [
+    { value: NA + c * EB * (1 + p), trap: "missed-step", note: "That leaves out the target's own net debt, which the buyer takes on with the company." },
+    { value: NA + NB + c * EB, trap: "missed-step", note: "That leaves out the premium. The cash part is a share of the price paid, which includes the premium." },
+    { value: NA + NB + EB * (1 + p), trap: "wrong-measure", note: "That borrows the whole price. Only the cash part adds debt; the rest is paid in new shares." }
+  ],
+  ask: ({ NA, EB, NB, p, c }) => `A buyer with net debt of ${R.m(NA)} acquires a target whose shares are worth ${R.m(EB)} in total and which has net debt of ${R.m(NB)}. It pays a ${R.pct(p, 0)} premium on the target's equity value, ${R.pct(c, 0)} in cash borrowed for the deal and the rest in new shares. Ignoring fees, what is the combined company's net debt?`,
+  why(i) { const { NA, EB, NB, p, c } = i; return `Price paid = ${R.num(EB)} × ${(1 + p).toFixed(2)} = ${R.m(EB * (1 + p), 1)}. Borrowed for the cash part = ${R.pct(c, 0)} × ${R.num(EB * (1 + p), 1)} = ${R.m(c * EB * (1 + p), 1)}. Combined net debt = ${NA} + ${NB} + ${R.num(c * EB * (1 + p), 1)} = ${R.m(this.solve(i), 1)}.`; },
+  fmt: v => R.m(v, 1)
+});
