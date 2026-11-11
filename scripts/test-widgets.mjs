@@ -77,6 +77,17 @@ r = run("dilutedShares", { price: 25 }); near("dilutedShares", "at the money add
 r = run("goodwill", {}); near("goodwill", "DTL", r.dtl, 30); near("goodwill", "fair value", r.fv, 460); near("goodwill", "goodwill", r.goodwill, 240); is("goodwill", "not a bargain", r.bargain, false);
 r = run("goodwill", { t: 0 }); near("goodwill", "no tax", r.goodwill, 210);
 r = run("goodwill", { price: 300 }); near("goodwill", "bargain amount", r.goodwill, -160); is("goodwill", "bargain", r.bargain, true);
+// Fund waterfall: 100 in, 200 back after 5 years, 8% compounded preferred return = 46.93; full catch-up of 0.2 × 46.93 ÷ 0.8 = 11.73;
+// the remaining 41.34 split 80/20, so the GP gets 11.73 + 8.27 = 20.00, exactly 20% of the 100 profit
+const pref5 = 100 * (1.08 ** 5 - 1);
+r = run("fundWaterfall", {}); near("fundWaterfall", "preferred return", r.prefPaid, pref5); near("fundWaterfall", "catch-up", r.gpCU, 0.2 * pref5 / 0.8);
+near("fundWaterfall", "GP carry", r.gp, 20); near("fundWaterfall", "LPs", r.lp, 180); near("fundWaterfall", "GP share", r.gpShare, 0.2);
+r = run("fundWaterfall", { cu: 0 }); near("fundWaterfall", "no catch-up", r.gp, 0.2 * (100 - pref5));
+r = run("fundWaterfall", { cu: 0.5 }); near("fundWaterfall", "50% catch-up still reaches 20%", r.gp, 20);
+r = run("fundWaterfall", { proc: 140 }); near("fundWaterfall", "below the preferred return", r.gp, 0);
+r = run("fundWaterfall", { proc: 150 }); near("fundWaterfall", "catch-up incomplete", r.gp, 50 - pref5);
+r = run("fundWaterfall", { proc: 80 }); near("fundWaterfall", "loss: GP nothing", r.gp, 0); near("fundWaterfall", "loss: LPs everything", r.lp, 80);
+for (const v of [{}, { cu: 0 }, { cu: 0.5 }, { proc: 150 }, { proc: 3000, carry: 0.3 }, { pref: 0 }, { carry: 0 }]) { const x = run("fundWaterfall", v); near("fundWaterfall", `everything is paid out ${JSON.stringify(v)}`, x.gp + x.lp, v.proc ?? 200, 1e-9); }
 
 // Every widget's default view must compute and render without NaN.
 for (const [name, w] of Object.entries(W)) {

@@ -159,6 +159,42 @@
       note("The three bars add up to the equity gain: equity out minus equity in."))
   });
 
+  define("fundWaterfall", {
+    title: "Fund distribution waterfall: who gets what",
+    inputs: [
+      { k: "cap", label: "Capital invested by LPs", min: 50, max: 1000, step: 10, value: 100, fmt: usd },
+      { k: "proc", label: "Total proceeds returned", min: 0, max: 3000, step: 10, value: 200, fmt: usd },
+      { k: "n", label: "Years invested", min: 1, max: 10, step: 1, value: 5, fmt: v => num(v, 0) },
+      { k: "pref", label: "Preferred return (compounded)", min: 0, max: 0.12, step: 0.005, value: 0.08, fmt: v => pct(v, 1) },
+      { k: "carry", label: "Carried interest", min: 0, max: 0.3, step: 0.01, value: 0.2, fmt: v => pct(v, 0) },
+      { k: "cu", label: "GP catch-up", min: 0, max: 1, step: 0.5, value: 1, fmt: v => v === 0 ? "None" : v === 1 ? "100% (full)" : pct(v, 0) }
+    ],
+    compute: v => {
+      // Whole-fund waterfall; capital goes in at the start and proceeds come back at the end.
+      let rem = v.proc;
+      const roc = Math.min(rem, v.cap); rem -= roc;
+      const prefAmt = v.cap * ((1 + v.pref) ** v.n - 1), prefPaid = Math.min(rem, prefAmt); rem -= prefPaid;
+      // Catch-up tier size K: the GP gets cu × K, which brings it to carry × (preferred return + K).
+      const K = v.cu > v.carry && v.carry > 0 ? v.carry * prefAmt / (v.cu - v.carry) : 0, cuPaid = Math.min(rem, K); rem -= cuPaid;
+      const gpCU = v.cu * cuPaid, lpCU = cuPaid - gpCU, gpSplit = v.carry * rem, lpSplit = rem - gpSplit;
+      const gp = gpCU + gpSplit, lp = roc + prefPaid + lpCU + lpSplit, profit = v.proc - v.cap;
+      return { roc, prefAmt, prefPaid, cuPaid, gpCU, lpCU, gpSplit, lpSplit, gp, lp, profit, gpShare: profit > 0 ? gp / profit : 0, caughtUp: K > 0 && cuPaid >= K - 1e-9 };
+    },
+    render: (v, r) => stats([stat("GP carried interest", usd(r.gp, 1), true), stat("LPs receive", usd(r.lp, 1)), stat("GP share of profit", r.profit > 0 ? pct(r.gpShare, 1) : "No profit")]) +
+      bars([{ label: "Capital back", value: r.roc, cls: "pos", text: num(r.roc, 1) },
+        { label: "Preferred return", value: r.prefPaid, cls: "pos", text: num(r.prefPaid, 1) },
+        { label: "Catch-up: GP", value: r.gpCU, cls: "total", text: num(r.gpCU, 1) },
+        ...(v.cu > 0 && v.cu < 1 ? [{ label: "Catch-up: LPs", value: r.lpCU, cls: "pos", text: num(r.lpCU, 1) }] : []),
+        { label: "Split: LPs", value: r.lpSplit, cls: "pos", text: num(r.lpSplit, 1) },
+        { label: "Split: GP", value: r.gpSplit, cls: "total", text: num(r.gpSplit, 1) }], { max: Math.max(r.roc, r.prefPaid, r.lpSplit, r.gpCU, r.gpSplit, 1e-9) }) +
+      note("US$ millions. Blue goes to the LPs, green to the GP.") +
+      note(r.profit <= 0 ? "Proceeds don't exceed the capital invested: everything that comes back goes to the LPs, and the GP earns no carry."
+        : r.prefPaid < r.prefAmt - 1e-9 ? "Profit doesn't cover the preferred return yet, so the GP earns no carry."
+        : v.cu > 0 && v.carry > 0 && !r.caughtUp ? "The catch-up isn't complete, so the GP has less than its full share of the profit."
+        : v.cu > 0 && v.carry > 0 ? `The catch-up is complete, so the GP ends with exactly ${pct(v.carry, 0)} of all the profit.`
+        : "With no catch-up, the GP shares only in the profit above the preferred return.")
+  });
+
   define("recovery", {
     title: "Who recovers what in a restructuring",
     inputs: [
