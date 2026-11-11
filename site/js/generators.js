@@ -1506,3 +1506,99 @@ Bank.gen("val", () => {
           `${x(mins[0])} clears ${T}%, but it isn't the highest entry multiple that does.`] };
   }
 });
+
+// Hotel valuation: value after the FF&E reserve and the brand's required renovation (PIP). Same redraw guard (mnaFar).
+Bank.calc("rev", {
+  lv: 2, unit: "US$m", tolerance: 0.1, dp: 1, prompt: "in US$m, to 1 decimal place",
+  make() {
+    for (;;) {
+      const Rv = R.step(20, 80, 1), E = Math.round(Rv * R.step(0.25, 0.38, 0.01) * 10) / 10, c = R.step(0.065, 0.09, 0.0025), P = R.step(2, 15, 0.5);
+      const i = { Rv, E, c, P };
+      if (this.solve(i) <= 0) continue;
+      if (mnaFar(this.solve(i), this.wrongs(i).map(w => w.value), 0.12, 1)) return i;
+    }
+  },
+  solve: ({ Rv, E, c, P }) => (E - 0.04 * Rv) / c - P,
+  wrongs: ({ Rv, E, c, P }) => [
+    { value: E / c - P, trap: "missed-step", note: "That leaves out the FF&E reserve (4% of revenue), a real recurring cost that comes off earnings before the cap rate." },
+    { value: (E - 0.04 * Rv) / c, trap: "missed-step", note: "That leaves out the renovation the brand requires, which the buyer will pay for." },
+    { value: (E - 0.04 * Rv) / c + P, trap: "sign", note: "The renovation is a cost to the buyer, so it comes off the value." }
+  ],
+  ask: ({ Rv, E, c, P }) => `A managed hotel has revenue of ${R.m(Rv)} and EBITDA after management fees of ${R.m(E, 1)}. Buyers deduct a 4% FF&E (furniture, fixtures and equipment) reserve and apply a ${R.pct(c, 2)} cap rate, and the brand requires a ${R.m(P, 1)} renovation (PIP) on the sale. What should a buyer pay?`,
+  why(i) { const { Rv, E, c, P } = i, ff = 0.04 * Rv; return `FF&E reserve = 4% × ${Rv} = ${R.m(ff, 2)}. Net earnings = ${R.num(E, 1)} − ${R.num(ff, 2)} = ${R.m(E - ff, 2)}. Value = ${R.num(E - ff, 2)} ÷ ${R.pct(c, 2)} = ${R.m((E - ff) / c, 1)}. Less the renovation: ${R.m(this.solve(i), 1)}.`; },
+  fmt: v => R.m(v, 1)
+});
+
+// Hotel valuation: the cap rate implied by a price per key. Same redraw guard (mnaFar).
+Bank.calc("rev", {
+  lv: 2, unit: "%", tolerance: 0.02, dp: 2, prompt: "as a percentage, to 2 decimal places",
+  make() {
+    for (;;) {
+      const N = R.step(120, 500, 10), K = R.step(150000, 600000, 5000), Rv = Math.round(N * K * R.step(0.25, 0.4, 0.01) / 1e5) / 10;
+      const E = Math.round(Rv * R.step(0.25, 0.36, 0.01) * 10) / 10, P = R.step(2, 15, 0.5);
+      const i = { N, K, Rv, E, P }, a = this.solve(i);
+      if (a < 0.04 || a > 0.12) continue;
+      if (mnaFar(a, this.wrongs(i).map(w => w.value), 0.12, 0.002)) return i;
+    }
+  },
+  solve: ({ N, K, Rv, E }) => (E - 0.04 * Rv) / (N * K / 1e6),
+  wrongs: ({ N, K, Rv, E, P }) => [
+    { value: E / (N * K / 1e6), trap: "missed-step", note: "That uses earnings before the FF&E reserve. Buyers capitalise earnings after the reserve." },
+    { value: (E - 0.04 * Rv) / (N * K / 1e6 + P), trap: "wrong-measure", note: "That divides by the price plus the renovation: a yield on total cost. The cap rate implied by the sale is on the price paid." },
+    { value: (E - 0.04 * Rv) / (N * K / 1e6 - P), trap: "sign", note: "That takes the renovation off the price. The cap rate on the sale uses the price as paid." }
+  ],
+  ask: ({ N, K, Rv, E, P }) => `A ${N}-room managed hotel sells for US$${R.num(K)} per key. It has revenue of ${R.m(Rv, 1)} and EBITDA after management fees of ${R.m(E, 1)}; buyers deduct a 4% FF&E reserve. The buyer will also spend ${R.m(P, 1)} on a brand-required renovation. What cap rate does the price imply?`,
+  why(i) { const { N, K, Rv, E } = i, price = N * K / 1e6, ff = 0.04 * Rv; return `Price = ${N} × US$${R.num(K)} = ${R.m(price, 1)}. Net earnings = ${R.num(E, 1)} − 4% × ${R.num(Rv, 1)} = ${R.m(E - ff, 2)}. Cap rate = ${R.num(E - ff, 2)} ÷ ${R.num(price, 1)} = ${R.pct(this.solve(i), 2)}.`; },
+  fmt: v => R.pct(v, 2)
+});
+
+// Case study: valuing a managed hotel, from fees to price per key. Figures quoted by later steps are rounded as shown.
+Bank.case("rev", {
+  lv: 3,
+  make() {
+    for (;;) {
+      const N = R.step(120, 500, 10), Rv = R.step(20, 90, 1), gm = R.step(0.3, 0.42, 0.01), fc = R.step(0.03, 0.06, 0.005), c = R.step(0.07, 0.09, 0.0025), P = R.step(2, 15, 0.5);
+      const GOP = +(Rv * gm).toFixed(1), F = +(Rv * fc).toFixed(1);
+      const fees = +(0.03 * Rv + 0.1 * GOP).toFixed(2), EB = +(GOP - fees - F).toFixed(2), NOI = +(EB - 0.04 * Rv).toFixed(2);
+      const V = +(NOI / c).toFixed(1), price = +(V - P).toFixed(1), key = price * 1e6 / N;
+      if (NOI <= 0 || price <= 0 || key < 120000 || key > 1200000) continue;
+      return { N, Rv, gm, GOP, F, c, P, fees, EB, NOI, V, price, key };
+    }
+  },
+  intro: ({ N, Rv, GOP, F, c, P }) => `A ${N}-room hotel is for sale. It has total revenue of ${R.m(Rv)} and gross operating profit (GOP) of ${R.m(GOP, 1)}. The operator charges a base fee of 3% of revenue and an incentive fee of 10% of GOP. Fixed charges (insurance and property tax) are ${R.m(F, 1)}, buyers deduct a 4% FF&E (furniture, fixtures and equipment) reserve, and similar hotels trade at a ${R.pct(c, 2)} cap rate. The brand requires a ${R.m(P, 1)} renovation (PIP) on the sale.`,
+  why: () => "From the operator's profit down to what the owner keeps (after fees, fixed charges and the FF&E reserve), then a cap rate, less the renovation, and a per-key check against other sales.",
+  steps: [
+    { unit: "US$m", dp: 2, tolerance: 0.02, prompt: "in US$m, to 2 decimal places",
+      ask: () => "How much does the operator earn in fees each year?",
+      solve: i => i.fees,
+      wrongs: ({ Rv }) => [{ value: 0.03 * Rv, trap: "missed-step", note: "That's only the base fee. The incentive fee (10% of GOP) is paid on top." }],
+      why: ({ Rv, GOP, fees }) => `Base fee = 3% × ${Rv} = ${R.m(0.03 * Rv, 2)}. Incentive fee = 10% × ${R.num(GOP, 1)} = ${R.m(0.1 * GOP, 2)}. Total = ${R.m(fees, 2)}.` },
+    { unit: "US$m", dp: 2, tolerance: 0.02, prompt: "in US$m, to 2 decimal places",
+      ask: ({ fees, F }) => `Fees are ${R.m(fees, 2)} and fixed charges ${R.m(F, 1)}. What is the owner's EBITDA after fees and fixed charges?`,
+      solve: i => i.EB,
+      wrongs: ({ GOP, fees, F }) => [
+        { value: GOP - fees, trap: "missed-step", note: "That leaves out the fixed charges (insurance and property tax), which the owner pays." },
+        { value: GOP - F, trap: "missed-step", note: "That leaves out the operator's fees." }],
+      why: ({ GOP, fees, F, EB }) => `EBITDA = GOP − fees − fixed charges = ${R.num(GOP, 1)} − ${R.num(fees, 2)} − ${R.num(F, 1)} = ${R.m(EB, 2)}.` },
+    { unit: "US$m", dp: 2, tolerance: 0.02, prompt: "in US$m, to 2 decimal places",
+      ask: ({ EB, Rv }) => `EBITDA after fees is ${R.m(EB, 2)} and revenue ${R.m(Rv)}. After the 4% FF&E reserve, what are the hotel's net earnings?`,
+      solve: i => i.NOI,
+      wrongs: ({ EB, GOP }) => [{ value: EB - 0.04 * GOP, trap: "wrong-measure", note: "The reserve is 4% of total revenue, not of GOP." }],
+      why: ({ EB, Rv, NOI }) => `FF&E reserve = 4% × ${Rv} = ${R.m(0.04 * Rv, 2)}. Net earnings = ${R.num(EB, 2)} − ${R.num(0.04 * Rv, 2)} = ${R.m(NOI, 2)}.` },
+    { unit: "US$m", dp: 1, tolerance: 0.1, prompt: "in US$m, to 1 decimal place",
+      ask: ({ NOI, c }) => `Net earnings are ${R.m(NOI, 2)} and the cap rate is ${R.pct(c, 2)}. What is the hotel worth once trading normally?`,
+      solve: i => i.NOI / i.c,
+      wrongs: ({ GOP, c }) => [{ value: GOP / c, trap: "wrong-measure", note: "That capitalises GOP. The owner's income is what's left after fees, fixed charges and the FF&E reserve." }],
+      why: ({ NOI, c, V }) => `Value = ${R.num(NOI, 2)} ÷ ${R.pct(c, 2)} = ${R.m(V, 1)}.` },
+    { unit: "US$m", dp: 1, tolerance: 0.1, prompt: "in US$m, to 1 decimal place",
+      ask: ({ V, P }) => `The hotel is worth ${R.m(V, 1)} once trading normally, and the buyer must spend ${R.m(P, 1)} on the brand's renovation. What should the buyer pay?`,
+      solve: i => i.price,
+      wrongs: ({ V, P }) => [{ value: V + P, trap: "sign", note: "The renovation is the buyer's cost, so it comes off the value." }],
+      why: ({ V, P, price }) => `Price = ${R.num(V, 1)} − ${R.num(P, 1)} = ${R.m(price, 1)}.` },
+    { unit: "US$", dp: 0, tolerance: 1000, prompt: "in US$, to the nearest US$1,000",
+      ask: ({ price, N }) => `At a price of ${R.m(price, 1)} for ${N} rooms, what is the price per key?`,
+      solve: i => Math.round(i.key / 1000) * 1000,
+      wrongs: ({ V, N }) => [{ value: V * 1e6 / N, trap: "missed-step", note: "That uses the value before the renovation. Use the price the buyer pays." }],
+      why: ({ price, N, key }) => `Price per key = ${R.num(price, 1)}m ÷ ${N} ≈ US$${R.num(Math.round(key / 1000) * 1000)}. Compare it with recent sales of similar hotels.` }
+  ]
+});
