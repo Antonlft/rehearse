@@ -15,7 +15,13 @@ Lessons.add("val", {
     {"kind": "practice", "text": "10m options at US$25 with shares at US$40 bring in US$250m, which buys back 6.25m shares: 3.75m net new shares."},
     {"section": "Cross-checks"},
     {"kind": "watch", "text": "Check what the terminal value implies. A Gordon growth terminal value = final-year free cash flow (FCF) × (1 + g) ÷ (WACC − g); divide it by final-year EBITDA and the multiple should land near peers' multiples. A big gap means the growth rate or WACC is out of line."},
-    {"kind": "practice", "text": "Calendarise: restate peers' figures to the same 12 months before comparing multiples.\nThe price/earnings-to-growth (PEG) ratio = P/E ÷ expected growth in earnings per share (EPS), in percentage points, to adjust the P/E for growth.\nCapital-heavy businesses: compare EV/(EBITDA − capex) or EV/EBIT, since EBITDA ignores the investment needed.\nPrivate companies: apply a discount for lack of marketability, often 20–30%."}
+    {"kind": "practice", "text": "Calendarise: restate peers' figures to the same 12 months before comparing multiples.\nThe price/earnings-to-growth (PEG) ratio = P/E ÷ expected growth in earnings per share (EPS), in percentage points, to adjust the P/E for growth.\nCapital-heavy businesses: compare EV/(EBITDA − capex) or EV/EBIT, since EBITDA ignores the investment needed.\nPrivate companies: apply a discount for lack of marketability, often 20–30%."},
+    {"section": "Reading sensitivity tables"},
+    {"kind": "idea", "text": "A sensitivity table shows how the answer changes when two inputs move at once: one down the rows, one across the columns, with the base case in the middle."},
+    {"kind": "how", "text": "Read across a row to see the effect of the column input alone; read down a column for the row input.\nCompare like with like: a 0.5-point step and a 1-point step aren't comparable.\nFind the breakeven: the cells where the answer crosses a target (for example a 20% IRR) show how much room a deal has."},
+    {"kind": "read", "text": "If values change faster towards one corner, the answer is non-linear in that direction.\nIn a DCF, value climbs steeply as WACC approaches the growth rate; in an LBO, each extra turn of entry multiple costs less IRR as the price rises."},
+    {"kind": "watch", "text": "Check the base-case cell matches the model, and that the ranges are realistic.\nExample: with 2% growth, EV = FCF ÷ (WACC − g) doubles when WACC falls from 6% to 4%, so a table running WACC down to 3% shows absurd values."},
+    {"kind": "practice", "text": "Describe the table before quoting numbers: what's on each axis, where the base case is, and which input moves the answer most."}
   ],
   "example": {
     "question": "A business is worth US$1,500m (EV). It has debt of US$450m, cash of US$120m, non-controlling interests of US$70m, a stake in an associate worth US$30m and 100m diluted shares. What is it worth per share?",

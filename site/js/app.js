@@ -222,7 +222,7 @@ function materialize(src, cat) {
     return { cat, id: src.id, gen: false, lv: src.lv || null, type: "walk", q: src.q, why: src.why, points: src.points };
   const perm = shuffle([0, 1, 2, 3]);
   const item = { cat, id: src.id || null, gen: !!src.gen, lv: src.lv || null, q: src.q, why: src.why,
-    o: perm.map(i => src.o[i]), a: perm.indexOf(0), x: perm.map(i => i === 0 ? null : src.x[i - 1]) };
+    o: perm.map(i => src.o[i]), a: perm.indexOf(0), x: perm.map(i => i === 0 ? null : src.x[i - 1]), ...(src.table ? { table: src.table } : {}) };
   // Mistake-type tags travel with the wrong options through the shuffle (only when the question has them).
   if (src.trap) item.trap = perm.map(i => i === 0 ? null : src.trap[i - 1] || null);
   return item;
@@ -436,7 +436,7 @@ function startRetry(items) {
     const wrong = [0, 1, 2, 3].filter(j => j !== it.a);
     return materialize({ id: it.id, gen: it.gen, lv: it.lv, q: it.q, why: it.why,
       o: [it.o[it.a], ...wrong.map(j => it.o[j])], x: wrong.map(j => it.x[j]),
-      ...(it.trap ? { trap: wrong.map(j => it.trap[j]) } : {}) }, it.cat);
+      ...(it.trap ? { trap: wrong.map(j => it.trap[j]) } : {}), ...(it.table ? { table: it.table } : {}) }, it.cat);
   }), `${items.length} question${items.length > 1 ? "s" : ""} you got wrong or skipped`, false, calcFor(RETRY));
   if (db.attempts[RETRY]) confirmModal("Start a new mistakes practice?", "Your mistakes practice in progress will be discarded.", "Start practice", go_);
   else go_();
@@ -881,6 +881,7 @@ function renderQuiz() {
     <section class="card question" aria-labelledby="qtext">
       <p class="label">${esc(catById(it.cat).name)} · Question ${at.cur + 1} of ${n}${it.lv ? ` · ${LEVELS[it.lv]}` : ""}${it.type === "case" ? ` · Case study, ${it.steps.length} steps` : ""}</p>
       <p class="prompt" id="qtext">${esc(it.q)}</p>
+      ${it.table ? qTable(it.table) : ""}
       ${it.type === "numeric" ? typedArea(at, it, ans, revealed) : it.type === "order" ? orderArea(at, it, ans, revealed) : it.type === "grid" ? gridArea(at, it, ans, revealed) : it.type === "walk" ? walkArea(at, it, ans, revealed) : it.type === "case" ? caseArea(at, it, ans) : `
       <div class="options" role="radiogroup" aria-labelledby="qtext">
         ${it.o.map((o, i) => `<button type="button" class="opt${optClass(i)}" role="radio" aria-checked="${ans === i}" data-opt="${i}" ${revealed ? "disabled" : ""}><span class="radio"></span><span>${esc(o)}</span></button>`).join("")}
@@ -1194,6 +1195,15 @@ function renderExpired(at) {
   document.getElementById("seeBtn").onclick = finish;
   document.getElementById("exitBtn").onclick = () => go({ name: "home" });
   confirmModal("Time's up", "Time ran out while you were away. Your round will be scored with the answers you'd saved.", "See your results", finish);
+}
+
+/* A table attached to a question (e.g. a sensitivity table), with the base case highlighted. */
+function qTable(t) {
+  const isBase = (r, c) => Array.isArray(t.base) && t.base[0] === r && t.base[1] === c;
+  return `${t.caption ? `<p class="q-table-cap">${esc(t.caption)}</p>` : ""}<div class="table-wrap q-table"><table class="report-table sens-table">
+      <thead><tr><th scope="col">${esc(t.corner || "")}</th>${t.cols.map(c => `<th scope="col">${esc(c)}</th>`).join("")}</tr></thead>
+      <tbody>${t.rows.map((row, r) => `<tr><th scope="row">${esc(row.head)}</th>${row.cells.map((cell, c) => `<td${isBase(r, c) ? ' class="base" title="Base case"' : ""}>${esc(cell)}</td>`).join("")}</tr>`).join("")}</tbody>
+    </table></div>`;
 }
 
 /* Confidence ratings on the quiz screen */
@@ -1870,6 +1880,7 @@ function reviewItem(it, i, ans, marked, misread, conf = null) {
         <span class="pills">${misreadBtn}<span class="pill ${st[0]}">${st[1]}</span>${conf && st[0] === "no" && conf === "sure" ? `<span class="pill sure-wrong">Sure but wrong</span>` : conf ? `<span class="pill conf-pill">You said: ${esc(confLabel(conf))}</span>` : ""}${marked ? `<span class="pill flagged">Marked</span>` : ""}</span>
       </div>
       <p class="prompt">${esc(it.q)}</p>
+      ${it.table ? qTable(it.table) : ""}
       ${it.type === "case" ? `
       <p class="label">${g.ok ? `All ${it.steps.length} steps right` : `${g.right} of ${it.steps.length} steps right`}</p>
       <ul class="ans">${it.steps.map((s, k) => {

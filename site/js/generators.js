@@ -1446,3 +1446,63 @@ Bank.calc("lbo", {
   why(i) { const { E0, m0, m1, E1, D0, D1 } = i, q0 = E0 * m0 - D0, q1 = E1 * m1 - D1; return `Entry equity = ${R.x(m0)} × ${E0} − ${D0} = ${R.m(q0)}. Exit equity = ${R.x(m1)} × ${E1} − ${D1} = ${R.m(q1)}. Gain = ${R.m(q1 - q0)}. Debt paydown = ${D0} − ${D1} = ${R.m(D0 - D1)}, so ${R.pct(this.solve(i), 0)} of the gain.`; },
   fmt: v => R.pct(v, 0)
 });
+
+// Sensitivity tables: reading a DCF value grid (WACC down the rows, growth across the columns). Same redraw guard (mnaFar).
+// The answer is worked out from the rounded figures shown in the table, so reading the table gives exactly the answer.
+const dcfGrid = ({ F, w0, g0 }) => {
+  const ws = [-0.01, -0.005, 0, 0.005, 0.01].map(d => +(w0 + d).toFixed(4)), gs = [-0.005, 0, 0.005].map(d => +(g0 + d).toFixed(4));
+  return { ws, gs, ev: ws.map(w => gs.map(g => Math.round(F / (w - g)))) };
+};
+Bank.calc("val", {
+  lv: 2, unit: "%", tolerance: 0.1, dp: 1, prompt: "as a percentage, to 1 decimal place",
+  make() {
+    for (;;) {
+      const F = R.step(40, 200, 5), w0 = R.step(0.07, 0.1, 0.005), g0 = R.step(0.015, 0.03, 0.005);
+      if (w0 - g0 < 0.045) continue;
+      const i = { F, w0, g0, ...dcfGrid({ F, w0, g0 }) };
+      if (mnaFar(this.solve(i), this.wrongs(i).map(w => w.value), 0.12, 0.005)) return i;
+    }
+  },
+  solve: ({ ev }) => (ev[2][1] - ev[4][1]) / ev[2][1],
+  wrongs: ({ ev }) => [
+    { value: (ev[2][1] - ev[4][1]) / ev[4][1], trap: "wrong-measure", note: "That divides by the new value. A fall is measured against the starting value." },
+    { value: (ev[2][1] - ev[3][1]) / ev[2][1], trap: "missed-step", note: "That moves one row (0.5 points). A 1-point rise in WACC is two rows down." },
+    { value: (ev[2][2] - ev[2][1]) / ev[2][1], trap: "inverted", note: "That reads across a row, which changes growth. A change in WACC means moving down a column." }
+  ],
+  table: ({ ws, gs, ev, F }) => ({
+    caption: `Enterprise value (US$m) of US$${F}m of free cash flow next year, growing forever: EV = FCF ÷ (WACC − g)`,
+    corner: "WACC ↓ · growth →",
+    cols: gs.map(g => R.pct(g)), rows: ws.map((w, r) => ({ head: R.pct(w), cells: ev[r].map(v => R.num(v)) })), base: [2, 1]
+  }),
+  ask: ({ ws, gs }) => `Using the sensitivity table, by what percentage does enterprise value fall if WACC rises from ${R.pct(ws[2])} to ${R.pct(ws[4])}, with growth at ${R.pct(gs[1])}?`,
+  why(i) { const { ws, gs, ev } = i; return `In the ${R.pct(gs[1])} growth column, EV goes from US$${R.num(ev[2][1])}m at ${R.pct(ws[2])} to US$${R.num(ev[4][1])}m at ${R.pct(ws[4])}. Fall = (${R.num(ev[2][1])} − ${R.num(ev[4][1])}) ÷ ${R.num(ev[2][1])} = ${R.pct(this.solve(i))}.`; },
+  fmt: v => R.pct(v)
+});
+
+// Sensitivity tables: in an LBO IRR grid (entry multiple down the rows, exit multiple across), find the highest entry
+// multiple that still clears a target IRR. Multiple choice only: the answer is a row of the table.
+Bank.gen("val", () => {
+  for (;;) {
+    const b = R.step(8, 11, 0.5), D0 = R.step(4.5, 6, 0.5) * 100, D1 = D0 - R.step(150, 300, 10), gr = R.step(0.04, 0.08, 0.01), F = (1 + gr) ** 5;
+    const mins = [-1, -0.5, 0, 0.5, 1].map(d => b + d), mouts = [-1, 0, 1].map(d => b + d);
+    if (mins[0] * 100 - D0 < 120) continue;
+    const irr = mins.map(mi => mouts.map(mo => ((mo * 100 * F - D1) / (mi * 100 - D0)) ** 0.2 - 1));
+    const shown = irr.map(row => row.map(v => +(v * 100).toFixed(1)));
+    const T = R.pick([15, 20, 25]), col = R.int(0, 2);
+    const best = c => { let k = -1; shown.forEach((row, r) => { if (row[c] >= T) k = r; }); return k; };
+    const k = best(col);
+    if (k < 1 || k > 3) continue; // the answer has a row above it that fails, and a lower row
+    const other = [0, 1, 2].filter(c => c !== col).map(best).find(x => x >= 0 && x !== k && x !== k + 1 && x !== 0);
+    if (other === undefined) continue;
+    const x = n => R.x(n);
+    return { lv: 2, trap: ["concept", "wrong-measure", "concept"],
+      q: `Using the sensitivity table, if the company is sold at ${x(mouts[col])} EBITDA, what is the highest entry multiple that still gives the sponsor an IRR of at least ${T}%?`,
+      table: { caption: "Sponsor's IRR over 5 years, by entry multiple (rows) and exit multiple (columns)", corner: "Entry ↓ · exit →",
+        cols: mouts.map(x), rows: mins.map((m, r) => ({ head: x(m), cells: shown[r].map(v => v.toFixed(1) + "%") })), base: [2, 1] },
+      o: [x(mins[k]), x(mins[k + 1]), x(mins[other]), x(mins[0])],
+      why: `In the ${x(mouts[col])} exit column, IRR is ${shown[k][col].toFixed(1)}% at ${x(mins[k])} entry and ${shown[k + 1][col].toFixed(1)}% at ${x(mins[k + 1])}, so ${x(mins[k])} is the highest entry multiple that clears ${T}%. Each extra half-turn paid at entry costs IRR, because the sponsor puts in more equity for the same exit.`,
+      x: [`At ${x(mins[k + 1])} entry the IRR is ${shown[k + 1][col].toFixed(1)}%, just under ${T}%.`,
+          `That's the answer for a different exit multiple column. Read the ${x(mouts[col])} column.`,
+          `${x(mins[0])} clears ${T}%, but it isn't the highest entry multiple that does.`] };
+  }
+});

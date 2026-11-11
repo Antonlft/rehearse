@@ -502,6 +502,15 @@ sup { font-size: 0.72em; line-height: 0; vertical-align: super; }
 
 /* Question style selector (home) */
 .style-bar { margin-bottom: 14px; }
+/* Tables attached to questions (sensitivity tables) */
+.q-table { margin: 0 0 16px; }
+.q-table-cap { margin: 4px 0 6px; font-size: 12.5px; color: var(--muted); }
+.sens-table th, .sens-table td { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.sens-table thead th:first-child, .sens-table tbody th { text-align: left; }
+.sens-table thead th { text-transform: none; letter-spacing: 0; font-size: 12.5px; }
+.sens-table td.base { background: var(--navy-bg); font-weight: 700; color: var(--navy); }
+@media (max-width: 520px) { .sens-table th, .sens-table td { padding: 7px 6px; font-size: 12.5px; } .sens-table thead th { font-size: 11.5px; } }
+
 /* Confidence ratings */
 .conf { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; margin: 14px 0; padding: 10px 12px; border: 1px dashed var(--rule-strong); border-radius: 6px; }
 .conf.waiting { border-style: solid; border-color: var(--navy); background: var(--navy-bg); }

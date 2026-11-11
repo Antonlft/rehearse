@@ -15,7 +15,8 @@ window.Bank = {
        fmt(v)      → how a value is shown as an option (e.g. R.pct(v, 2)),
        unit        → "%", "x", "US$m", "US$" (plain amounts) or "years": what a typed answer is measured in,
        tolerance   → how far a typed answer may be from the right one, in typed units (e.g. 0.05 = 0.05 percentage points),
-       prompt      → how to type it, e.g. "to 2 decimal places", dp → decimal places for showing the answer, lv }
+       prompt      → how to type it, e.g. "to 2 decimal places", dp → decimal places for showing the answer, lv,
+       table(i)    → optional: a table shown under the question, { caption, corner, cols: [..], rows: [{ head, cells: [..] }], base: [row, col] } }
      The multiple-choice version is registered exactly where a plain Bank.gen would be, and is identical to one;
      the typed version goes into Bank.numeric. */
   calc(cat, spec) {
@@ -23,13 +24,13 @@ window.Bank = {
     this.gen(cat, () => {
       const i = spec.make(), w = spec.wrongs(i);
       return { ...(spec.lv ? { lv: spec.lv } : {}), trap: w.map(x => x.trap || null),
-        q: spec.ask(i), o: [spec.fmt(spec.solve(i)), ...w.map(x => spec.fmt(x.value))], why: spec.why(i), x: w.map(x => x.note) };
+        q: spec.ask(i), o: [spec.fmt(spec.solve(i)), ...w.map(x => spec.fmt(x.value))], why: spec.why(i), x: w.map(x => x.note), ...(spec.table ? { table: spec.table(i) } : {}) };
     });
     (this.numeric[cat] ||= []).push(() => {
       const i = spec.make();
       return { type: "numeric", ...(spec.lv ? { lv: spec.lv } : {}), unit: spec.unit, tolerance: spec.tolerance, ...(spec.dp != null ? { dp: spec.dp } : {}),
         q: `${spec.ask(i)} Type your answer${spec.prompt ? " " + spec.prompt : ""}.`, answer: toUnit(spec.solve(i)), why: spec.why(i),
-        wrongs: spec.wrongs(i).map(x => ({ value: toUnit(x.value), note: x.note, trap: x.trap || null })) };
+        wrongs: spec.wrongs(i).map(x => ({ value: toUnit(x.value), note: x.note, trap: x.trap || null })), ...(spec.table ? { table: spec.table(i) } : {}) };
     });
   },
   /* Multi-step case study: a scenario and 3–8 linked typed steps, checked one at a time. spec = {

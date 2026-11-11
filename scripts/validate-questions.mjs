@@ -12,6 +12,8 @@
 //    3–8 linked typed `steps`, each checked like a typed answer, with a positive right answer, and every known wrong
 //    answer far enough away to be graded as a concept gap; case generators are sampled like the others).
 //    Fields belonging to one type (`tolerance`, `unit`, `o`, `rows`, ...) are rejected on the others.
+//    Multiple-choice and typed questions may carry a `table` { caption?, corner?, cols: 2–6, rows: 2–8 of { head, cells } }
+//    with one cell per column and an optional `base` [row, column] inside it.
 //  - every category has a lesson (site/lessons/<category>.js, loaded by index.html); a "stub" may be empty, but a
 //    "draft" or "reviewed" lesson needs a method, a worked example (question, working, answer) and a source;
 //    method items are paragraphs, { section } headings or blocks { kind, title?, text, note? } (kinds: Lessons.BLOCKS);
@@ -61,7 +63,17 @@ for (const cat of new Set([...Object.keys(Bank.written), ...Object.keys(Bank.gen
 const UNITS = ["%", "x", "US$m", "US$", "years"];
 const isNum = v => typeof v === "number" && Number.isFinite(v);
 const notAllowed = (where, q, type, keys) => keys.forEach(k => { if (k in q) fail(`${where}: "${k}" isn't allowed on ${type} question`); });
+function checkTable(where, t) {
+  if (!t || !Array.isArray(t.cols) || t.cols.length < 2 || t.cols.length > 6) return fail(`${where}: table needs 2–6 columns`);
+  if (!Array.isArray(t.rows) || t.rows.length < 2 || t.rows.length > 8) return fail(`${where}: table needs 2–8 rows`);
+  t.rows.forEach((r, k) => {
+    if (!r || typeof r.head !== "string" || !Array.isArray(r.cells) || r.cells.length !== t.cols.length) fail(`${where}: table row ${k + 1} needs a head and one cell per column`);
+    else if (r.cells.some(c => typeof c !== "string" || BAD_TEXT.test(c))) fail(`${where}: table row ${k + 1} has an invalid cell`);
+  });
+  if (t.base !== undefined && !(Array.isArray(t.base) && t.base[0] >= 0 && t.base[0] < t.rows.length && t.base[1] >= 0 && t.base[1] < t.cols.length)) fail(`${where}: table base must be [row, column] inside the table`);
+}
 const checkShape = (where, q) => {
+  if (q.table !== undefined) { const type = q.type ?? "mcq"; if (type === "mcq" || type === "numeric") checkTable(where, q.table); else fail(`${where}: "table" isn't allowed on a ${type} question`); }
   if (typeof q.q !== "string" || !q.q.trim()) fail(`${where}: missing question text`);
   if (typeof q.why !== "string" || !q.why.trim()) fail(`${where}: missing explanation (why)`);
   if (q.lv !== undefined && ![1, 2, 3].includes(q.lv)) fail(`${where}: lv must be 1, 2 or 3, got ${q.lv}`);
