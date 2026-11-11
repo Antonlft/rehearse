@@ -476,6 +476,12 @@ sup { font-size: 0.72em; line-height: 0; vertical-align: super; }
 .mb-practice { --mb: var(--muted); --mb-bg: var(--tray); --mb-line: var(--rule); }
 @media (max-width: 640px) { .mb-grid { grid-template-columns: minmax(0, 1fr); } }
 
+/* Question style selector (home) */
+.style-bar { margin-bottom: 14px; }
+.style-row { display: flex; align-items: center; gap: 10px 14px; flex-wrap: wrap; }
+.style-label { font-size: 13px; font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase; color: var(--muted); }
+.style-note { margin: 6px 0 0; font-size: 13px; color: var(--muted); max-width: 70ch; }
+
 /* Lessons page */
 #app.wide { max-width: 1080px; }
 .lesson-group { font-size: 13px; font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase; color: var(--muted); margin: 26px 0 10px; }

@@ -132,7 +132,8 @@ All progress lives in one `localStorage` key, `rehearse.v3` (the light/dark choi
 | `roundModes` | `{ test, practice }`: `"timed"` (default) or `"learning"`, remembered separately for the main test and one-category practice |
 | `calcPrefs` | Calculator overrides, e.g. `{ "test-timed": true }`. Defaults: off in the timed main test, on everywhere else |
 | `sprints` | The last 50 mental maths sprints: `{ at, ok, n, answered, ms, kinds: { <kind>: { n, ok } } }`. Kept apart from rounds: no effect on the answer log, spaced repetition, category accuracy or the weak-spots report. A sprint where no sum was attempted isn't saved. Defaulted with `\|\|= []` |
-| `newFormats` | Include new question formats (typed answers, ordering, classification grids and walk-through cards) in rounds. Default `false`, defaulted with `??=`. Off means rounds are exactly as before |
+| `formatsOnly` | With `newFormats` on, use only the new formats ("New formats only" question style): typed calculations, ordering, grids and walk-through cards from the chosen categories, each at most once, so rounds can be shorter. Default `false`, defaulted with `??=` |
+| `newFormats` | Include new question formats (typed answers, ordering, classification grids and walk-through cards) in rounds. Set by the "Question style" selector on the home page (Classic = off, Mixed or New formats only = on). Default `false`, defaulted with `??=`. Off means rounds are exactly as before |
 
 **Answer log (`db.log`).** One entry per *answered* question in every submitted round (skipped questions aren't logged):
 
@@ -183,3 +184,4 @@ When it's on for a category, each written-question slot in a round takes a due q
 | 10 | Classification grids: `answers[]` can hold one column number (or `null`) per grid row; their log entries have `type: "grid"`, `given` and `rowsRight`. No new top-level fields |
 | 11 | Walk-through cards: `answers[]` can hold `"got"`, `"partly"` or `"missed"`; a round in progress can have `walkShown[]` (cards whose model answer was revealed); their log entries have `type: "walk"` and `given` (the self-grade). Only `"got"` counts as correct. No new top-level fields |
 | 12 | Added `sprints`, the mental maths sprint results. No other changes |
+| 13 | Added `formatsOnly` (the "New formats only" question style). `newFormats` keeps its meaning |

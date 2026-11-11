@@ -112,7 +112,10 @@ const NUMERIC_SHARE = 0.5; // with new formats on, half the calculation slots in
 //  12: added db.sprints: the last 50 mental maths sprints, each { at, ok, n, answered, ms, kinds: { kind: { n, ok } } }.
 //      Sprints are separate from rounds: they don't touch the answer log, spaced repetition or category accuracy.
 db.sprints ||= [];
-const SCHEMA_VERSION = 12;
+//  13: added db.formatsOnly (default false, ??=): with newFormats on, rounds use only the new formats.
+//      Question style on the home page: Classic = newFormats off; Mixed = on; New formats only = on + formatsOnly.
+db.formatsOnly ??= false;
+const SCHEMA_VERSION = 13;
 db.schemaVersion = Math.max(db.schemaVersion || 1, SCHEMA_VERSION);
 let saveWarned = false;
 const persist = () => {
@@ -154,6 +157,15 @@ const formatQs = cat => db.newFormats ? (Bank.formats[cat] || []) : [];
 // Walk-through cards only ever replace a question (at most one per 10 in a round), so they never add to capacity.
 const capacity = cat => gens(cat).length ? Infinity : written(cat).length + formatQs(cat).filter(q => q.type !== "walk").length;
 const WALK_EVERY = 10; // at most one walk-through card per this many questions in a round
+const onlyNew = () => db.newFormats && db.formatsOnly; // "New formats only" question style
+const styleOf = () => !db.newFormats ? "classic" : db.formatsOnly ? "new" : "mixed";
+const STYLES = [
+  ["classic", "Classic", "Multiple choice, including calculation questions."],
+  ["mixed", "Mixed", "Multiple choice plus the new formats: typed answers, ordering, classification grids and walk-through cards."],
+  ["new", "New formats only", "Only typed answers, ordering, classification grids and walk-through cards. Rounds are shorter where a category has few of them."]
+];
+// How many new-format questions a category can supply to one round (walk-through cards count once).
+const newCount = cat => { const f = Bank.formats[cat] || []; return f.filter(q => q.type !== "walk").length + (f.some(q => q.type === "walk") ? 1 : 0) + (Bank.numeric[cat] || []).length; };
 
 /* Round building */
 function generated(fn) {
@@ -287,7 +299,42 @@ function allocate(cats, n) {
   return shuffle(cats.flatMap(c => Array(quota[c]).fill(c)));
 }
 
+// "New formats only": formats and typed calculations from the chosen categories, each at most once, spread across
+// categories in turn, due (spaced repetition) questions first, walk-through cards capped at one per 10 questions.
+function buildRoundNew(mode, cats) {
+  const n = modeInfo(mode).n, now = Date.now();
+  let walksLeft = Math.floor(n / WALK_EVERY);
+  const lists = Object.fromEntries(cats.map(cat => {
+    const f = Bank.formats[cat] || [];
+    const due = f.filter(q => srsOn(cat) && db.schedule[q.id] && db.schedule[q.id].dueAt <= now).sort((a, b) => db.schedule[a.id].dueAt - db.schedule[b.id].dueAt);
+    const rest = shuffle(f.filter(q => !due.includes(q)));
+    return [cat, [...due.map(q => ({ q })), ...shuffle([...rest.map(q => ({ q })), ...(Bank.numeric[cat] || []).map(fn => ({ fn }))])]];
+  }));
+  const items = [];
+  let progressed = true;
+  while (items.length < n && progressed) {
+    progressed = false;
+    for (const cat of shuffle(cats)) {
+      if (items.length >= n) break;
+      const list = lists[cat];
+      let k = list.findIndex(x => !(x.q && x.q.type === "walk" && walksLeft <= 0));
+      if (k < 0) continue;
+      const [x] = list.splice(k, 1);
+      if (x.q) {
+        if (x.q.type === "walk") walksLeft--;
+        const seenList = (db.seen[cat] ||= []);
+        if (!seenList.includes(x.q.id)) seenList.push(x.q.id);
+        items.push(materialize(x.q, cat));
+      } else items.push(typedItem(x.fn, cat));
+      progressed = true;
+    }
+  }
+  if (mode !== "mixed" && items.some(it => it.lv)) items.sort((a, b) => (a.lv || 2) - (b.lv || 2));
+  return items;
+}
+
 function buildRound(mode, cats) {
+  if (onlyNew()) return buildRoundNew(mode, cats);
   const used = new Set();
   used.walkLeft = Math.floor(modeInfo(mode).n / WALK_EVERY);
   const items = allocate(cats, modeInfo(mode).n).map(cat => draw(cat, used));
@@ -308,7 +355,9 @@ function beginAttempt(mode, items, sub, learning = false, calc = false) {
 function startRound(mode) {
   const cats = mode === "mixed" ? selectedCats() : [mode], learning = learningFor(mode);
   const sub = (mode === "mixed" ? `${groupLabel(cats)} · ${selectionLabel(cats)}` : "Category practice") + (learning ? " · Learning mode" : "");
-  beginAttempt(mode, buildRound(mode, cats), sub, learning, calcFor(mode));
+  const items = buildRound(mode, cats);
+  if (!items.length) return confirmModal("No new-format questions here yet", "This category has no typed answers, ordering, grids or walk-through cards yet. Switch the question style to Classic or Mixed to practise it.", "OK", () => {}, null);
+  beginAttempt(mode, items, sub + (onlyNew() ? " · New formats only" : ""), learning, calcFor(mode));
 }
 
 function newRound(mode) {
@@ -467,7 +516,9 @@ function actionButtons(mode, label, primary) {
 
 function catRow(c) {
   const st = db.catStats[c.id], w = written(c.id).length, g = gens(c.id).length;
-  const bank = w && g ? `${w} written + calculations` : w ? `${w} written` : "Calculations only";
+  const nc = onlyNew() ? newCount(c.id) : null;
+  const bank = nc !== null ? (nc ? `${nc} new-format question${nc > 1 ? "s" : ""}` : `<span class="muted">None yet</span>`)
+    : w && g ? `${w} written + calculations` : w ? `${w} written` : "Calculations only";
   const acc = st && st.n ? Math.round(st.ok / st.n * 100) : null;
   return `
     <div class="cat-row">
@@ -475,7 +526,7 @@ function catRow(c) {
       <div class="cat-bank">${bank}</div>
       <div class="cat-acc">${acc === null ? `<span class="muted">Not attempted</span>`
         : `<span><b>${acc}%</b> <span class="muted">· ${st.ok}/${st.n}</span></span><span class="bar"><i style="width:${acc}%"></i></span>`}</div>
-      <div class="cat-act">${actionButtons(c.id, "Practise", false)}</div>
+      <div class="cat-act">${nc === 0 && !db.attempts[c.id] ? `<button class="btn" type="button" disabled title="No new-format questions in this category yet">Practise</button>` : actionButtons(c.id, "Practise", false)}</div>
     </div>`;
 }
 
@@ -494,13 +545,22 @@ function renderHome() {
       <p>${esc(reminder)} Your progress is saved only in this browser.</p>
       <div class="nudge-actions"><button class="link" type="button" data-backup>Download backup</button><button class="link" type="button" data-snooze>Not now</button></div>
     </div>` : ""}
+    <section class="style-bar" aria-labelledby="styleLabel">
+      <div class="style-row">
+        <span class="style-label" id="styleLabel">Question style</span>
+        <div class="seg" role="group" aria-labelledby="styleLabel">
+          ${STYLES.map(([v, l]) => `<button type="button" data-style="${v}" aria-pressed="${styleOf() === v}">${l}</button>`).join("")}
+        </div>
+      </div>
+      <p class="style-note">${esc(STYLES.find(s => s[0] === styleOf())[2])} Applies to every round.</p>
+    </section>
     <section class="card test-card">
       <div class="test-row">
         <div>
           <p class="label">${esc(groupLabel(selectedCats()))} · ${selectionLabel(selectedCats())} <button class="link" type="button" data-setup>Choose categories</button></p>
           <h2>Financial aptitude test</h2>
           <ul class="facts">
-            <li><b>20</b> questions</li><li>${db.roundModes.test === "learning" ? "Learning mode, no time limit" : "<b>20</b> minutes"}</li><li><b>${seen}</b> of ${totalWritten()} written questions seen so far</li>
+            <li>${onlyNew() ? "Up to <b>20</b> questions" : "<b>20</b> questions"}</li><li>${db.roundModes.test === "learning" ? "Learning mode, no time limit" : "<b>20</b> minutes"}</li><li><b>${seen}</b> of ${totalWritten()} written questions seen so far</li>
           </ul>
         </div>
         <div class="test-actions">${actionButtons("mixed", "Start round", true)}</div>
@@ -531,12 +591,11 @@ function renderHome() {
     <div class="section-head">
       <h2>Practise one category</h2>
       <div class="section-tools">
-        <p>10 questions · ${db.roundModes.practice === "learning" ? "no time limit" : "10 minutes"}</p>
+        <p>${onlyNew() ? "Up to 10 questions" : "10 questions"} · ${db.roundModes.practice === "learning" ? "no time limit" : onlyNew() ? "1 minute each" : "10 minutes"}</p>
         <div class="seg" role="group" aria-label="Practice mode">
           ${[["timed", "Timed"], ["learning", "Learning"]].map(([v, l]) => `<button type="button" data-practice-mode="${v}" aria-pressed="${db.roundModes.practice === v}">${l}</button>`).join("")}
         </div>
         <label class="switch small"><input type="checkbox" role="switch" id="practiceCalc" ${calcPref("practice", db.roundModes.practice === "learning") ? "checked" : ""}><span>Calculator</span></label>
-        <label class="switch small" title="Typed answers, ordering and classification questions"><input type="checkbox" role="switch" id="practiceFormats" ${db.newFormats ? "checked" : ""}><span>New formats</span></label>
       </div>
     </div>
     <div class="cat-table">
@@ -552,7 +611,11 @@ function renderHome() {
   app.querySelectorAll("[data-backup]").forEach(b => b.onclick = exportBackup);
   app.querySelectorAll("[data-report]").forEach(b => b.onclick = () => go({ name: "report", back: { name: "home" } }));
   app.querySelectorAll("[data-learn]").forEach(b => b.onclick = () => go({ name: "lesson", cat: b.dataset.learn, back: { name: "home" } }));
-  document.getElementById("practiceFormats").onchange = e => { db.newFormats = e.target.checked; persist(); renderHome(); document.getElementById("practiceFormats").focus(); };
+  app.querySelectorAll("[data-style]").forEach(b => b.onclick = () => {
+    const s = b.dataset.style;
+    db.newFormats = s !== "classic"; db.formatsOnly = s === "new"; // additive: newFormats keeps its meaning
+    persist(); renderHome(); document.querySelector(`[data-style="${s}"]`).focus();
+  });
   const practiceCalc = document.getElementById("practiceCalc");
   practiceCalc.onchange = () => {
     db.calcPrefs[calcKey("practice", db.roundModes.practice === "learning")] = practiceCalc.checked;
@@ -1040,7 +1103,7 @@ function renderReport() {
     ${traps.length ? `<div class="table-wrap"><table class="report-table">
       <thead><tr><th scope="col">Mistake</th><th scope="col">Times</th></tr></thead>
       <tbody>${traps.map(([k, v]) => `<tr><th scope="row">${esc(TRAPS[k] ? TRAPS[k][0].toUpperCase() + TRAPS[k].slice(1) : k)}</th><td>${v}</td></tr>`).join("")}</tbody>
-    </table></div>` : `<div class="card"><p class="muted">Mistake types will show here once the questions' wrong answers are tagged with the kind of slip they represent.</p></div>`}
+    </table></div>` : `<div class="card"><p class="muted">No tagged mistakes yet. When you pick a wrong option, the kind of slip it represents (a sign error, a flipped ratio, a missed step…) is counted here.</p></div>`}
     ${d.slips + d.gaps ? `<div class="section-head"><h2>Typed answers</h2><p>Wrong typed answers, by how far off they were</p></div>
     <div class="table-wrap"><table class="report-table">
       <thead><tr><th scope="col">Kind of miss</th><th scope="col">Times</th></tr></thead>
