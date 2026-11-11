@@ -467,7 +467,7 @@ function renderSetup() {
       </div>
       ${GROUPS.map(g => `
         <div class="check-group">
-          <div class="check-group-head"><h3>${esc(g.name)}</h3><button class="link" type="button" data-only="${g.id}">Only this group</button></div>
+          <div class="check-group-head grp-${g.id}"><h3>${esc(g.name)}</h3><button class="link" type="button" data-only="${g.id}">Only this group</button></div>
           <div class="check-grid">
             ${CATEGORIES.filter(c => c.group === g.id).map(c => `
               <label class="check" for="cat-${c.id}">
@@ -538,14 +538,14 @@ function actionButtons(mode, label, primary) {
   return `<button class="btn ${primary ? "primary" : ""}" type="button" data-new="${mode}">${label}</button>`;
 }
 
-function catRow(c) {
+function catRow(c, grp) {
   const st = db.catStats[c.id], w = written(c.id).length, g = gens(c.id).length;
   const nc = onlyNew() ? newCount(c.id) : null;
   const bank = nc !== null ? (nc ? `${nc} new-format question${nc > 1 ? "s" : ""}` : `<span class="muted">None yet</span>`)
     : w && g ? `${w} written + calculations` : w ? `${w} written` : "Calculations only";
   const acc = st && st.n ? Math.round(st.ok / st.n * 100) : null;
   return `
-    <div class="cat-row">
+    <div class="cat-row${grp ? ` grp-${grp}` : ""}">
       <div class="cat-name"><h3>${esc(c.name)}</h3><p>${esc(c.desc)}</p><button class="link learn-link" type="button" data-learn="${c.id}">Learn${Lessons.all[c.id]?.status && Lessons.all[c.id].status !== "stub" ? "" : " (coming soon)"}</button></div>
       <div class="cat-bank">${bank}</div>
       <div class="cat-acc">${acc === null ? `<span class="muted">Not attempted</span>`
@@ -661,7 +661,8 @@ function renderBrowseTab() {
     </div>
     <div class="cat-table">
       <div class="cat-row cat-head" aria-hidden="true"><span>Category</span><span>Question bank</span><span>Your accuracy</span><span></span></div>
-      ${GROUPS.map(g => `<div class="cat-group">${esc(g.name)}</div>` + CATEGORIES.filter(c => c.group === g.id).sort(byName).map(catRow).join("")).join("")}
+      ${GROUPS.map(g => { const cats = CATEGORIES.filter(c => c.group === g.id).sort(byName);
+        return `<div class="cat-group grp-${g.id}">${esc(g.name)}<span class="grp-count">${cats.length} categories</span></div>` + cats.map(c => catRow(c, g.id)).join(""); }).join("")}
     </div>`;
 }
 
