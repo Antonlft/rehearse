@@ -324,6 +324,7 @@ main { padding-block: 30px 48px; }
 .srs-head p { font-size: 13px; max-width: 60ch; }
 .srs-head b { color: var(--ink); }
 .srs-cats { margin-top: 12px; }
+.srs-cats[hidden] { display: none; } /* .check-grid sets display: grid, which would otherwise override hidden */
 .switch { flex: none; display: inline-flex; align-items: center; gap: 8px; font-size: 13px; font-weight: 500; cursor: pointer; }
 .switch input { appearance: none; -webkit-appearance: none; margin: 0; width: 36px; height: 20px; border-radius: 999px; background: var(--rule-strong); position: relative; cursor: pointer; transition: background .15s; }
 .switch input::after { content: ""; position: absolute; top: 2px; left: 2px; width: 16px; height: 16px; border-radius: 50%; background: var(--page); transition: transform .15s; }
