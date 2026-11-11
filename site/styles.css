@@ -501,11 +501,32 @@ sup { font-size: 0.72em; line-height: 0; vertical-align: super; }
 .sprint-h { font-size: 13px; font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase; color: var(--muted); margin: 20px 0 8px; }
 .sprint-result + .card, .card + .card { margin-top: 14px; }
 .sprint-h.first { margin-top: 0; }
-.sp-mistakes { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
-.sp-mistakes li { display: grid; gap: 3px; padding: 9px 12px; border: 1px solid var(--rule); border-left: 4px solid var(--bad); border-radius: 5px; font-size: 14px; }
+.sp-hint { font-size: 13px; margin: -4px 0 12px; }
+.sp-kind-list { display: grid; gap: 8px; margin-bottom: 12px; }
+.sp-kind { border: 1px solid var(--rule); border-radius: 6px; background: var(--page); }
+.sp-kind > summary { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; padding: 10px 14px; cursor: pointer; list-style: none; }
+.sp-kind > summary::-webkit-details-marker { display: none; }
+.sp-kind > summary::before { content: ""; width: 7px; height: 7px; border-right: 2px solid var(--muted); border-bottom: 2px solid var(--muted); transform: rotate(-45deg); transition: transform 0.15s; flex: none; }
+.sp-kind[open] > summary::before { transform: rotate(45deg); }
+.sp-kind > summary:hover { background: var(--select); }
+.sp-kind > summary:focus-visible { outline: 2px solid var(--navy); outline-offset: 2px; }
+.sp-kname { font-size: 15px; font-weight: 500; flex: 1; min-width: 140px; }
+.sp-kstats { display: flex; align-items: center; gap: 12px; font-size: 13px; color: var(--muted); }
+.sp-k10 b { color: var(--ink); font-variant-numeric: tabular-nums; }
+.sp-badge { padding: 3px 9px; border-radius: 999px; font-size: 12.5px; font-weight: 600; font-variant-numeric: tabular-nums; border: 1px solid transparent; white-space: nowrap; }
+.sp-badge.good { color: var(--good); background: var(--good-bg); border-color: var(--good-line); }
+.sp-badge.mid { color: var(--amber); background: var(--amber-bg); border-color: var(--amber-line); }
+.sp-badge.bad { color: var(--bad); background: var(--bad-bg); border-color: var(--bad-line); }
+.sp-badge.none { color: var(--muted); background: var(--tray); border-color: var(--rule); font-weight: 500; }
+.sp-kbody { padding: 2px 14px 14px; display: grid; gap: 10px; border-top: 1px solid var(--rule); padding-top: 12px; }
+.sp-sums { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
+.sp-sums li { display: grid; grid-template-columns: 18px minmax(0, 1fr); gap: 8px; padding: 8px 10px; border-radius: 5px; font-size: 14px; background: var(--tray); }
+.sp-sums li > span:last-child { display: grid; gap: 2px; }
+.sp-mark { font-weight: 700; }
+.sp-sums li.ok .sp-mark { color: var(--good); } .sp-sums li.no .sp-mark { color: var(--bad); }
+@media (prefers-reduced-motion: reduce) { .sp-kind > summary::before { transition: none; } }
 .sp-a { font-size: 13px; color: var(--muted); }
 .sp-a b.no { color: var(--bad); } .sp-a b.ok { color: var(--good); }
-.sp-tips { display: grid; gap: 10px; }
 .sp-chart { max-width: 560px; }
 .sp-chart .sp-acc { fill: none; stroke: var(--amber); stroke-width: 2; }
 .sp-chart .sp-acc-dot { fill: var(--amber); stroke: var(--page); stroke-width: 1.5; }

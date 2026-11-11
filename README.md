@@ -45,7 +45,7 @@ The version stamp makes browsers fetch matching files after each deploy. Any new
 | `site/js/generators.js`, `generators-hl.js` | Calculation questions that get new numbers every round |
 | `site/js/calculator.js` | The built-in calculator: a small expression parser (no `eval`) and its panel |
 | `site/js/widgets.js` | Interactive "Try it" widgets for the lessons |
-| `site/js/sprint.js` | The mental maths sprint's sums (8 kinds, friendly numbers) and a "how to get faster" trick for each kind; the sprint screen and results (mistakes, tricks for weak kinds, progress chart, accuracy by kind) are in `app.js` |
+| `site/js/sprint.js` | The mental maths sprint's sums (8 kinds, friendly numbers) and a "how to get faster" trick for each kind; the sprint screen and results (one collapsible row per kind with your sums and its trick, and a progress chart) are in `app.js` |
 | `site/js/app.js` | Everything else: categories, round building, quiz, results, saving |
 | `site/lessons/*.js` | One lesson (Learn page) per category, all listed on the Lessons page (header button) |
 | `scripts/validate-questions.mjs` | The question check |

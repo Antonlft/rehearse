@@ -1136,8 +1136,8 @@ function finishSprint() {
   const result = { at: Date.now(), ok: items.filter(i => i.ok).length, n: items.length, answered: items.filter(i => !i.skipped).length, ms: Sprint.MS, kinds };
   const prevBest = sprintBest();
   if (result.n) { db.sprints = [...db.sprints, result].slice(-SPRINT_KEEP); persist(); } // a sprint with no sums attempted isn't saved
-  // The mistakes list uses this sprint's questions, which aren't saved (only the counts in db.sprints are).
-  go({ name: "sprint", result, prevBest, mistakes: items.filter(i => !i.ok) });
+  // The per-kind details use this sprint's questions, which aren't saved (only the counts in db.sprints are).
+  go({ name: "sprint", result, prevBest, sums: items });
 }
 
 // Progress chart: one bar per sprint (sums answered: right in green, wrong in red) and a line for accuracy.
@@ -1166,13 +1166,20 @@ function sprintChart(runs) {
 function renderSprintResults() {
   const r = view.result, best = Math.max(view.prevBest, r.ok), newBest = r.ok > view.prevBest && db.sprints.length > 1;
   const acc = r.answered ? Math.round(r.ok / r.answered * 100) : 0, per = r.n ? (r.ms / 1000 / r.n).toFixed(1) : "–";
-  // Accuracy by kind over the last 10 sprints (this one included) decides which tricks to show, weakest first.
+  // Accuracy by kind over the last 10 sprints (this one included), shown next to this sprint's result.
   const recent = db.sprints.slice(-10), long = {};
   for (const s of recent) for (const [k, v] of Object.entries(s.kinds || {})) { const t = (long[k] ||= { n: 0, ok: 0 }); t.n += v.n; t.ok += v.ok; }
   const pct = v => v && v.n ? Math.round(v.ok / v.n * 100) : null;
-  const kinds = Object.keys({ ...long, ...r.kinds }).sort((a, b) => (pct(long[a]) ?? 101) - (pct(long[b]) ?? 101) || (r.kinds[b]?.n || 0) - (r.kinds[a]?.n || 0));
-  const weak = kinds.filter(k => (r.kinds[k] && r.kinds[k].ok < r.kinds[k].n) || (pct(long[k]) ?? 100) < 80);
-  const mistakes = view.mistakes || [];
+  // Worst in this sprint first (kinds not in this sprint last), then by accuracy over the last 10 sprints.
+  const now = k => r.kinds[k] ? r.kinds[k].ok / r.kinds[k].n : 2;
+  const kinds = Object.keys({ ...long, ...r.kinds }).sort((a, b) => now(a) - now(b) || (pct(long[a]) ?? 101) - (pct(long[b]) ?? 101) || (r.kinds[b]?.n || 0) - (r.kinds[a]?.n || 0));
+  const sums = view.sums || [];
+  const badge = v => !v ? ["none", "Not in this sprint"] : v.ok === v.n ? ["good", `${v.ok} of ${v.n}`] : v.ok / v.n >= 0.5 ? ["mid", `${v.ok} of ${v.n}`] : ["bad", `${v.ok} of ${v.n}`];
+  const sumRow = m => `<li class="${m.ok ? "ok" : "no"}">
+      <span class="sp-mark" aria-label="${m.ok ? "right" : "wrong"}">${m.ok ? "✓" : "✗"}</span>
+      <span><span class="sp-q">${esc(m.q)}</span>
+      <span class="sp-a">${m.given == null ? "Skipped" : `You: <b class="${m.ok ? "ok" : "no"}">${esc(m.given)}</b>`}${m.ok ? "" : ` · Answer: <b class="ok">${esc(m.answer)}</b>`}</span></span>
+    </li>`;
   meta.innerHTML = `<button class="link" id="sprintHome" type="button">All assessments</button>`;
   app.innerHTML = `
     <div class="title-row"><div><h1>Mental maths sprint</h1><p>Results</p></div></div>
@@ -1185,30 +1192,27 @@ function renderSprintResults() {
         <li>Personal best <b>${best}</b></li>
       </ul>
     </section>
-    ${mistakes.length ? `<section class="card">
-      <h2 class="sprint-h first">Your mistakes this sprint</h2>
-      <ul class="sp-mistakes">${mistakes.map(m => `<li>
-        <span class="sp-q">${esc(m.q)}</span>
-        <span class="sp-a">${m.given == null ? "Skipped" : `You: <b class="no">${esc(m.given)}</b>`} · Answer: <b class="ok">${esc(m.answer)}</b></span>
-      </li>`).join("")}</ul>
-    </section>` : ""}
     <section class="card">
-      <h2 class="sprint-h first">How to get faster</h2>
-      ${weak.length ? `<div class="sp-tips">${weak.map(k => `<div class="mblock mb-how">
-          <span class="mb-label">${esc(Sprint.label(k))}${pct(long[k]) != null ? ` · ${pct(long[k])}% right over your last ${recent.length} sprint${recent.length > 1 ? "s" : ""}` : ""}</span>
-          <p class="mb-text">${Sprint.tip(k).split("\n").map(line => `<span class="mb-line">${rich(line)}</span>`).join("")}</p>
-        </div>`).join("")}</div>`
-        : `<p class="muted">No weak spots this time. Next goal: answer more sums in the 2 minutes while keeping your accuracy.</p>`}
+      <h2 class="sprint-h first">By kind of sum</h2>
+      <p class="muted sp-hint">Weakest first. Open a kind to see your sums and a trick to get faster.</p>
+      <div class="sp-kind-list">${kinds.map(k => { const [cls, txt] = badge(r.kinds[k]), mine = sums.filter(m => m.kind === k);
+        return `<details class="sp-kind">
+          <summary>
+            <span class="sp-kname">${esc(Sprint.label(k))}</span>
+            <span class="sp-kstats"><span class="sp-badge ${cls}">${txt}</span><span class="sp-k10">Last ${recent.length}: <b>${pct(long[k]) != null ? pct(long[k]) + "%" : "–"}</b></span></span>
+          </summary>
+          <div class="sp-kbody">
+            ${mine.length ? `<ul class="sp-sums">${mine.map(sumRow).join("")}</ul>` : `<p class="muted">None in this sprint.</p>`}
+            <div class="mblock mb-how"><span class="mb-label">How to get faster</span>
+              <p class="mb-text">${Sprint.tip(k).split("\n").map(line => `<span class="mb-line">${rich(line)}</span>`).join("")}</p>
+            </div>
+          </div>
+        </details>`; }).join("")}</div>
+      <p class="muted sp-hint">Sprints are kept separate from your rounds and weak-spots report.</p>
     </section>
     <section class="card">
       <h2 class="sprint-h first">Your progress</h2>
       ${db.sprints.length >= 2 ? sprintChart(db.sprints.slice(-20)) : `<p class="muted">Your progress chart appears after your second sprint.</p>`}
-      <h2 class="sprint-h">By kind of sum</h2>
-      <table class="sp-kinds">
-        <thead><tr><th>Kind</th><th>This sprint</th><th>Last ${recent.length} sprint${recent.length > 1 ? "s" : ""}</th></tr></thead>
-        <tbody>${kinds.map(k => `<tr><td>${esc(Sprint.label(k))}</td><td>${r.kinds[k] ? `${r.kinds[k].ok} of ${r.kinds[k].n}` : "–"}</td><td>${pct(long[k]) != null ? `<b>${pct(long[k])}%</b> <span class="muted">(${long[k].ok} of ${long[k].n})</span>` : "–"}</td></tr>`).join("")}</tbody>
-      </table>
-      <p class="muted">Weakest first. Sprints are kept separate from your rounds and weak-spots report.</p>
     </section>
     <div class="result-actions">
       <button class="btn primary lg" id="sprintAgain" type="button">Sprint again</button>
