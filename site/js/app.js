@@ -565,7 +565,7 @@ function renderHome() {
   app.innerHTML = `
     <div class="page-head">
       <h1>Assessments</h1>
-      <p>Every round draws a new set of questions. Written questions don't repeat until you've seen them all, except ones you got wrong, which come back sooner. Calculation questions get new numbers each time.</p>
+      <p>Practise for finance, real estate and hospitality interviews: take the full test or drill one category, in multiple choice or in new formats such as typed calculations, ordering, walk-throughs and case studies. Questions you get wrong come back sooner, calculations get new numbers each time, and every category has a lesson with the method and a worked example.</p>
     </div>
     <nav class="home-tabs" aria-label="Home sections">
       <div class="seg" role="group" aria-label="Home sections">
