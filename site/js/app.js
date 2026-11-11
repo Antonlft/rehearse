@@ -593,15 +593,6 @@ function renderPracticeTab() {
       <p>${esc(reminder)} Your progress is saved only in this browser.</p>
       <div class="nudge-actions"><button class="link" type="button" data-backup>Download backup</button><button class="link" type="button" data-snooze>Not now</button></div>
     </div>` : ""}
-    <section class="style-bar" aria-labelledby="styleLabel">
-      <div class="style-row">
-        <span class="style-label" id="styleLabel">Question style</span>
-        <div class="seg" role="group" aria-labelledby="styleLabel">
-          ${STYLES.map(([v, l]) => `<button type="button" data-style="${v}" aria-pressed="${styleOf() === v}">${l}</button>`).join("")}
-        </div>
-      </div>
-      <p class="style-note">${esc(STYLES.find(s => s[0] === styleOf())[2])} Applies to every round.</p>
-    </section>
     <section class="card test-card">
       <div class="test-row">
         <div>
@@ -672,13 +663,7 @@ function renderBrowseTab() {
   return `
     <div class="section-head">
       <h2>Practise one category</h2>
-      <div class="section-tools">
-        <p>${onlyNew() ? "Up to 10 questions" : "10 questions"} · ${db.roundModes.practice === "learning" ? "no time limit" : onlyNew() ? "1 minute each" : "10 minutes"}</p>
-        <div class="seg" role="group" aria-label="Practice mode">
-          ${[["timed", "Timed"], ["learning", "Learning"]].map(([v, l]) => `<button type="button" data-practice-mode="${v}" aria-pressed="${db.roundModes.practice === v}">${l}</button>`).join("")}
-        </div>
-        <label class="switch small"><input type="checkbox" role="switch" id="practiceCalc" ${calcPref("practice", db.roundModes.practice === "learning") ? "checked" : ""}><span>Calculator</span></label>
-      </div>
+      <p class="practice-summary">${practiceSummary()} · <button class="link" type="button" data-goto-tab="progress">Change in Progress &amp; settings</button></p>
     </div>
     <div class="cat-table">
       <div class="cat-row cat-head" aria-hidden="true"><span>Category</span><span>Question bank</span><span>Your accuracy</span><span></span></div>
@@ -686,9 +671,39 @@ function renderBrowseTab() {
     </div>`;
 }
 
-// Progress & settings.
+// What a category "Practise" button will start, in words (shown on Browse; changed on Progress & settings).
+const practiceSummary = () => `${onlyNew() ? "Up to 10 questions" : "10 questions"} · ${db.roundModes.practice === "learning" ? "no time limit" : onlyNew() ? "1 minute each" : "10 minutes"} · ${calcPref("practice", db.roundModes.practice === "learning") ? "calculator on" : "no calculator"}`;
+
+// Progress & settings: the weak-spots report, round settings and spaced repetition.
 function renderProgressTab() {
-  return `${db.log.some(isAnswer) ? `<p class="report-link"><button class="link" type="button" data-report>See your weak spots</button></p>` : ""}
+  return `
+    <section class="card settings-card">
+      <h2>Your progress</h2>
+      ${db.log.some(isAnswer) ? `<p class="report-link"><button class="link" type="button" data-report>See your weak spots</button> <span class="muted">· accuracy by category, time pressure and the kinds of mistake you make</span></p>`
+        : `<p class="muted">Your weak-spots report appears once you've answered some questions.</p>`}
+    </section>
+    <section class="card settings-card">
+      <h2>Settings</h2>
+      <section class="style-bar" aria-labelledby="styleLabel">
+      <div class="style-row">
+        <span class="style-label" id="styleLabel">Question style</span>
+        <div class="seg" role="group" aria-labelledby="styleLabel">
+          ${STYLES.map(([v, l]) => `<button type="button" data-style="${v}" aria-pressed="${styleOf() === v}">${l}</button>`).join("")}
+        </div>
+      </div>
+      <p class="style-note">${esc(STYLES.find(s => s[0] === styleOf())[2])} Applies to every round.</p>
+    </section>
+      <section class="style-bar" aria-labelledby="practiceLabel">
+        <div class="style-row">
+          <span class="style-label" id="practiceLabel">Category practice</span>
+          <div class="seg" role="group" aria-labelledby="practiceLabel">
+            ${[["timed", "Timed"], ["learning", "Learning"]].map(([v, l]) => `<button type="button" data-practice-mode="${v}" aria-pressed="${db.roundModes.practice === v}">${l}</button>`).join("")}
+          </div>
+          <label class="switch small"><input type="checkbox" role="switch" id="practiceCalc" ${calcPref("practice", db.roundModes.practice === "learning") ? "checked" : ""}><span>Calculator</span></label>
+        </div>
+        <p class="style-note">${practiceSummary()}. Applies when you practise one category; the main test has its own settings on its setup screen.</p>
+      </section>
+    </section>
     ${srsPanel()}`;
 }
 

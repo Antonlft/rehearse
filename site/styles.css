@@ -498,6 +498,12 @@ sup { font-size: 0.72em; line-height: 0; vertical-align: super; }
 .tile-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 14px; margin-top: 6px; }
 .tile-actions .link { font-size: 13px; }
 @media (max-width: 760px) { .home-tiles { grid-template-columns: minmax(0, 1fr); } }
+/* Home: Progress & settings */
+.settings-card h2 { font-size: 15px; font-weight: 600; margin-bottom: 10px; }
+.settings-card .report-link { margin: 0; }
+.settings-card .style-bar:last-child { margin-bottom: 0; }
+.practice-summary { font-size: 12px; color: var(--muted); }
+.practice-summary .link { font-size: 12px; }
 /* Home: section tabs (same pill pattern as the other selectors, a little larger, full width on phones) */
 .home-tabs { margin: -6px 0 20px; }
 .home-tabs .seg { display: flex; width: fit-content; max-width: 100%; }
