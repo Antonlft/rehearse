@@ -89,13 +89,14 @@ Lessons.add("val", {
     answer: "The result, with a line on what it means."
   },
   source: { text: "Author, Title (edition), chapter", url: "https://…" }, // url optional
-  widget: { type: "evBridge", values: { debt: 500 } } // optional interactive "Try it"; values change its starting numbers
+  widget: { type: "evBridge", values: { debt: 500 } }, // optional interactive "Try it"; values change its starting numbers
+  widgets: [{ type: "dilutedShares", values: {} }]    // optional extra "Try it" widgets, shown below the main one
 });
 ```
 
 Text is shown as plain paragraphs and numbered steps (no formatting code needed). The question check requires a lesson for every category; a stub may be empty, but a draft or reviewed lesson must have a method, an example and a source, and a source link must start with `http://` or `https://`. All 18 lessons are drafts written by Claude (method, worked example, source and widget), to be reviewed and marked "reviewed".
 
-**Widgets.** `site/js/widgets.js` defines 18 interactive "Try it" widgets (sliders that recalculate live, with a small chart), one per category: `evBridge`, `wacc`, `compound`, `lboReturns`, `recovery`, `depreciation`, `bondPrice`, `ptbv`, `terp`, `yieldCurve`, `accretion`, `montyHall`, `revpar`, `hotelModels`, `yieldValue`, `rentRoll`, `maxLoan`, `capitalStack`. Each has a pure `compute()` for the maths and a `render()` for the picture. `node scripts/test-widgets.mjs` checks the maths against hand-worked answers (it also runs before every deploy), and the question check rejects a lesson that names a widget that doesn't exist or gives it starting values outside its sliders.
+**Widgets.** `site/js/widgets.js` defines 19 interactive "Try it" widgets (sliders that recalculate live, with a small chart), at least one per category: `evBridge`, `dilutedShares` (Valuation's second widget), `wacc`, `compound`, `lboReturns`, `recovery`, `depreciation`, `bondPrice`, `ptbv`, `terp`, `yieldCurve`, `accretion`, `montyHall`, `revpar`, `hotelModels`, `yieldValue`, `rentRoll`, `maxLoan`, `capitalStack`. Each has a pure `compute()` for the maths and a `render()` for the picture. `node scripts/test-widgets.mjs` checks the maths against hand-worked answers (it also runs before every deploy), and the question check rejects a lesson that names a widget that doesn't exist or gives it starting values outside its sliders.
 
 ## Saved data
 

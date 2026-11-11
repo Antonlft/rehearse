@@ -967,6 +967,8 @@ function renderLesson() {
   const missing = `<p class="muted">This lesson hasn't been written yet.</p>`;
   const src = l.source, safeUrl = src && /^https?:\/\//i.test(src.url || "") ? src.url : null; // only plain web links
   const ex = l.example;
+  // "widget" is the lesson's main "Try it"; an optional "widgets" list adds more below it.
+  const tries = [l.widget, ...(Array.isArray(l.widgets) ? l.widgets : [])].filter(w => w && Widgets.registry[w.type]);
   meta.innerHTML = `<button class="link" id="backLink" type="button">Back</button>`;
   app.innerHTML = `
     <div class="title-row">
@@ -980,7 +982,7 @@ function renderLesson() {
       ${ex ? `<p class="prompt">${esc(ex.question)}</p>
         ${ex.working && ex.working.length ? `<ol class="lesson-steps">${ex.working.map(w => `<li>${esc(w)}</li>`).join("")}</ol>` : ""}
         <p class="lesson-answer"><b>Answer:</b> ${esc(ex.answer)}</p>` : missing}
-      ${l.widget && Widgets.registry[l.widget.type] ? `<h2>Try it</h2><div id="lessonWidget"></div>` : ""}
+      ${tries.length ? `<h2>Try it</h2>${tries.map((_, i) => `<div class="lesson-widget" id="lessonWidget${i}"></div>`).join("")}` : ""}
       <h2>Source</h2>
       ${src ? `<p>${safeUrl ? `<a href="${esc(safeUrl)}" target="_blank" rel="noopener noreferrer">${esc(src.text)}</a>` : esc(src.text)}</p>` : missing}
     </section>
@@ -990,8 +992,7 @@ function renderLesson() {
     </div>`;
   document.getElementById("backLink").onclick = document.getElementById("backBtn").onclick = () => go(back);
   document.getElementById("practiseBtn").onclick = () => newRound(view.cat);
-  const wEl = document.getElementById("lessonWidget");
-  if (wEl) Widgets.mount(wEl, l.widget.type, l.widget.values || {});
+  tries.forEach((w, i) => Widgets.mount(document.getElementById("lessonWidget" + i), w.type, w.values || {}));
 }
 
 /* Results */

@@ -11,7 +11,7 @@
 //    Fields belonging to one type (`tolerance`, `unit`, `o`, `rows`, ...) are rejected on the others.
 //  - every category has a lesson (site/lessons/<category>.js, loaded by index.html); a "stub" may be empty, but a
 //    "draft" or "reviewed" lesson needs a method, a worked example (question, working, answer) and a source;
-//    a lesson's optional widget must be one defined in site/js/widgets.js, with starting values only for its own inputs
+//    a lesson's optional widget (and any extra ones in `widgets`) must be defined in site/js/widgets.js, with starting values only for its own inputs
 // Exits with code 1 on any violation.
 import { readFileSync, readdirSync } from "node:fs";
 import { join, dirname } from "node:path";
@@ -188,10 +188,12 @@ for (const [cat, l] of Object.entries(Lessons)) {
     if (!text(l.source.text)) fail(`${where}: source needs text`);
     if (l.source.url != null && l.source.url !== "" && !/^https?:\/\//i.test(l.source.url)) fail(`${where}: source url must start with http:// or https://`);
   }
-  if (l.widget != null) {
-    const w = ctx.Widgets?.registry?.[l.widget.type];
-    if (!w) fail(`${where}: widget "${l.widget.type}" isn't defined in site/js/widgets.js`);
-    else for (const [k, val] of Object.entries(l.widget.values || {})) {
+  if (l.widgets != null && !Array.isArray(l.widgets)) fail(`${where}: widgets must be a list of { type, values }`);
+  for (const lw of [l.widget, ...(Array.isArray(l.widgets) ? l.widgets : [])]) {
+    if (lw == null) continue;
+    const w = ctx.Widgets?.registry?.[lw.type];
+    if (!w) fail(`${where}: widget "${lw.type}" isn't defined in site/js/widgets.js`);
+    else for (const [k, val] of Object.entries(lw.values || {})) {
       const inp = w.inputs.find(i => i.k === k);
       if (!inp) fail(`${where}: widget value "${k}" isn't one of its inputs (${w.inputs.map(i => i.k).join(", ")})`);
       else if (typeof val !== "number" || val < inp.min || val > inp.max) fail(`${where}: widget value ${k} = ${val} is outside ${inp.min}–${inp.max}`);

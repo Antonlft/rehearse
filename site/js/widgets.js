@@ -66,7 +66,7 @@
   const stats = list => `<div class="w-stats">${list.join("")}</div>`;
   const note = t => `<p class="w-note">${escH(t)}</p>`;
 
-  /* ---------- The 18 widgets ---------- */
+  /* ---------- The widgets (one or more per lesson) ---------- */
 
   define("evBridge", {
     title: "From enterprise value to equity value",
@@ -84,6 +84,28 @@
         { label: "Pref", value: v.pref, kind: "down", text: "−" + num(v.pref, 0) }, { label: "Equity", value: r.equity, kind: "total", text: num(r.equity, 0) }]) +
       note("Chart in US$ millions.") +
       (r.equity < 0 ? note("Equity value is negative: the claims ahead of shareholders exceed what the business is worth.") : "")
+  });
+
+  define("dilutedShares", {
+    title: "Diluted shares: the treasury stock method",
+    inputs: [
+      { k: "price", label: "Share price", min: 5, max: 100, step: 1, value: 40, fmt: v => "US$" + num(v, 0) },
+      { k: "strike", label: "Exercise price", min: 5, max: 100, step: 1, value: 25, fmt: v => "US$" + num(v, 0) },
+      { k: "opts", label: "Options (millions)", min: 0, max: 30, step: 0.5, value: 10, fmt: v => num(v, 1) + "m" },
+      { k: "basic", label: "Basic shares (millions)", min: 50, max: 500, step: 10, value: 200, fmt: v => num(v, 0) + "m" }
+    ],
+    compute: v => {
+      const itm = v.price > v.strike, exercised = itm ? v.opts : 0, proceeds = exercised * v.strike, buyback = proceeds / v.price;
+      const net = exercised - buyback;
+      return { itm, exercised, proceeds, buyback, net, diluted: v.basic + net, dilution: net / v.basic };
+    },
+    render: (v, r) => stats([stat("Diluted shares", num(r.diluted, 2) + "m", true), stat("Net new shares", num(r.net, 2) + "m"), stat("Dilution", pct(r.dilution, 1))]) +
+      bars([{ label: "Exercised", value: r.exercised, cls: "pos", text: (r.exercised ? "+" : "") + num(r.exercised, 2) + "m" },
+        { label: "Bought back", value: r.buyback, cls: "neg", text: (r.buyback ? "−" : "") + num(r.buyback, 2) + "m" },
+        { label: "Net new", value: r.net, cls: "total", text: (r.net ? "+" : "") + num(r.net, 2) + "m" }], { max: Math.max(v.opts, 1e-9) }) +
+      note(!v.opts ? "No options outstanding, so there's nothing to dilute: diluted shares equal basic shares."
+        : !r.itm ? "The exercise price is at or above the share price: nobody would exercise, so the options add nothing."
+        : `Exercise brings in ${usd(r.proceeds, 1)}, which buys back ${num(r.buyback, 2)}m shares at US$${num(v.price, 0)}. The higher the share price, the fewer shares that buys back, so dilution grows.`)
   });
 
   define("wacc", {

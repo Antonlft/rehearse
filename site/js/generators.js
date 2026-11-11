@@ -24,6 +24,39 @@ Bank.gen("val", () => {
   };
 });
 
+// Net new shares from options under the treasury stock method. One definition gives both the multiple-choice and typed versions.
+Bank.calc("val", {
+  lv: 2, tolerance: 0.01, dp: 2, prompt: "in millions of shares, as a number only, to 2 decimal places",
+  make() {
+    let P, K;
+    do { P = R.step(20, 80, 1); K = R.step(5, 78, 1); } while (K / P < 0.3 || K / P > 0.9 || K * 2 === P || P - K < 2);
+    return { P, K, B: R.step(50, 400, 10), N: R.step(2, 20, 0.5) };
+  },
+  solve: ({ P, K, N }) => N - N * K / P,
+  wrongs: ({ P, K, N }) => [
+    { value: N, trap: "missed-step", note: "That adds every option but leaves out the buyback funded by the exercise proceeds." },
+    { value: N * K / P, trap: "wrong-measure", note: "That's the number of shares bought back. The net new shares are the options minus the shares bought back." },
+    { value: N * (P - K), trap: "units", note: "That's the options' intrinsic value in US$m, not a number of shares." }
+  ],
+  ask: ({ P, K, B, N }) => `A company has ${B}m basic shares trading at US$${P}. It has ${R.num(N)}m options with an exercise price of US$${K}. Using the treasury stock method, how many net new shares do the options add?`,
+  why(i) { const { P, K, N } = i; return `Exercise proceeds = ${R.num(N)}m × US$${K} = US$${R.num(N * K, 1)}m, which buys back ${R.num(N * K, 1)} ÷ ${P} = ${R.num(N * K / P, 2)}m shares. Net new shares = ${R.num(N)} − ${R.num(N * K / P, 2)} = ${R.num(this.solve(i), 2)}m.`; },
+  fmt: v => R.num(v, 2) + "m"
+});
+
+// Diluted shares with two option tranches, one out of the money.
+Bank.gen("val", () => {
+  let P, K1, K2;
+  do { P = R.step(20, 80, 1); K1 = R.step(5, P - 3, 1); K2 = R.step(P + 2, P + 30, 1); } while (K1 / P < 0.3);
+  const B = R.step(50, 400, 10), N1 = R.step(2, 15, 0.5), N2 = R.step(2, 15, 0.5);
+  const right = B + N1 - N1 * K1 / P, f = v => R.num(v, 2) + "m";
+  return { lv: 2, trap: ["concept", "missed-step", "missed-step"],
+    q: `A company has ${B}m basic shares trading at US$${P}. It has ${R.num(N1)}m options with an exercise price of US$${K1} and ${R.num(N2)}m options with an exercise price of US$${K2}. Using the treasury stock method, what is its diluted share count?`,
+    o: [f(right), f(B + N1 + N2 - (N1 * K1 + N2 * K2) / P), f(B + N1 + N2), f(B + N1)],
+    why: `Only the US$${K1} options are in the money; the US$${K2} options are above the share price and left out. Buyback = ${R.num(N1)} × ${K1} ÷ ${P} = ${R.num(N1 * K1 / P, 2)}m. Diluted shares = ${B} + ${R.num(N1)} − ${R.num(N1 * K1 / P, 2)} = ${f(right)}.`,
+    x: [`That includes the out-of-the-money US$${K2} options. Nobody exercises an option above the share price.`, "That adds every option and leaves out the buyback.", "That rightly leaves out the out-of-the-money options, but forgets the buyback funded by the exercise proceeds."]
+  };
+});
+
 Bank.gen("lbo", () => {
   const eq = R.step(100, 800, 10), moic = R.pick([1.5, 1.8, 2.0, 2.2, 2.5, 2.8, 3.0]), n = R.pick([3, 4, 5, 6, 7]);
   const exit = eq * moic, irr = moic ** (1 / n) - 1;

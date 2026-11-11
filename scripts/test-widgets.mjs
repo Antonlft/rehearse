@@ -68,6 +68,11 @@ r = run("maxLoan", {}); near("maxLoan", "ICR limit", r.byIcr, 61.9047619, 1e-6);
 r = run("maxLoan", { rate: 0.08 }); is("maxLoan", "binding at 8%", r.binding, "ICR"); near("maxLoan", "loan at 8%", r.loan, 46.4285714, 1e-6);
 // Capital stack: 55% × 6% + 15% × 11% = 4.95% on 70% → 7.07%; overall + 30% × 15% = 9.45%
 r = run("capitalStack", {}); near("capitalStack", "blended debt", r.blendedDebt, 0.0707143, 1e-5); near("capitalStack", "overall", r.overall, 0.0945); near("capitalStack", "equity", r.eq, 0.30);
+// Treasury stock method: 10m options at US$25, shares at US$40 → proceeds 250, buys back 6.25m; net new 3.75m; diluted 203.75m (1.875%)
+r = run("dilutedShares", {}); near("dilutedShares", "bought back", r.buyback, 6.25); near("dilutedShares", "net new", r.net, 3.75);
+near("dilutedShares", "diluted", r.diluted, 203.75); near("dilutedShares", "dilution", r.dilution, 0.01875);
+r = run("dilutedShares", { price: 20 }); near("dilutedShares", "out of the money adds nothing", r.net, 0); near("dilutedShares", "OTM diluted", r.diluted, 200);
+r = run("dilutedShares", { price: 25 }); near("dilutedShares", "at the money adds nothing", r.net, 0);
 
 // Every widget's default view must compute and render without NaN.
 for (const [name, w] of Object.entries(W)) {
