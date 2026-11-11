@@ -20,6 +20,7 @@ Then open http://localhost:8765/site/ (in Claude Code this is the `quiz-static` 
 node scripts/validate-questions.mjs
 node scripts/test-calculator.mjs
 node scripts/test-widgets.mjs
+node scripts/test-sprint.mjs
 ```
 
 It loads every question file, calculation generator and lesson, and checks that each question has 4 unique options, 3 wrong-answer notes, an explanation and a unique ID, and that any `trap` tags are valid. It also checks that no option contains `NaN`/`Infinity`/`undefined`, that every file is loaded by `index.html`, and that every category exists in `app.js`. Each generator is run 50 times. It prints `✓ …` and exits with code 0 when everything passes, or lists each problem and exits with code 1. GitHub runs it before every deploy, and a failure stops the deploy. `test-calculator.mjs` does the same for the built-in calculator and for reading typed answers: it checks about 90 cases against hand-worked answers.
@@ -28,7 +29,7 @@ It loads every question file, calculation generator and lesson, and checks that 
 
 Every push to `main` runs `.github/workflows/pages.yml`:
 
-1. **validate**: runs the question, calculator and widget checks above.
+1. **validate**: runs the question, calculator, widget and sprint checks above.
 2. **deploy**: replaces `?v=dev` on every script and stylesheet link in `site/index.html` with the commit ID, then publishes the `site/` folder to GitHub Pages.
 
 The version stamp makes browsers fetch matching files after each deploy. Any new `<script>` or stylesheet tag in `index.html` must end in `?v=dev`. GitHub Pages lets browsers cache the page itself for up to 10 minutes, so a hard refresh (Cmd + Shift + R) may be needed right after a deploy.
@@ -44,11 +45,13 @@ The version stamp makes browsers fetch matching files after each deploy. Any new
 | `site/js/generators.js`, `generators-hl.js` | Calculation questions that get new numbers every round |
 | `site/js/calculator.js` | The built-in calculator: a small expression parser (no `eval`) and its panel |
 | `site/js/widgets.js` | Interactive "Try it" widgets for the lessons |
+| `site/js/sprint.js` | The mental maths sprint's sums (8 kinds, friendly numbers); the sprint screen itself is in `app.js` |
 | `site/js/app.js` | Everything else: categories, round building, quiz, results, saving |
 | `site/lessons/*.js` | One lesson (Learn page) per category |
 | `scripts/validate-questions.mjs` | The question check |
 | `scripts/test-calculator.mjs` | The calculator check |
 | `scripts/test-widgets.mjs` | The lesson widget check |
+| `scripts/test-sprint.mjs` | The sprint check: every kind of sum against a hand recomputation, over 20,000 samples |
 
 ## Question format
 
@@ -124,6 +127,7 @@ All progress lives in one `localStorage` key, `rehearse.v3` (the light/dark choi
 | `srsExcluded` | Category IDs where spaced repetition is off |
 | `roundModes` | `{ test, practice }`: `"timed"` (default) or `"learning"`, remembered separately for the main test and one-category practice |
 | `calcPrefs` | Calculator overrides, e.g. `{ "test-timed": true }`. Defaults: off in the timed main test, on everywhere else |
+| `sprints` | The last 50 mental maths sprints: `{ at, ok, n, answered, ms, kinds: { <kind>: { n, ok } } }`. Kept apart from rounds: no effect on the answer log, spaced repetition, category accuracy or the weak-spots report. Defaulted with `\|\|= []` |
 | `newFormats` | Include new question formats (typed answers, ordering, classification grids and walk-through cards) in rounds. Default `false`, defaulted with `??=`. Off means rounds are exactly as before |
 
 **Answer log (`db.log`).** One entry per *answered* question in every submitted round (skipped questions aren't logged):
@@ -174,3 +178,4 @@ When it's on for a category, each written-question slot in a round takes a due q
 | 9 | Ordering questions: a round's `answers[]` can hold an ordering (step numbers in the order chosen); their log entries have `type: "order"` and `given`. No new top-level fields |
 | 10 | Classification grids: `answers[]` can hold one column number (or `null`) per grid row; their log entries have `type: "grid"`, `given` and `rowsRight`. No new top-level fields |
 | 11 | Walk-through cards: `answers[]` can hold `"got"`, `"partly"` or `"missed"`; a round in progress can have `walkShown[]` (cards whose model answer was revealed); their log entries have `type: "walk"` and `given` (the self-grade). Only `"got"` counts as correct. No new top-level fields |
+| 12 | Added `sprints`, the mental maths sprint results. No other changes |

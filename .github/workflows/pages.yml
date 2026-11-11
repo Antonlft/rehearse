@@ -28,6 +28,8 @@ jobs:
         run: node scripts/test-calculator.mjs
       - name: Check lesson widget maths
         run: node scripts/test-widgets.mjs
+      - name: Check mental maths sprint
+        run: node scripts/test-sprint.mjs
 
   deploy:
     needs: validate

@@ -109,7 +109,10 @@ const NUMERIC_SHARE = 0.5; // with new formats on, half the calculation slots in
 //  11: walk-through cards (self-graded): a round's answers[] can hold "got" | "partly" | "missed", a round in progress
 //      can have walkShown[] (cards whose model answer was revealed), and their answer log entries have type: "walk" and
 //      given (the self-grade). Only "got" counts as correct. No new top-level fields.
-const SCHEMA_VERSION = 11;
+//  12: added db.sprints: the last 50 mental maths sprints, each { at, ok, n, answered, ms, kinds: { kind: { n, ok } } }.
+//      Sprints are separate from rounds: they don't touch the answer log, spaced repetition or category accuracy.
+db.sprints ||= [];
+const SCHEMA_VERSION = 12;
 db.schemaVersion = Math.max(db.schemaVersion || 1, SCHEMA_VERSION);
 let saveWarned = false;
 const persist = () => {
@@ -344,6 +347,7 @@ function endVisit(at) {
 
 function go(v) {
   if (v.name !== "quiz") CalcUI.hide(); // the calculator only lives on the quiz screen
+  if (v.name !== "sprint") sprint = null; // leaving a sprint abandons it; only finished sprints are saved
   // Leaving a live round (Save & exit, logo, etc.): stop its clock so time away isn't counted.
   if (view.name === "quiz" && view.live && db.attempts[view.mode]) { endVisit(db.attempts[view.mode]); persist(); }
   view = v;
@@ -358,6 +362,7 @@ function render() {
   else if (view.name === "setup") renderSetup();
   else if (view.name === "report") renderReport();
   else if (view.name === "lesson") renderLesson();
+  else if (view.name === "sprint") renderSprint();
   else renderHome();
 }
 
@@ -490,6 +495,16 @@ function renderHome() {
         ${hist.length ? `<span>Last <b>${hist[hist.length - 1].pct}%</b></span><button class="link" type="button" data-review="mixed">Review last round</button>` : ""}
       </div>` : ""}
     </section>
+    <section class="card test-card sprint-card">
+      <div class="test-row">
+        <div>
+          <p class="label">No calculator</p>
+          <h2>Mental maths sprint</h2>
+          <ul class="facts"><li><b>2</b> minutes of quick sums: percentages, multiples, yields, basis points</li>${db.sprints.length ? `<li>Best <b>${sprintBest()}</b> right</li>` : ""}</ul>
+        </div>
+        <div class="test-actions"><button class="btn primary" type="button" data-sprint>Start sprint</button></div>
+      </div>
+    </section>
     ${db.attempts[RETRY] ? (() => { const at = db.attempts[RETRY], done = at.answers.filter(a => !isBlank(a)).length; return `
     <section class="card test-card retry-card">
       <div class="test-row">
@@ -517,6 +532,7 @@ function renderHome() {
   wireSrsPanel();
   app.querySelectorAll("[data-new]").forEach(b => b.onclick = () => b.dataset.new === "mixed" ? go({ name: "setup" }) : newRound(b.dataset.new));
   app.querySelectorAll("[data-setup]").forEach(b => b.onclick = () => go({ name: "setup" }));
+  app.querySelectorAll("[data-sprint]").forEach(b => b.onclick = startSprint);
   app.querySelectorAll("[data-backup]").forEach(b => b.onclick = exportBackup);
   app.querySelectorAll("[data-report]").forEach(b => b.onclick = () => go({ name: "report", back: { name: "home" } }));
   app.querySelectorAll("[data-learn]").forEach(b => b.onclick = () => go({ name: "lesson", cat: b.dataset.learn, back: { name: "home" } }));
@@ -1018,6 +1034,124 @@ function renderReport() {
   document.getElementById("backLink").onclick = document.getElementById("backBtn").onclick = () => go(back);
 }
 
+/* Mental maths sprint: 2 minutes of quick sums (site/js/sprint.js), typed and checked one after another.
+   The sprint in progress lives only in memory; the finished result is saved to db.sprints. */
+let sprint = null; // { end, items: [{ kind, ok, skipped, ms }], cur, curStart, lock, done }
+const SPRINT_KEEP = 50;
+const sprintBest = () => db.sprints.reduce((b, s) => Math.max(b, s.ok || 0), 0);
+const sprintAnswer = it => (it.unit === "US$m" ? "US$" : "") + it.answer.toLocaleString("en-US", { maximumFractionDigits: 3 }).replace("-", "−")
+  + ({ "%": "%", x: "x", "US$m": "m" }[it.unit] || "");
+// Phone number pads have no minus key, so sums whose answer can be negative get the full keyboard.
+const sprintInputMode = it => it.kind === "pctChange" ? "text" : "decimal";
+
+function startSprint() {
+  const now = Date.now();
+  sprint = { end: now + Sprint.MS, items: [], cur: Sprint.make(null), curStart: now, lock: false, done: false };
+  go({ name: "sprint" });
+}
+
+function renderSprint() {
+  if (view.result) return renderSprintResults();
+  if (!sprint) return go({ name: "home" });
+  const it = sprint.cur, right = sprint.items.filter(i => i.ok).length;
+  meta.innerHTML = `<button class="link" id="sprintStop" type="button">Stop sprint</button>`;
+  app.innerHTML = `
+    <div class="title-row">
+      <div><h1>Mental maths sprint</h1><p>No calculator · press Enter to answer</p></div>
+      <div class="timer" id="timer" role="timer"><span>Time left</span><strong id="clock">${fmt(sprint.end - Date.now())}</strong></div>
+    </div>
+    <section class="card question sprint" aria-labelledby="sprintQ">
+      <p class="label" id="sprintLabel">${esc(Sprint.label(it.kind))} · Sum ${sprint.items.length + 1}</p>
+      <p class="prompt" id="sprintQ">${esc(it.q)}</p>
+      <div class="typed-row">
+        <input id="sprintInput" class="typed-input" type="text" inputmode="${sprintInputMode(it)}" autocomplete="off" autocorrect="off" spellcheck="false" aria-labelledby="sprintQ" aria-describedby="sprintFb">
+        <button class="btn primary" id="sprintGo" type="button">Answer</button>
+        <button class="btn" id="sprintSkip" type="button">Skip</button>
+      </div>
+      <p class="typed-hint sprint-fb" id="sprintFb" aria-live="polite"></p>
+      <p class="sprint-score">Right so far: <b id="sprintRight">${right}</b></p>
+    </section>`;
+  const input = document.getElementById("sprintInput"), fb = document.getElementById("sprintFb");
+  const next = () => {
+    if (!sprint || sprint.done) return;
+    if (Date.now() >= sprint.end) return finishSprint();
+    sprint.cur = Sprint.make(sprint.cur.kind); sprint.curStart = Date.now(); sprint.lock = false;
+    const n = sprint.cur;
+    document.getElementById("sprintLabel").textContent = `${Sprint.label(n.kind)} · Sum ${sprint.items.length + 1}`;
+    document.getElementById("sprintQ").textContent = n.q;
+    input.setAttribute("inputmode", sprintInputMode(n));
+    input.value = ""; fb.textContent = ""; fb.className = "typed-hint sprint-fb";
+    input.focus();
+  };
+  const submitSum = skipped => {
+    if (!sprint || sprint.lock || sprint.done) return;
+    const cur = sprint.cur, raw = input.value.trim();
+    if (!skipped && !raw) { fb.textContent = "Type an answer, or press Skip."; input.focus(); return; }
+    if (!skipped && !Typed.readings(raw, cur.unit).length) { fb.textContent = "That doesn't read as a number."; input.focus(); return; }
+    const ok = !skipped && Typed.grade(cur, raw).ok;
+    sprint.items.push({ kind: cur.kind, ok, skipped, ms: Date.now() - sprint.curStart });
+    sprint.lock = true;
+    fb.className = "typed-hint sprint-fb " + (ok ? "ok" : "no");
+    fb.textContent = ok ? "✓ Right" : `✗ ${skipped ? "Skipped" : "Not quite"}. The answer is ${sprintAnswer(cur)}.`;
+    document.getElementById("sprintRight").textContent = sprint.items.filter(i => i.ok).length;
+    setTimeout(next, ok ? 350 : 1500); // a wrong answer stays up a little longer so you can read it
+    input.focus();
+  };
+  input.onkeydown = e => { if (e.key === "Enter") { e.preventDefault(); submitSum(false); } };
+  document.getElementById("sprintGo").onclick = () => submitSum(false);
+  document.getElementById("sprintSkip").onclick = () => submitSum(true);
+  document.getElementById("sprintStop").onclick = () => confirmModal("Stop this sprint?", "It won't be saved.", "Stop sprint", () => go({ name: "home" }));
+  input.focus();
+  const update = () => {
+    const left = sprint ? sprint.end - Date.now() : 0, clock = document.getElementById("clock");
+    if (!sprint || !clock) return clearInterval(tick);
+    clock.textContent = fmt(left);
+    document.getElementById("timer").classList.toggle("low", left < 20000);
+    if (left <= 0 && !sprint.lock) finishSprint(); // a sum being marked finishes first, then next() ends the sprint
+  };
+  tick = setInterval(update, 250);
+}
+
+function finishSprint() {
+  if (!sprint || sprint.done) return;
+  sprint.done = true;
+  clearInterval(tick);
+  const items = sprint.items, kinds = {};
+  for (const i of items) { const k = (kinds[i.kind] ||= { n: 0, ok: 0 }); k.n++; if (i.ok) k.ok++; }
+  const result = { at: Date.now(), ok: items.filter(i => i.ok).length, n: items.length, answered: items.filter(i => !i.skipped).length, ms: Sprint.MS, kinds };
+  const prevBest = sprintBest();
+  db.sprints = [...db.sprints, result].slice(-SPRINT_KEEP);
+  persist();
+  go({ name: "sprint", result, prevBest });
+}
+
+function renderSprintResults() {
+  const r = view.result, best = Math.max(view.prevBest, r.ok), newBest = r.ok > view.prevBest && db.sprints.length > 1;
+  const acc = r.answered ? Math.round(r.ok / r.answered * 100) : 0, per = r.n ? (r.ms / 1000 / r.n).toFixed(1) : "–";
+  const rows = Object.entries(r.kinds).map(([k, v]) => [k, v, v.ok / v.n]).sort((a, b) => a[2] - b[2] || b[1].n - a[1].n);
+  meta.innerHTML = `<button class="link" id="sprintHome" type="button">All assessments</button>`;
+  app.innerHTML = `
+    <div class="title-row"><div><h1>Mental maths sprint</h1><p>Results</p></div></div>
+    <section class="card sprint-result">
+      <p class="sprint-big"><b>${r.ok}</b> right${newBest ? ` <span class="pill ok">New personal best</span>` : ""}</p>
+      <ul class="facts">
+        <li>Answered <b>${r.answered}</b>${r.n > r.answered ? ` (+${r.n - r.answered} skipped)` : ""}</li>
+        <li>Accuracy <b>${acc}%</b></li>
+        <li><b>${per}</b> seconds per sum</li>
+        <li>Personal best <b>${best}</b></li>
+      </ul>
+      ${rows.length ? `<h2 class="sprint-h">By kind of sum</h2>
+      <ul class="sprint-kinds">${rows.map(([k, v]) => `<li><span>${esc(Sprint.label(k))}</span><b>${v.ok} of ${v.n}</b></li>`).join("")}</ul>
+      <p class="muted">Weakest first. Sprints are kept separate from your rounds and weak-spots report.</p>` : `<p class="muted">No sums answered this time.</p>`}
+    </section>
+    <div class="result-actions">
+      <button class="btn primary lg" id="sprintAgain" type="button">Sprint again</button>
+      <button class="btn lg" id="sprintBack" type="button">Back</button>
+    </div>`;
+  document.getElementById("sprintAgain").onclick = startSprint;
+  document.getElementById("sprintHome").onclick = document.getElementById("sprintBack").onclick = () => go({ name: "home" });
+}
+
 /* Lessons: one page per category (content in site/lessons/<category>.js) */
 const LESSON_STATUS = { stub: "Not written yet", draft: "Draft", reviewed: "Reviewed" };
 function renderLesson() {
@@ -1268,7 +1402,7 @@ function backupProblem(d) {
   const missing = ["attempts", "history", "totals", "seen", "catStats"].filter(k => !isObj(d[k]));
   if (missing.length) return `This file doesn't look like a Rehearse backup: ${missing.join(", ")} ${missing.length > 1 ? "are" : "is"} missing or the wrong shape.`;
   if ("qStats" in d && !isObj(d.qStats)) return "This backup is damaged: qStats is the wrong shape.";
-  for (const k of ["excluded", "log"]) if (k in d && !Array.isArray(d[k])) return `This backup is damaged: ${k} should be a list.`;
+  for (const k of ["excluded", "log", "sprints"]) if (k in d && !Array.isArray(d[k])) return `This backup is damaged: ${k} should be a list.`;
   return null;
 }
 
