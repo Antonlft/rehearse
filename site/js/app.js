@@ -1371,7 +1371,7 @@ function methodHtml(items) {
   const block = b => `<div class="mblock mb-${esc(b.kind)}">
       <span class="mb-label">${esc(Lessons.BLOCKS[b.kind] || b.kind)}${b.title ? ` · ${esc(b.title)}` : ""}</span>
       ${b.kind === "formula" ? `<p class="mb-eq">${b.text.split("\n").map(line => `<span class="mb-line">${rich(line)}</span>`).join("")}</p>` : `<p class="mb-text">${b.text.split("\n").map(line => `<span class="mb-line">${rich(line)}</span>`).join("")}</p>`}
-      ${b.note ? `<p class="mb-note">${rich(b.note)}</p>` : ""}
+      ${b.note ? `<p class="mb-note">${b.note.split("\n").map(line => `<span class="mb-line">${rich(line)}</span>`).join("")}</p>` : ""}
     </div>`;
   const isBlock = b => b && typeof b === "object" && b.kind;
   const short = b => isBlock(b) && b.kind !== "formula" && (b.text.length + (b.note || "").length + (b.title || "").length) <= METHOD_SHORT;

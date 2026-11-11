@@ -821,3 +821,46 @@ Bank.calc("econ", {
   why(i) { const { n, r } = i; return `Breakeven inflation ≈ nominal yield − real yield = ${R.pct(n, 2)} − ${R.pct(r, 2)} = ${R.pct(this.solve(i), 2)}: the average inflation at which TIPS and ordinary Treasuries return the same.`; },
   fmt: v => R.pct(v, 2)
 });
+
+// Accounting: share premium (US: additional paid-in capital) booked on a funding round. Same redraw guard (mnaFar).
+Bank.calc("acc", {
+  lv: 2, unit: "US$m", tolerance: 0.05, dp: 1, prompt: "in US$m, to 1 decimal place",
+  make() {
+    for (;;) {
+      const par = R.pick([0.5, 1, 2, 5, 10]), price = +(par * R.step(1.5, 7, 0.5)).toFixed(2), S = R.step(1, 20, 0.5), I = R.step(2, 40, 0.5);
+      const i = { par, price, S, I };
+      if (mnaFar(this.solve(i), this.wrongs(i).map(w => w.value), 0.12, 0.3)) return i;
+    }
+  },
+  solve: ({ par, price, I }) => I - I / price * par,
+  wrongs: ({ par, price, I }) => [
+    { value: I, trap: "missed-step", note: "That books the whole raise as premium. The nominal value of the new shares goes to share capital first." },
+    { value: I / price * par, trap: "wrong-measure", note: "That's the share capital: new shares × nominal value. The premium is the rest of the money raised." },
+    { value: I + I / price * par, trap: "sign", note: "The share capital is part of the money raised, so it's taken off the raise, not added to it." }
+  ],
+  ask: ({ par, price, S, I }) => `A start-up has ${R.num(S)} million shares, each with a nominal (par) value of US$${R.num(par, par % 1 ? 1 : 0)}. It raises ${R.m(I)} at a pre-money valuation of ${R.m(S * price, 1)}. How much of the raise is booked as share premium (US: additional paid-in capital)?`,
+  why(i) { const { par, price, S, I } = i, N = I / price; return `Price per share = pre-money ÷ shares = ${R.num(S * price, 1)} ÷ ${R.num(S)} = US$${R.num(price, 2)}. New shares = ${R.num(I)} ÷ ${R.num(price, 2)} = ${R.num(N, 3)}m. Share capital = ${R.num(N, 3)}m × US$${R.num(par, par % 1 ? 1 : 0)} = ${R.m(N * par, 2)}. Share premium = ${R.num(I)} − ${R.num(N * par, 2)} = ${R.m(this.solve(i), 1)}.`; },
+  fmt: v => R.m(v, 1)
+});
+
+// Accounting: return on equity from ROCE, the cost of debt and leverage (the leverage effect). Same redraw guard (mnaFar).
+Bank.calc("acc", {
+  lv: 3, unit: "%", tolerance: 0.1, dp: 1, prompt: "as a percentage, to 1 decimal place",
+  make() {
+    for (;;) {
+      const r = R.step(0.06, 0.15, 0.005), k = R.step(0.03, 0.09, 0.005), t = R.pick([0.21, 0.25, 0.3]), d = R.step(0.3, 1.5, 0.1);
+      const i = { r, k, t, d }, a = this.solve(i), ws = this.wrongs(i).map(w => w.value);
+      if (a <= 0.02 || ws.some(w => w <= 0.005)) continue;
+      if (mnaFar(a, ws, 0.12, 0.005)) return i;
+    }
+  },
+  solve: ({ r, k, t, d }) => r + (r - k * (1 - t)) * d,
+  wrongs: ({ r, k, t, d }) => [
+    { value: r + (r - k) * d, trap: "missed-step", note: "That uses the pre-tax cost of debt. Interest is tax-deductible, so the spread is ROCE − cost of debt × (1 − tax rate)." },
+    { value: r, trap: "concept", note: "That's ROCE. With debt in the mix, ROE moves away from ROCE by the spread × net debt ÷ equity." },
+    { value: r - (r - k * (1 - t)) * d, trap: "sign", note: "When ROCE beats the after-tax cost of debt, the leverage effect is added: debt lifts ROE." }
+  ],
+  ask: ({ r, k, t, d }) => `A company earns an after-tax return on capital employed (ROCE) of ${R.pct(r)}. Its net debt is ${R.num(d, 1)} times its book equity, its debt costs ${R.pct(k)} before tax, and the tax rate is ${R.pct(t, 0)}. What is its return on equity (ROE)?`,
+  why(i) { const { r, k, t, d } = i, kd = k * (1 - t); return `After-tax cost of debt = ${R.pct(k)} × (1 − ${R.pct(t, 0)}) = ${R.pct(kd, 2)}. ROE = ROCE + (ROCE − after-tax cost of debt) × net debt ÷ equity = ${R.pct(r)} + (${R.pct(r)} − ${R.pct(kd, 2)}) × ${R.num(d, 1)} = ${R.pct(this.solve(i))}.`; },
+  fmt: v => R.pct(v)
+});
