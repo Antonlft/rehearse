@@ -2,7 +2,8 @@
 //   node scripts/test-sprint.mjs
 // For every kind of sum: the answer matches a hand recomputation from its inputs, is non-zero and needs at most
 // 3 decimal places, the question text is clean, and the typed-answer reader accepts the right answer (and rejects
-// a clearly wrong one). Exits with code 1 if any check fails. Runs in CI before every deploy.
+// a clearly wrong one), and every number worked in each kind's "how to get faster" trick is right.
+// Exits with code 1 if any check fails. Runs in CI before every deploy.
 import { readFileSync } from "node:fs";
 import { join, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -50,6 +51,14 @@ checks++;
 for (const kind of Object.keys(Sprint.KINDS)) if (!seenKinds[kind]) fails.push(`${kind}: never generated`);
 checks++;
 if (repeats) fails.push(`the same kind came up twice in a row ${repeats} times`);
+
+// Every kind has a "how to get faster" trick, and every number worked in it is right.
+for (const [kind, k] of Object.entries(Sprint.KINDS)) {
+  checks++;
+  if (typeof k.tip !== "string" || k.tip.trim().length < 40) fails.push(`${kind}: missing its trick`);
+  if (!Array.isArray(k.checks) || !k.checks.length) { fails.push(`${kind}: its trick has no worked numbers to check`); continue; }
+  k.checks.forEach(([worked, stated], n) => { checks++; if (Math.abs(worked - stated) > 1e-9) fails.push(`${kind}: worked number ${n + 1} in the trick is ${worked}, but the trick says ${stated}`); });
+}
 
 // Spot checks worked by hand.
 const typed = (answer, unit, raw, tolerance = 0.001) => Typed.grade({ answer, unit, tolerance }, raw).ok;

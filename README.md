@@ -45,7 +45,7 @@ The version stamp makes browsers fetch matching files after each deploy. Any new
 | `site/js/generators.js`, `generators-hl.js` | Calculation questions that get new numbers every round |
 | `site/js/calculator.js` | The built-in calculator: a small expression parser (no `eval`) and its panel |
 | `site/js/widgets.js` | Interactive "Try it" widgets for the lessons |
-| `site/js/sprint.js` | The mental maths sprint's sums (8 kinds, friendly numbers); the sprint screen itself is in `app.js` |
+| `site/js/sprint.js` | The mental maths sprint's sums (8 kinds, friendly numbers) and a "how to get faster" trick for each kind; the sprint screen and results (mistakes, tricks for weak kinds, progress chart, accuracy by kind) are in `app.js` |
 | `site/js/app.js` | Everything else: categories, round building, quiz, results, saving |
 | `site/lessons/*.js` | One lesson (Learn page) per category, all listed on the Lessons page (header button) |
 | `scripts/validate-questions.mjs` | The question check |
@@ -131,7 +131,7 @@ All progress lives in one `localStorage` key, `rehearse.v3` (the light/dark choi
 | `srsExcluded` | Category IDs where spaced repetition is off |
 | `roundModes` | `{ test, practice }`: `"timed"` (default) or `"learning"`, remembered separately for the main test and one-category practice |
 | `calcPrefs` | Calculator overrides, e.g. `{ "test-timed": true }`. Defaults: off in the timed main test, on everywhere else |
-| `sprints` | The last 50 mental maths sprints: `{ at, ok, n, answered, ms, kinds: { <kind>: { n, ok } } }`. Kept apart from rounds: no effect on the answer log, spaced repetition, category accuracy or the weak-spots report. Defaulted with `\|\|= []` |
+| `sprints` | The last 50 mental maths sprints: `{ at, ok, n, answered, ms, kinds: { <kind>: { n, ok } } }`. Kept apart from rounds: no effect on the answer log, spaced repetition, category accuracy or the weak-spots report. A sprint where no sum was attempted isn't saved. Defaulted with `\|\|= []` |
 | `newFormats` | Include new question formats (typed answers, ordering, classification grids and walk-through cards) in rounds. Default `false`, defaulted with `??=`. Off means rounds are exactly as before |
 
 **Answer log (`db.log`).** One entry per *answered* question in every submitted round (skipped questions aren't logged):

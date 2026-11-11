@@ -367,7 +367,7 @@ function render() {
   // The Lessons button is hidden during a round or sprint, so it can't pull you out of one by accident.
   const lessonsLink = document.getElementById("lessonsLink");
   if (lessonsLink) {
-    lessonsLink.hidden = view.name === "quiz" || view.name === "sprint";
+    lessonsLink.hidden = view.name === "quiz" || (view.name === "sprint" && !view.result); // shown again on sprint results
     if (view.name === "lessons") lessonsLink.setAttribute("aria-current", "page"); else lessonsLink.removeAttribute("aria-current");
   }
   app.classList.toggle("wide", view.name === "lessons"); // the lessons grid uses the full header width
@@ -1104,7 +1104,7 @@ function renderSprint() {
     if (!skipped && !raw) { fb.textContent = "Type an answer, or press Skip."; input.focus(); return; }
     if (!skipped && !Typed.readings(raw, cur.unit).length) { fb.textContent = "That doesn't read as a number."; input.focus(); return; }
     const ok = !skipped && Typed.grade(cur, raw).ok;
-    sprint.items.push({ kind: cur.kind, ok, skipped, ms: Date.now() - sprint.curStart });
+    sprint.items.push({ kind: cur.kind, ok, skipped, ms: Date.now() - sprint.curStart, q: cur.q, given: skipped ? null : raw, answer: sprintAnswer(cur) });
     sprint.lock = true;
     fb.className = "typed-hint sprint-fb " + (ok ? "ok" : "no");
     fb.textContent = ok ? "✓ Right" : `✗ ${skipped ? "Skipped" : "Not quite"}. The answer is ${sprintAnswer(cur)}.`;
@@ -1135,15 +1135,44 @@ function finishSprint() {
   for (const i of items) { const k = (kinds[i.kind] ||= { n: 0, ok: 0 }); k.n++; if (i.ok) k.ok++; }
   const result = { at: Date.now(), ok: items.filter(i => i.ok).length, n: items.length, answered: items.filter(i => !i.skipped).length, ms: Sprint.MS, kinds };
   const prevBest = sprintBest();
-  db.sprints = [...db.sprints, result].slice(-SPRINT_KEEP);
-  persist();
-  go({ name: "sprint", result, prevBest });
+  if (result.n) { db.sprints = [...db.sprints, result].slice(-SPRINT_KEEP); persist(); } // a sprint with no sums attempted isn't saved
+  // The mistakes list uses this sprint's questions, which aren't saved (only the counts in db.sprints are).
+  go({ name: "sprint", result, prevBest, mistakes: items.filter(i => !i.ok) });
+}
+
+// Progress chart: one bar per sprint (sums answered: right in green, wrong in red) and a line for accuracy.
+function sprintChart(runs) {
+  const W = 340, H = 190, L = 30, R = 34, T = 12, B = 26, n = runs.length;
+  const maxY = Math.max(5, Math.ceil(Math.max(...runs.map(r => r.answered)) / 5) * 5);
+  const plotW = W - L - R, plotH = H - T - B, slot = plotW / n, bw = Math.min(14, slot * 0.6);
+  const y = v => T + plotH - v / maxY * plotH, yAcc = a => T + plotH - a * plotH, x = k => L + slot * (k + 0.5);
+  const acc = runs.map(r => r.answered ? r.ok / r.answered : null); // null: nothing answered, so no accuracy point
+  const label = k => k === 0 || k === n - 1 || (k + 1) % 5 === 0;
+  return `<svg class="w-chart sp-chart" viewBox="0 0 ${W} ${H}" role="img" aria-label="${esc(`Last ${n} sprints. Latest: ${runs[n - 1].ok} right of ${runs[n - 1].answered} answered${acc[n - 1] == null ? "" : `, ${Math.round(acc[n - 1] * 100)}% accuracy`}.`)}">
+      <line x1="${L}" x2="${W - R}" y1="${T + plotH}" y2="${T + plotH}" class="w-axis"/>
+      <text x="${L - 5}" y="${T + 4}" text-anchor="end" class="w-lbl">${maxY}</text><text x="${L - 5}" y="${T + plotH}" text-anchor="end" class="w-lbl">0</text>
+      <text x="${W - R + 5}" y="${T + 4}" class="w-lbl">100%</text><text x="${W - R + 5}" y="${T + plotH}" class="w-lbl">0%</text>
+      ${runs.map((r, k) => { const wrong = r.answered - r.ok;
+        return `<rect x="${x(k) - bw / 2}" y="${y(r.ok)}" width="${bw}" height="${Math.max(0, T + plotH - y(r.ok))}" class="w-bar total"/>
+          <rect x="${x(k) - bw / 2}" y="${y(r.answered)}" width="${bw}" height="${Math.max(0, y(r.ok) - y(r.answered))}" class="w-bar neg"/>
+          ${label(k) ? `<text x="${x(k)}" y="${H - 8}" text-anchor="middle" class="w-lbl">${k + 1}</text>` : ""}`; }).join("")}
+      ${acc.reduce((segs, a, k) => { if (a == null) segs.push([]); else segs[segs.length - 1].push(`${x(k).toFixed(1)},${yAcc(a).toFixed(1)}`); return segs; }, [[]]).filter(s => s.length > 1).map(s => `<polyline points="${s.join(" ")}" class="sp-acc"/>`).join("")}
+      ${acc.map((a, k) => a == null ? "" : `<circle cx="${x(k)}" cy="${yAcc(a)}" r="2.8" class="sp-acc-dot"/>`).join("")}
+    </svg>
+    <p class="sp-legend"><span class="sp-item"><span class="sp-key right"></span>Right</span><span class="sp-item"><span class="sp-key wrong"></span>Wrong</span><span class="sp-item"><span class="sp-key acc"></span>Accuracy (right axis)</span></p>
+    <p class="sp-legend sub">Bars show sums answered per sprint, oldest to newest.</p>`;
 }
 
 function renderSprintResults() {
   const r = view.result, best = Math.max(view.prevBest, r.ok), newBest = r.ok > view.prevBest && db.sprints.length > 1;
   const acc = r.answered ? Math.round(r.ok / r.answered * 100) : 0, per = r.n ? (r.ms / 1000 / r.n).toFixed(1) : "–";
-  const rows = Object.entries(r.kinds).map(([k, v]) => [k, v, v.ok / v.n]).sort((a, b) => a[2] - b[2] || b[1].n - a[1].n);
+  // Accuracy by kind over the last 10 sprints (this one included) decides which tricks to show, weakest first.
+  const recent = db.sprints.slice(-10), long = {};
+  for (const s of recent) for (const [k, v] of Object.entries(s.kinds || {})) { const t = (long[k] ||= { n: 0, ok: 0 }); t.n += v.n; t.ok += v.ok; }
+  const pct = v => v && v.n ? Math.round(v.ok / v.n * 100) : null;
+  const kinds = Object.keys({ ...long, ...r.kinds }).sort((a, b) => (pct(long[a]) ?? 101) - (pct(long[b]) ?? 101) || (r.kinds[b]?.n || 0) - (r.kinds[a]?.n || 0));
+  const weak = kinds.filter(k => (r.kinds[k] && r.kinds[k].ok < r.kinds[k].n) || (pct(long[k]) ?? 100) < 80);
+  const mistakes = view.mistakes || [];
   meta.innerHTML = `<button class="link" id="sprintHome" type="button">All assessments</button>`;
   app.innerHTML = `
     <div class="title-row"><div><h1>Mental maths sprint</h1><p>Results</p></div></div>
@@ -1155,9 +1184,31 @@ function renderSprintResults() {
         <li><b>${per}</b> seconds per sum</li>
         <li>Personal best <b>${best}</b></li>
       </ul>
-      ${rows.length ? `<h2 class="sprint-h">By kind of sum</h2>
-      <ul class="sprint-kinds">${rows.map(([k, v]) => `<li><span>${esc(Sprint.label(k))}</span><b>${v.ok} of ${v.n}</b></li>`).join("")}</ul>
-      <p class="muted">Weakest first. Sprints are kept separate from your rounds and weak-spots report.</p>` : `<p class="muted">No sums answered this time.</p>`}
+    </section>
+    ${mistakes.length ? `<section class="card">
+      <h2 class="sprint-h first">Your mistakes this sprint</h2>
+      <ul class="sp-mistakes">${mistakes.map(m => `<li>
+        <span class="sp-q">${esc(m.q)}</span>
+        <span class="sp-a">${m.given == null ? "Skipped" : `You: <b class="no">${esc(m.given)}</b>`} · Answer: <b class="ok">${esc(m.answer)}</b></span>
+      </li>`).join("")}</ul>
+    </section>` : ""}
+    <section class="card">
+      <h2 class="sprint-h first">How to get faster</h2>
+      ${weak.length ? `<div class="sp-tips">${weak.map(k => `<div class="mblock mb-how">
+          <span class="mb-label">${esc(Sprint.label(k))}${pct(long[k]) != null ? ` · ${pct(long[k])}% right over your last ${recent.length} sprint${recent.length > 1 ? "s" : ""}` : ""}</span>
+          <p class="mb-text">${Sprint.tip(k).split("\n").map(line => `<span class="mb-line">${rich(line)}</span>`).join("")}</p>
+        </div>`).join("")}</div>`
+        : `<p class="muted">No weak spots this time. Next goal: answer more sums in the 2 minutes while keeping your accuracy.</p>`}
+    </section>
+    <section class="card">
+      <h2 class="sprint-h first">Your progress</h2>
+      ${db.sprints.length >= 2 ? sprintChart(db.sprints.slice(-20)) : `<p class="muted">Your progress chart appears after your second sprint.</p>`}
+      <h2 class="sprint-h">By kind of sum</h2>
+      <table class="sp-kinds">
+        <thead><tr><th>Kind</th><th>This sprint</th><th>Last ${recent.length} sprint${recent.length > 1 ? "s" : ""}</th></tr></thead>
+        <tbody>${kinds.map(k => `<tr><td>${esc(Sprint.label(k))}</td><td>${r.kinds[k] ? `${r.kinds[k].ok} of ${r.kinds[k].n}` : "–"}</td><td>${pct(long[k]) != null ? `<b>${pct(long[k])}%</b> <span class="muted">(${long[k].ok} of ${long[k].n})</span>` : "–"}</td></tr>`).join("")}</tbody>
+      </table>
+      <p class="muted">Weakest first. Sprints are kept separate from your rounds and weak-spots report.</p>
     </section>
     <div class="result-actions">
       <button class="btn primary lg" id="sprintAgain" type="button">Sprint again</button>
