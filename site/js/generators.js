@@ -535,3 +535,70 @@ Bank.calc("lbo", {
   },
   fmt: v => R.m(v, 1)
 });
+
+// REITs: FFO from net income, real estate D&A and a gain on a property sale. Same redraw guard as above (mnaFar).
+Bank.calc("rev", {
+  lv: 2, unit: "US$m", tolerance: 0.05, dp: 1, prompt: "in US$m, to 1 decimal place",
+  make() {
+    for (;;) {
+      const i = { NI: R.step(20, 300, 5), DA: R.step(10, 150, 5), G: R.step(5, 60, 5) };
+      if (i.NI <= i.G) continue; // keeps FFO and every wrong answer positive
+      if (mnaFar(this.solve(i), this.wrongs(i).map(w => w.value), 0.12, 0.5)) return i;
+    }
+  },
+  solve: ({ NI, DA, G }) => NI + DA - G,
+  wrongs: ({ NI, DA, G }) => [
+    { value: NI + DA, trap: "missed-step", note: "That leaves the one-off gain on the property sale in. FFO takes it out." },
+    { value: NI + DA + G, trap: "sign", note: "The gain is already in net income and is one-off, so it's deducted, not added." },
+    { value: NI - G, trap: "missed-step", note: "That forgets to add back real estate depreciation, the main FFO adjustment." }
+  ],
+  ask: ({ NI, DA, G }) => `A REIT reports net income of ${R.m(NI)}. That's after ${R.m(DA)} of real estate depreciation and amortisation, and includes a ${R.m(G)} gain on selling a property. What is its FFO?`,
+  why(i) { const { NI, DA, G } = i; return `FFO = net income + real estate depreciation − gains on property sales = ${R.num(NI)} + ${R.num(DA)} − ${R.num(G)} = ${R.m(this.solve(i), 1)}.`; },
+  fmt: v => R.m(v, 1)
+});
+
+// REITs: NAV per share from NOI, a market cap rate, cash, debt and the share count.
+Bank.calc("rev", {
+  lv: 2, tolerance: 0.01, dp: 2, prompt: "in US$ per share, to 2 decimal places",
+  make() {
+    for (;;) {
+      const NOI = R.step(20, 200, 2), cap = R.step(0.04, 0.08, 0.0025), GAV = NOI / cap;
+      const D = Math.round(GAV * R.step(0.25, 0.55, 0.05) / 10) * 10, C = R.step(10, 200, 5), SH = R.step(20, 300, 5);
+      const i = { NOI, cap, D, C, SH };
+      if (GAV + C - D <= 0) continue;
+      if (mnaFar(this.solve(i), this.wrongs(i).map(w => w.value), 0.12, 0.05)) return i;
+    }
+  },
+  solve: ({ NOI, cap, D, C, SH }) => (NOI / cap + C - D) / SH,
+  wrongs: ({ NOI, cap, D, C, SH }) => [
+    { value: (NOI / cap + C) / SH, trap: "missed-step", note: "That ignores the debt, which ranks ahead of shareholders." },
+    { value: (NOI / cap - D) / SH, trap: "missed-step", note: "That leaves out the cash, which belongs to shareholders too." },
+    { value: (NOI / cap - D - C) / SH, trap: "sign", note: "Cash is an asset, so it's added, not deducted." }
+  ],
+  ask: ({ NOI, cap, D, C, SH }) => `A REIT's properties produce NOI of ${R.m(NOI)}, and similar assets trade at a ${R.pct(cap, 2)} cap rate. It has ${R.m(D)} of debt, ${R.m(C)} of cash and ${SH}m shares. What is its NAV per share?`,
+  why(i) { const { NOI, cap, D, C, SH } = i, G = NOI / cap; return `Property value = ${NOI} ÷ ${R.pct(cap, 2)} = ${R.m(G, 1)}. NAV = ${R.num(G, 1)} + ${R.num(C)} − ${R.num(D)} = ${R.m(G + C - D, 1)}. Per share = ${R.num(G + C - D, 1)} ÷ ${SH} = ${R.usd2(this.solve(i))}.`; },
+  fmt: v => R.usd2(v)
+});
+
+// REITs: the cap rate implied by the share price, excluding non-income assets such as development land.
+Bank.calc("rev", {
+  lv: 3, unit: "%", tolerance: 0.05, dp: 2, prompt: "as a percentage, to 2 decimal places",
+  make() {
+    for (;;) {
+      const P = R.step(10, 80, 0.5), SH = R.step(50, 400, 5), MC = P * SH;
+      const ND = Math.round(MC * R.step(0.4, 1, 0.05) / 10) * 10, L = Math.round((MC + ND) * R.step(0.13, 0.25, 0.01) / 5) * 5;
+      const NOI = Math.round((MC + ND - L) * R.step(0.045, 0.08, 0.0025) * 10) / 10;
+      const i = { P, SH, ND, L, NOI };
+      if (mnaFar(this.solve(i), this.wrongs(i).map(w => w.value), 0.12, 0.002)) return i;
+    }
+  },
+  solve: ({ P, SH, ND, L, NOI }) => NOI / (P * SH + ND - L),
+  wrongs: ({ P, SH, ND, L, NOI }) => [
+    { value: NOI / (P * SH), trap: "missed-step", note: "That divides by the equity value only. The properties are funded by debt as well as equity." },
+    { value: NOI / (P * SH + ND), trap: "missed-step", note: "That includes the development land, which produces no NOI. Take it out before working out the yield on the let property." },
+    { value: NOI / (P * SH + ND + L), trap: "sign", note: "The land's value is deducted to isolate the let property, not added." }
+  ],
+  ask: ({ P, SH, ND, L, NOI }) => `A REIT has ${SH}m shares trading at US$${R.num(P, 2)} and net debt of ${R.m(ND)}. Besides its let properties, which produce NOI of ${R.m(NOI, 1)}, it owns development land worth ${R.m(L)} that produces no income. What cap rate is the share price implying for the let properties?`,
+  why(i) { const { P, SH, ND, L, NOI } = i, MC = P * SH, V = MC + ND - L; return `Market cap = ${SH} × ${R.num(P, 2)} = ${R.m(MC, 1)}. Implied value of the let properties = ${R.num(MC, 1)} + ${R.num(ND)} − ${R.num(L)} = ${R.m(V, 1)}. Implied cap rate = ${R.num(NOI, 1)} ÷ ${R.num(V, 1)} = ${R.pct(this.solve(i), 2)}.`; },
+  fmt: v => R.pct(v, 2)
+});
