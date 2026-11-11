@@ -602,3 +602,69 @@ Bank.calc("rev", {
   why(i) { const { P, SH, ND, L, NOI } = i, MC = P * SH, V = MC + ND - L; return `Market cap = ${SH} × ${R.num(P, 2)} = ${R.m(MC, 1)}. Implied value of the let properties = ${R.num(MC, 1)} + ${R.num(ND)} − ${R.num(L)} = ${R.m(V, 1)}. Implied cap rate = ${R.num(NOI, 1)} ÷ ${R.num(V, 1)} = ${R.pct(this.solve(i), 2)}.`; },
   fmt: v => R.pct(v, 2)
 });
+
+// Credit: approximate yield to maturity. Same redraw guard as above (mnaFar); every value stays positive.
+Bank.calc("credit", {
+  lv: 2, unit: "%", tolerance: 0.05, dp: 2, prompt: "as a percentage, to 2 decimal places",
+  make() {
+    for (;;) {
+      const c = R.step(0.03, 0.1, 0.0025), P = R.step(70, 125, 0.5), n = R.int(2, 15);
+      const i = { c, P, n };
+      if (Math.abs(P - 100) < 3 || [this.solve(i), ...this.wrongs(i).map(w => w.value)].some(v => v <= 0.005)) continue;
+      if (mnaFar(this.solve(i), this.wrongs(i).map(w => w.value), 0.12, 0.002)) return i;
+    }
+  },
+  solve: ({ c, P, n }) => (c * 100 + (100 - P) / n) / ((100 + P) / 2),
+  wrongs: ({ c, P, n }) => [
+    { value: c * 100 / P, trap: "missed-step", note: `That's the current yield. It ignores the ${P < 100 ? "gain" : "loss"} as the price moves to 100 by maturity.` },
+    { value: c, trap: "wrong-measure", note: "That's the coupon rate. The yield depends on the price paid." },
+    { value: (c * 100 - (100 - P) / n) / ((100 + P) / 2), trap: "sign", note: `The ${P < 100 ? "discount is a gain, so it's added" : "premium is a loss, so it's deducted"} each year, not the other way round.` }
+  ],
+  ask: ({ c, P, n }) => `A bond with a ${R.pct(c, 2)} annual coupon and ${n} years to maturity trades at ${R.num(P, 1)}. Using the approximation (coupon + (100 − price) ÷ years) ÷ ((100 + price) ÷ 2), what is its yield to maturity?`,
+  why(i) { const { c, P, n } = i; return `Annual coupon = ${R.num(c * 100, 2)}; pull to par = (100 − ${R.num(P, 1)}) ÷ ${n} = ${P > 100 ? "−" : ""}${R.num(Math.abs(100 - P) / n, 2)} a year. Average price = (100 + ${R.num(P, 1)}) ÷ 2 = ${R.num((100 + P) / 2, 2)}. YTM ≈ (${R.num(c * 100, 2)} ${P < 100 ? "+" : "−"} ${R.num(Math.abs(100 - P) / n, 2)}) ÷ ${R.num((100 + P) / 2, 2)} = ${R.pct(this.solve(i), 2)}.`; },
+  fmt: v => R.pct(v, 2)
+});
+
+// Credit: annual cost of a revolving credit facility.
+Bank.calc("credit", {
+  lv: 2, unit: "US$m", tolerance: 0.01, dp: 2, prompt: "in US$m, to 2 decimal places",
+  make() {
+    for (;;) {
+      const K = R.step(100, 1000, 25), D = Math.round(K * R.step(0.1, 0.6, 0.05) / 5) * 5, b = R.step(0.03, 0.055, 0.0025), m = R.step(0.015, 0.04, 0.0025), f = R.pick([0.0025, 0.00375, 0.005]);
+      const i = { K, D, b, m, f };
+      if (D <= 0) continue;
+      if (mnaFar(this.solve(i), this.wrongs(i).map(w => w.value), 0.12, 0.05)) return i;
+    }
+  },
+  solve: ({ K, D, b, m, f }) => D * (b + m) + (K - D) * f,
+  wrongs: ({ K, D, b, m, f }) => [
+    { value: D * (b + m), trap: "missed-step", note: "That leaves out the commitment fee on the undrawn part of the facility." },
+    { value: K * (b + m), trap: "wrong-measure", note: "Interest is charged only on the amount drawn, not on the whole facility." },
+    { value: D * m + (K - D) * f, trap: "missed-step", note: "That charges only the margin. Interest is the base rate plus the margin." }
+  ],
+  ask: ({ K, D, b, m, f }) => `A company has a ${R.m(K)} revolver and has drawn ${R.m(D)} for the whole year. Drawn amounts pay SOFR + ${R.pct(m, 2)}, with SOFR at ${R.pct(b, 2)}, and the undrawn amount pays a ${R.pct(f, 3)} commitment fee. What is the facility's annual cost?`,
+  why(i) { const { K, D, b, m, f } = i; return `Interest = ${R.num(D)} × (${R.pct(b, 2)} + ${R.pct(m, 2)}) = ${R.m(D * (b + m), 2)}. Commitment fee = (${R.num(K)} − ${R.num(D)}) × ${R.pct(f, 3)} = ${R.m((K - D) * f, 2)}. Total = ${R.m(this.solve(i), 2)}.`; },
+  fmt: v => R.m(v, 2)
+});
+
+// Credit: availability under an asset-based loan (ABL).
+Bank.calc("credit", {
+  lv: 2, unit: "US$m", tolerance: 0.05, dp: 1, prompt: "in US$m, to 1 decimal place",
+  make() {
+    for (;;) {
+      const AR = R.step(50, 500, 10), INV = R.step(50, 500, 10), a = R.pick([0.8, 0.85, 0.9]), bi = R.pick([0.5, 0.55, 0.6, 0.65]);
+      const base = AR * a + INV * bi, DR = Math.round(base * R.step(0.15, 0.6, 0.05) / 5) * 5;
+      const i = { AR, INV, a, bi, DR };
+      if (mnaFar(this.solve(i), this.wrongs(i).map(w => w.value), 0.12, 0.5)) return i;
+    }
+  },
+  solve: ({ AR, INV, a, bi, DR }) => AR * a + INV * bi - DR,
+  wrongs: ({ AR, INV, a, bi, DR }) => [
+    { value: AR + INV - DR, trap: "missed-step", note: "That ignores the advance rates. Lenders lend only a percentage of each type of collateral." },
+    { value: (AR + INV) * a - DR, trap: "wrong-measure", note: "That applies the receivables advance rate to inventory too. Inventory is harder to turn into cash, so its rate is lower." },
+    { value: AR * a + INV * bi, trap: "missed-step", note: "That's the whole borrowing base. The amount already drawn has to come off it." }
+  ],
+  ask: ({ AR, INV, a, bi, DR }) => `An ABL lends ${R.pct(a, 0)} against eligible receivables and ${R.pct(bi, 0)} against eligible inventory, and the facility limit is above the borrowing base. The company has ${R.m(AR)} of eligible receivables, ${R.m(INV)} of eligible inventory and has already drawn ${R.m(DR)}. How much more can it borrow?`,
+  why(i) { const { AR, INV, a, bi, DR } = i; return `Borrowing base = ${R.pct(a, 0)} × ${AR} + ${R.pct(bi, 0)} × ${INV} = ${R.m(AR * a, 1)} + ${R.m(INV * bi, 1)} = ${R.m(AR * a + INV * bi, 1)}. Available = ${R.num(AR * a + INV * bi, 1)} − ${R.num(DR)} = ${R.m(this.solve(i), 1)}.`; },
+  fmt: v => R.m(v, 1)
+});
