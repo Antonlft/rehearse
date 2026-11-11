@@ -2,24 +2,24 @@
 const STORE_KEY = "rehearse.v3";
 const GEN_SHARE = 0.25;
 const CATEGORIES = [
-  { id: "fig", name: "Financial institutions (FIG)", desc: "Banks, insurers and asset managers: capital, margins and valuation" },
-  { id: "val", name: "Valuation", desc: "Multiples, the EV bridge, DCF and terminal value" },
-  { id: "mna", name: "M&A process & documents", desc: "Auctions, LOIs, SPAs, deal protection, accretion/dilution" },
-  { id: "lbo", name: "LBO & private equity", desc: "Returns, leverage, fund economics and exits" },
+  { id: "fig", name: "Financial institutions (FIG)", desc: "Financial institutions group (FIG): banks, insurers and asset managers, their capital, margins and valuation" },
+  { id: "val", name: "Valuation", desc: "Multiples, the bridge from enterprise value (EV) to equity value, discounted cash flow (DCF) and terminal value" },
+  { id: "mna", name: "M&A process & documents", desc: "Mergers and acquisitions (M&A): auctions, letters of intent (LOIs), share purchase agreements (SPAs), deal protection, accretion/dilution" },
+  { id: "lbo", name: "LBO & private equity", desc: "Leveraged buyouts (LBOs): returns, leverage, fund economics and exits" },
   { id: "rx", name: "Restructuring", desc: "Priority of claims, Chapter 11, schemes and liability management" },
-  { id: "acc", name: "Accounting & statements", desc: "The three statements, working capital and key IFRS rules" },
+  { id: "acc", name: "Accounting & statements", desc: "The three statements, working capital and key International Financial Reporting Standards (IFRS) rules" },
   { id: "cf", name: "Corporate finance", desc: "Cost of capital, capital structure and payout policy" },
   { id: "credit", name: "Credit & debt", desc: "Covenants, ratings, bonds and seniority" },
-  { id: "cm", name: "ECM & DCM", desc: "IPOs, rights issues, block trades, convertibles and bond issuance" },
-  { id: "maths", name: "Quick maths", desc: "CAGR, discounting, perpetuities, breakevens and basis points" },
+  { id: "cm", name: "ECM & DCM", desc: "Equity and debt capital markets (ECM, DCM): initial public offerings (IPOs), rights issues, block trades, convertibles and bond issuance" },
+  { id: "maths", name: "Quick maths", desc: "Compound annual growth rate (CAGR), discounting, perpetuities, breakevens and basis points" },
   { id: "bt", name: "Brain teasers", desc: "Probability, logic puzzles and mental arithmetic" },
-  { id: "econ", name: "Economics & markets", desc: "Rates, inflation, FX and the macro cycle" },
-  { id: "hk", group: "hl", name: "Hotel economics & KPIs", desc: "Occupancy, ADR, RevPAR, TRevPAR, GOP, GOPPAR and EBITDA(R)" },
-  { id: "hom", group: "hl", name: "Hotel operating models", desc: "Lease vs management vs franchise, OpCo/PropCo and fee structures" },
-  { id: "rev", group: "hl", name: "Real estate valuation", desc: "Yields, price per key and bed, NOI vs EBITDA(R), DCF and exit yields, REITs, FFO and NAV" },
-  { id: "liv", group: "hl", name: "Living sectors: PBSA, BTR, co-living", desc: "How each works, income stability, key metrics and valuation drivers" },
-  { id: "pf", group: "hl", name: "Property finance & rates", desc: "LTV, ICR, DSCR, debt yield, swaps, SONIA and leverage" },
-  { id: "hds", group: "hl", name: "Hospitality & living deal structuring", desc: "Sale process, asset vs share deals, leasebacks, JVs, forward funding" }
+  { id: "econ", name: "Economics & markets", desc: "Rates, inflation, foreign exchange (FX) and the macro cycle" },
+  { id: "hk", group: "hl", name: "Hotel economics & KPIs", desc: "Key performance indicators (KPIs): occupancy, average daily rate (ADR), revenue per available room (RevPAR), gross operating profit (GOP) and earnings before interest, tax, depreciation and amortisation (EBITDA)" },
+  { id: "hom", group: "hl", name: "Hotel operating models", desc: "Lease vs management vs franchise, operating and property company (OpCo/PropCo) splits, and fee structures" },
+  { id: "rev", group: "hl", name: "Real estate valuation", desc: "Yields, price per key and bed, net operating income (NOI), discounted cash flow (DCF) and exit yields, and real estate investment trusts (REITs)" },
+  { id: "liv", group: "hl", name: "Living sectors: PBSA, BTR, co-living", desc: "Purpose-built student accommodation (PBSA), build-to-rent (BTR) and co-living: how each works, its income and its valuation" },
+  { id: "pf", group: "hl", name: "Property finance & rates", desc: "Loan-to-value (LTV), interest cover (ICR) and debt service cover (DSCR) ratios, debt yield, swaps, benchmark rates and leverage" },
+  { id: "hds", group: "hl", name: "Hospitality & living deal structuring", desc: "Sale process, asset vs share deals, leasebacks, joint ventures (JVs), forward funding" }
 ];
 CATEGORIES.forEach(c => c.group ||= "fin");
 const GROUPS = [{ id: "fin", name: "Finance & accounting" }, { id: "hl", name: "Hospitality & living" }];
