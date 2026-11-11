@@ -396,6 +396,16 @@ main { padding-block: 30px 48px; }
 
 /* Typed-answer questions */
 .typed { display: grid; gap: 6px; }
+/* Case studies: linked typed steps */
+.case { display: grid; gap: 10px; }
+.case-note { margin: 0; font-size: 13px; color: var(--muted); }
+.case-steps { list-style: none; margin: 0; padding: 0; display: grid; gap: 12px; }
+.case-step { display: grid; gap: 8px; padding: 12px 14px; border: 1px solid var(--rule); border-radius: 6px; }
+.case-step.open { border-color: var(--navy); }
+.case-step .feedback { margin: 0; }
+.case { margin-bottom: 14px; }
+.case-q { margin: 0; font-size: 15px; line-height: 1.45; }
+.case-num { display: block; margin-bottom: 2px; font-size: 12px; font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase; color: var(--muted); }
 .typed-row { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
 .typed-input { width: 12em; max-width: 100%; padding: 10px 12px; border: 1px solid var(--rule-strong); border-radius: 5px; background: var(--page); color: var(--ink); font: 500 16px/1.3 var(--font); }
 .typed-input:focus { outline: 2px solid var(--navy); outline-offset: 1px; border-color: var(--navy); }

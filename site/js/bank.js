@@ -3,6 +3,7 @@ window.Bank = {
   gens: {},
   numeric: {}, // typed-answer calculation questions, only used when "new formats" is switched on
   formats: {}, // written questions in new formats (e.g. ordering), only used when "new formats" is switched on
+  cases: {},   // multi-step case studies (linked typed steps), only used when "new formats" is switched on
   add(cat, list) { (this.written[cat] ||= []).push(...list); },
   addFormat(cat, list) { (this.formats[cat] ||= []).push(...list); },
   gen(cat, fn) { (this.gens[cat] ||= []).push(fn); },
@@ -12,7 +13,7 @@ window.Bank = {
        wrongs(i)   → three known wrong answers [{ value, note, trap }], in the same plain units,
        ask(i), why(i) → question and explanation text,
        fmt(v)      → how a value is shown as an option (e.g. R.pct(v, 2)),
-       unit        → "%", "x" or "US$m": what a typed answer is measured in,
+       unit        → "%", "x", "US$m", "US$" (plain amounts) or "years": what a typed answer is measured in,
        tolerance   → how far a typed answer may be from the right one, in typed units (e.g. 0.05 = 0.05 percentage points),
        prompt      → how to type it, e.g. "to 2 decimal places", dp → decimal places for showing the answer, lv }
      The multiple-choice version is registered exactly where a plain Bank.gen would be, and is identical to one;
@@ -30,12 +31,32 @@ window.Bank = {
         q: `${spec.ask(i)} Type your answer${spec.prompt ? " " + spec.prompt : ""}.`, answer: toUnit(spec.solve(i)), why: spec.why(i),
         wrongs: spec.wrongs(i).map(x => ({ value: toUnit(x.value), note: x.note, trap: x.trap || null })) };
     });
+  },
+  /* Multi-step case study: a scenario and 3–8 linked typed steps, checked one at a time. spec = {
+       lv, make() → inputs (all randomness here; round any figure a later step quotes, so it matches what's shown),
+       intro(i) → the scenario,
+       steps: [{ ask(i), solve(i), unit, dp, tolerance, prompt, why(i), wrongs?(i) → [{ value, note, trap }] }] }
+     Later steps quote the right figures from earlier ones, so one slip doesn't spoil the rest. Known wrong answers
+     closer than 12% to the right one (or within the tolerance) are dropped: they'd be read as slips or as right. */
+  case(cat, spec) {
+    (this.cases[cat] ||= []).push(() => {
+      const i = spec.make();
+      return { type: "case", ...(spec.lv ? { lv: spec.lv } : {}), q: spec.intro(i), why: spec.why ? spec.why(i) : "Each step builds on the right answer to the one before.",
+        steps: spec.steps.map(s => {
+          const toUnit = v => s.unit === "%" ? v * 100 : v, answer = toUnit(s.solve(i));
+          return { q: s.ask(i) + (s.prompt ? ` Type your answer ${s.prompt}.` : ""), unit: s.unit, tolerance: s.tolerance, ...(s.dp != null ? { dp: s.dp } : {}),
+            answer, why: s.why(i),
+            wrongs: (s.wrongs ? s.wrongs(i) : []).map(x => ({ value: toUnit(x.value), note: x.note, trap: x.trap || null }))
+              .filter(w => Math.abs(w.value - answer) > Math.max(0.12 * Math.abs(answer), s.tolerance)) };
+        }) };
+    });
   }
 };
 
 /* Typed answers: read what someone typed and grade it.
-   Accepts spaces, thousands commas, a minus sign (− or -), fractions ("3/4"), "%", a trailing "x", and for money
-   "US$", "$", "m", "bn", "k". Ambiguous bare numbers are read both ways and the closer reading counts:
+   Accepts spaces, thousands commas, a minus sign (− or -), fractions ("3/4"), "%", a trailing "x", for money
+   "US$", "$", "m", "bn", "k", and for years a trailing "years" / "yrs" / "y". Units: "%", "x", "US$m" (millions),
+   "US$" (plain amounts such as a price per share or per room) and "years". Ambiguous bare numbers are read both ways and the closer reading counts:
    on a % question "0.125" and "12.5" both mean 12.5%; on a US$m question "1,200,000" and "1.2" both mean US$1.2m. */
 window.Typed = {
   // All sensible readings of the input, in the question's units. [] if it isn't a number at all.
@@ -50,6 +71,11 @@ window.Typed = {
       const m = /(bn|b|mn|m|k)$/.exec(s);
       if (m) { scale = { bn: 1000, b: 1000, mn: 1, m: 1, k: 0.001 }[m[1]]; s = s.slice(0, -m[1].length); }
     }
+    else if (unit === "US$") { // plain amounts: "350k" = 350,000; "1.2m" = 1,200,000
+      const m = /(bn|b|mn|m|k)$/.exec(s);
+      if (m) { scale = { bn: 1e9, b: 1e9, mn: 1e6, m: 1e6, k: 1e3 }[m[1]]; s = s.slice(0, -m[1].length); }
+    }
+    else if (unit === "years") s = s.replace(/(years|year|yrs|yr|y)$/, "");
     const n = /^(-?)(\d+\.?\d*|\.\d+)(?:\/(\d+\.?\d*|\.\d+))?$/.exec(s);
     if (!n) return [];
     let v = parseFloat(n[2]) / (n[3] ? parseFloat(n[3]) : 1);
@@ -57,6 +83,7 @@ window.Typed = {
     if (!Number.isFinite(v)) return [];
     if (unit === "%") return pct ? [v] : [v, v * 100];
     if (unit === "US$m") return scale !== null ? [v * scale] : [v, v / 1e6];
+    if (unit === "US$") return scale !== null ? [v * scale] : [v];
     return [v];
   },
   // { ok, value (the reading used), cause, trap, note } for a numeric question item.
@@ -75,6 +102,8 @@ window.Typed = {
   // How a typed-units value is shown, e.g. 8.42 with unit "%" → "8.42%". dp rounds to that many decimal places.
   show(v, unit, dp) {
     const s = (dp != null ? v.toFixed(dp) : String(Number(v.toPrecision(10)))).replace("-", "−");
+    if (unit === "US$") { const n = Number(dp != null ? v.toFixed(dp) : v.toPrecision(10)); return (n < 0 ? "−" : "") + "US$" + Math.abs(n).toLocaleString("en-US", { minimumFractionDigits: dp ?? 0, maximumFractionDigits: dp ?? 6 }); }
+    if (unit === "years") return s + (s === "1" ? " year" : " years");
     return unit === "%" ? s + "%" : unit === "x" ? s + "x" : unit === "US$m" ? "US$" + s + "m" : s;
   }
 };

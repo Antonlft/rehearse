@@ -115,7 +115,11 @@ db.sprints ||= [];
 //  13: added db.formatsOnly (default false, ??=): with newFormats on, rounds use only the new formats.
 //      Question style on the home page: Classic = newFormats off; Mixed = on; New formats only = on + formatsOnly.
 db.formatsOnly ??= false;
-const SCHEMA_VERSION = 13;
+//  14: multi-step case studies (new formats only): a round's answers[] can hold a list of typed answers, one per step
+//      (null for steps not answered), a round in progress can have caseDone[] (how many steps of each case have been
+//      checked), and their answer log entries have type: "case", given (each step's reading, or null) and stepsRight,
+//      plus cause / trap from the first wrong step. A case counts as correct only if every step is. No new top-level fields.
+const SCHEMA_VERSION = 14;
 db.schemaVersion = Math.max(db.schemaVersion || 1, SCHEMA_VERSION);
 let saveWarned = false;
 const persist = () => {
@@ -157,15 +161,18 @@ const formatQs = cat => db.newFormats ? (Bank.formats[cat] || []) : [];
 // Walk-through cards only ever replace a question (at most one per 10 in a round), so they never add to capacity.
 const capacity = cat => gens(cat).length ? Infinity : written(cat).length + formatQs(cat).filter(q => q.type !== "walk").length;
 const WALK_EVERY = 10; // at most one walk-through card per this many questions in a round
+const CASE_EVERY = 10; // at most one case study per this many questions in a round
+const CASE_SHARE = 0.5; // with new formats on, chance that a calculation slot in a category with cases becomes a case
+const casesOf = cat => Bank.cases[cat] || [];
 const onlyNew = () => db.newFormats && db.formatsOnly; // "New formats only" question style
 const styleOf = () => !db.newFormats ? "classic" : db.formatsOnly ? "new" : "mixed";
 const STYLES = [
   ["classic", "Classic", "Multiple choice, including calculation questions."],
-  ["mixed", "Mixed", "Multiple choice plus the new formats: typed answers, ordering, classification grids and walk-through cards."],
-  ["new", "New formats only", "Only typed answers, ordering, classification grids and walk-through cards. Rounds are shorter where a category has few of them."]
+  ["mixed", "Mixed", "Multiple choice plus the new formats: typed answers, ordering, classification grids, walk-through cards and case studies."],
+  ["new", "New formats only", "Only typed answers, ordering, classification grids, walk-through cards and case studies. Rounds are shorter where a category has few of them."]
 ];
-// How many new-format questions a category can supply to one round (walk-through cards count once).
-const newCount = cat => { const f = Bank.formats[cat] || []; return f.filter(q => q.type !== "walk").length + (f.some(q => q.type === "walk") ? 1 : 0) + (Bank.numeric[cat] || []).length; };
+// How many new-format questions a category can supply to one round (walk-through cards and case studies count once).
+const newCount = cat => { const f = Bank.formats[cat] || []; return f.filter(q => q.type !== "walk").length + (f.some(q => q.type === "walk") ? 1 : 0) + (Bank.numeric[cat] || []).length + (casesOf(cat).length ? 1 : 0); };
 
 /* Round building */
 function generated(fn) {
@@ -206,9 +213,21 @@ function typedItem(fn, cat) {
   return { cat, id: null, gen: true, ...g };
 }
 
+// A case study, ready for a round (new numbers each time, like typed calculations).
+function caseItem(fn, cat) {
+  let g;
+  for (let k = 0; k < 30; k++) { g = fn(); if (g.steps.every(s => Number.isFinite(s.answer))) break; }
+  return { cat, id: null, gen: true, ...g };
+}
+
 /* Grading: the one place that decides whether an answer is right, for every question format. */
 const isBlank = a => a === null || a === undefined || a === "";
 function grade(it, ans) {
+  if (it.type === "case") { // right only if every step is right; right = steps right, steps = each step's grade
+    const steps = it.steps.map((s, k) => { const raw = Array.isArray(ans) ? ans[k] : null; return isBlank(raw) ? { ok: false, blank: true, value: null } : Typed.grade(s, raw); });
+    const right = steps.filter(s => s.ok).length;
+    return { ok: right === steps.length, right, steps, ...(isBlank(ans) ? { blank: true } : {}) };
+  }
   if (isBlank(ans)) return { ok: false, blank: true };
   if (it.type === "numeric") return Typed.grade(it, ans); // { ok, value, cause, trap, note, unreadable }
   if (it.type === "order") { // only the exact sequence is right; placed = steps in the right position
@@ -223,7 +242,7 @@ function grade(it, ans) {
   return { ok: ans === it.a };
 }
 // Learning mode reveals an answer once it's final: multiple choice on click, typed answers on "Check".
-const needsCheck = it => it.type === "numeric" || it.type === "order" || it.type === "grid";
+const needsCheck = it => it.type === "numeric" || it.type === "order" || it.type === "grid" || it.type === "case"; // cases are checked step by step (caseDone)
 const isRevealed = (at, i) => !!at.learning && !isBlank(at.answers[i]) && (!needsCheck(at.items[i]) || !!(at.checked && at.checked[i]));
 const causeText = g => g.unreadable ? "Your answer couldn't be read as a number."
   : g.note ? g.note
@@ -270,6 +289,14 @@ function draw(cat, used) {
       return materialize(q, cat);
     }
   }
+  // New formats: a calculation slot can become a case study, at most one per CASE_EVERY questions. Categories without
+  // cases (and rounds with new formats off) skip this entirely, without drawing a random number.
+  const freshCase = db.newFormats && used.caseLeft > 0 ? casesOf(cat).filter(fn => !used.has(fn)) : [];
+  if (freshCase.length && Math.random() < CASE_SHARE) {
+    const cf = pick(freshCase);
+    used.add(cf); used.caseLeft--;
+    return caseItem(cf, cat);
+  }
   // New formats: some calculation slots become typed-answer questions. Skipped entirely when switched off.
   // Each typed calculation is used at most once per round, so a category with only one doesn't repeat it.
   const freshTyped = db.newFormats ? (Bank.numeric[cat] || []).filter(fn => !used.has(fn)) : [];
@@ -303,12 +330,12 @@ function allocate(cats, n) {
 // categories in turn, due (spaced repetition) questions first, walk-through cards capped at one per 10 questions.
 function buildRoundNew(mode, cats) {
   const n = modeInfo(mode).n, now = Date.now();
-  let walksLeft = Math.floor(n / WALK_EVERY);
+  let walksLeft = Math.floor(n / WALK_EVERY), casesLeft = Math.floor(n / CASE_EVERY);
   const lists = Object.fromEntries(cats.map(cat => {
     const f = Bank.formats[cat] || [];
     const due = f.filter(q => srsOn(cat) && db.schedule[q.id] && db.schedule[q.id].dueAt <= now).sort((a, b) => db.schedule[a.id].dueAt - db.schedule[b.id].dueAt);
     const rest = shuffle(f.filter(q => !due.includes(q)));
-    return [cat, [...due.map(q => ({ q })), ...shuffle([...rest.map(q => ({ q })), ...(Bank.numeric[cat] || []).map(fn => ({ fn }))])]];
+    return [cat, [...due.map(q => ({ q })), ...shuffle([...rest.map(q => ({ q })), ...(Bank.numeric[cat] || []).map(fn => ({ fn })), ...casesOf(cat).map(cs => ({ cs }))])]];
   }));
   const items = [];
   let progressed = true;
@@ -317,7 +344,7 @@ function buildRoundNew(mode, cats) {
     for (const cat of shuffle(cats)) {
       if (items.length >= n) break;
       const list = lists[cat];
-      let k = list.findIndex(x => !(x.q && x.q.type === "walk" && walksLeft <= 0));
+      let k = list.findIndex(x => !(x.q && x.q.type === "walk" && walksLeft <= 0) && !(x.cs && casesLeft <= 0));
       if (k < 0) continue;
       const [x] = list.splice(k, 1);
       if (x.q) {
@@ -325,7 +352,8 @@ function buildRoundNew(mode, cats) {
         const seenList = (db.seen[cat] ||= []);
         if (!seenList.includes(x.q.id)) seenList.push(x.q.id);
         items.push(materialize(x.q, cat));
-      } else items.push(typedItem(x.fn, cat));
+      } else if (x.cs) { casesLeft--; items.push(caseItem(x.cs, cat)); }
+      else items.push(typedItem(x.fn, cat));
       progressed = true;
     }
   }
@@ -337,6 +365,7 @@ function buildRound(mode, cats) {
   if (onlyNew()) return buildRoundNew(mode, cats);
   const used = new Set();
   used.walkLeft = Math.floor(modeInfo(mode).n / WALK_EVERY);
+  used.caseLeft = Math.floor(modeInfo(mode).n / CASE_EVERY);
   const items = allocate(cats, modeInfo(mode).n).map(cat => draw(cat, used));
   // Single-category practice runs from basic to advanced when the category has levels. Questions without a level
   // (e.g. some calculation questions) sort as intermediate; the sort is stable, so fully levelled rounds are unchanged.
@@ -346,7 +375,7 @@ function buildRound(mode, cats) {
 
 function beginAttempt(mode, items, sub, learning = false, calc = false) {
   db.attempts[mode] = { mode, sub, items, answers: Array(items.length).fill(null), marked: Array(items.length).fill(false),
-    cur: 0, start: Date.now(), deadline: Date.now() + (learning ? LEARNING_MS : (items.length + items.filter(it => it.type === "walk").length) * 60000), ...(learning ? { learning: true } : {}), ...(calc ? { calc: true } : {}) };
+    cur: 0, start: Date.now(), deadline: Date.now() + (learning ? LEARNING_MS : (items.length + items.filter(it => it.type === "walk").length + items.reduce((s, it) => s + (it.type === "case" ? it.steps.length - 1 : 0), 0)) * 60000), ...(learning ? { learning: true } : {}), ...(calc ? { calc: true } : {}) };
   persist();
   reviewFilter = "all";
   go({ name: "quiz", mode });
@@ -356,7 +385,7 @@ function startRound(mode) {
   const cats = mode === "mixed" ? selectedCats() : [mode], learning = learningFor(mode);
   const sub = (mode === "mixed" ? `${groupLabel(cats)} · ${selectionLabel(cats)}` : "Category practice") + (learning ? " · Learning mode" : "");
   const items = buildRound(mode, cats);
-  if (!items.length) return confirmModal("No new-format questions here yet", "This category has no typed answers, ordering, grids or walk-through cards yet. Switch the question style to Classic or Mixed to practise it.", "OK", () => {}, null);
+  if (!items.length) return confirmModal("No new-format questions here yet", "This category has no typed answers, ordering, grids, walk-through cards or case studies yet. Switch the question style to Classic or Mixed to practise it.", "OK", () => {}, null);
   beginAttempt(mode, items, sub + (onlyNew() ? " · New formats only" : ""), learning, calcFor(mode));
 }
 
@@ -373,6 +402,7 @@ function startRetry(items) {
     if (it.type === "order") return { ...it, start: orderStart(it.answer.length) }; // a fresh starting order
     if (it.type === "grid") return { ...it, rowOrder: shuffle([...it.rows.keys()]) }; // rows in a new order
     if (it.type === "walk") return { ...it }; // walk-through cards are asked again as they are
+    if (it.type === "case") return { ...it }; // case studies too, with the same numbers
     const wrong = [0, 1, 2, 3].filter(j => j !== it.a);
     return materialize({ id: it.id, gen: it.gen, lv: it.lv, q: it.q, why: it.why,
       o: [it.o[it.a], ...wrong.map(j => it.o[j])], x: wrong.map(j => it.x[j]),
@@ -698,9 +728,9 @@ function renderQuiz() {
         : `<div class="timer" id="timer" role="timer"><span>Time left</span><strong id="clock">${fmt(at.deadline - Date.now())}</strong></div>`}
     </div>
     <section class="card question" aria-labelledby="qtext">
-      <p class="label">${esc(catById(it.cat).name)} · Question ${at.cur + 1} of ${n}${it.lv ? ` · ${LEVELS[it.lv]}` : ""}</p>
+      <p class="label">${esc(catById(it.cat).name)} · Question ${at.cur + 1} of ${n}${it.lv ? ` · ${LEVELS[it.lv]}` : ""}${it.type === "case" ? ` · Case study, ${it.steps.length} steps` : ""}</p>
       <p class="prompt" id="qtext">${esc(it.q)}</p>
-      ${it.type === "numeric" ? typedArea(at, it, ans, revealed) : it.type === "order" ? orderArea(at, it, ans, revealed) : it.type === "grid" ? gridArea(at, it, ans, revealed) : it.type === "walk" ? walkArea(at, it, ans, revealed) : `
+      ${it.type === "numeric" ? typedArea(at, it, ans, revealed) : it.type === "order" ? orderArea(at, it, ans, revealed) : it.type === "grid" ? gridArea(at, it, ans, revealed) : it.type === "walk" ? walkArea(at, it, ans, revealed) : it.type === "case" ? caseArea(at, it, ans) : `
       <div class="options" role="radiogroup" aria-labelledby="qtext">
         ${it.o.map((o, i) => `<button type="button" class="opt${optClass(i)}" role="radio" aria-checked="${ans === i}" data-opt="${i}" ${revealed ? "disabled" : ""}><span class="radio"></span><span>${esc(o)}</span></button>`).join("")}
       </div>
@@ -738,6 +768,7 @@ function renderQuiz() {
   if (it.type === "order" && !revealed) wireOrder(at, it);
   if (it.type === "grid" && !revealed) wireGrid(at, it);
   if (it.type === "walk" && !revealed) wireWalk(at, it);
+  if (it.type === "case") wireCase(at, it);
   // Calculator: only in rounds that allow it (decided when the round started).
   const calcBtn = document.getElementById("calcBtn");
   if (calcBtn) calcBtn.onclick = () => { CalcUI.toggle(); calcBtn.setAttribute("aria-expanded", CalcUI.isOpen()); };
@@ -759,7 +790,8 @@ function renderQuiz() {
 
 /* Typed-answer questions on the quiz screen */
 function typedHint(it, raw) {
-  if (isBlank(raw)) return it.unit === "%" ? "12.5, 12.5% and 0.125 all count as 12.5%." : it.unit === "US$m" ? "In US$ millions: 1.2, 1.2m and 1,200,000 all count as US$1.2m." : "Type a number.";
+  if (isBlank(raw)) return it.unit === "%" ? "12.5, 12.5% and 0.125 all count as 12.5%." : it.unit === "US$m" ? "In US$ millions: 1.2, 1.2m and 1,200,000 all count as US$1.2m."
+    : it.unit === "US$" ? "In US dollars: 350,000, 350k and US$350,000 all count the same." : it.unit === "years" ? "In years, for example 6 or 6.5." : "Type a number.";
   return Typed.readings(raw, it.unit).length ? "" : "That doesn't read as a number yet.";
 }
 function typedArea(at, it, ans, revealed) {
@@ -806,6 +838,68 @@ function wireTyped(at, it) {
   };
   const btn = document.getElementById("checkBtn");
   if (btn) btn.onclick = check;
+}
+
+/* Case studies on the quiz screen: one step open at a time. "Check step" locks it, shows the right answer and the
+   working, and opens the next step, which quotes the right figures so one slip doesn't spoil the rest. Works the same
+   in Timed and Learning mode. Steps typed but not checked are still marked when the round is submitted. */
+const caseDoneOf = (at, i) => (at.caseDone && at.caseDone[i]) || 0;
+function caseArea(at, it, ans) {
+  const done = caseDoneOf(at, at.cur), n = it.steps.length, vals = Array.isArray(ans) ? ans : [];
+  const step = (s, k) => {
+    if (k > done || k >= n) return "";
+    const checked = k < done, g = checked ? Typed.grade(s, vals[k] ?? "") : null, right = Typed.show(s.answer, s.unit, s.dp);
+    return `<li class="case-step${checked ? (g.ok ? " ok" : " no") : " open"}">
+        <p class="case-q" id="caseQ${k}"><span class="case-num">Step ${k + 1} of ${n}</span>${esc(s.q)}</p>
+        <div class="typed-row">
+          <input ${checked ? "" : 'id="caseInput"'} class="typed-input" type="text" inputmode="decimal" autocomplete="off" autocorrect="off" spellcheck="false"
+            aria-labelledby="caseQ${k}" ${checked ? "" : 'aria-describedby="caseHint"'} value="${esc(vals[k] ?? "")}" ${checked ? "disabled" : ""}>
+          ${s.unit ? `<span class="typed-unit" aria-hidden="true">${esc(s.unit)}</span>` : ""}
+          ${checked ? "" : `<button class="btn primary" id="caseCheck" type="button">Check step</button>`}
+        </div>
+        ${checked ? `<div class="feedback ${g.ok ? "ok" : "no"}" role="status">
+          <p class="feedback-title">${g.ok ? `Correct: ${esc(right)}` : `Not quite. The answer is ${esc(right)}${g.value != null ? `; you gave ${esc(Typed.show(g.value, s.unit))}` : ""}.`}</p>
+          ${g.ok ? "" : `<p>${esc(causeText(g))}</p>`}
+          <p>${rich(s.why)}</p>
+        </div>` : `<p class="typed-hint" id="caseHint" aria-live="polite">${esc(typedHint(s, vals[k]))}</p>`}
+      </li>`;
+  };
+  const right = done >= n ? grade(it, ans).right : 0;
+  return `<div class="case">
+      ${done < n ? `<p class="case-note">Check each step to see the answer and open the next one. Later steps use the right figures, so one slip doesn't spoil the rest.</p>` : ""}
+      <ol class="case-steps">${it.steps.map(step).join("")}</ol>
+      ${done >= n ? `<div class="feedback ${right === n ? "ok" : "no"}" id="caseSum" role="status" tabindex="-1">
+        <p class="feedback-title">${right === n ? `All ${n} steps right` : `${right} of ${n} steps right`}</p>
+        <p>${rich(it.why)}</p>
+      </div>` : ""}
+    </div>`;
+}
+function wireCase(at, it) {
+  const input = document.getElementById("caseInput"), hint = document.getElementById("caseHint");
+  if (!input) return;
+  const i = at.cur, k = caseDoneOf(at, i), s = it.steps[k];
+  const save = () => {
+    ensureTiming(at);
+    const a = Array.isArray(at.answers[i]) ? at.answers[i].slice() : Array(it.steps.length).fill(null);
+    a[k] = input.value.trim() === "" ? null : input.value;
+    at.answers[i] = a.some(v => !isBlank(v)) ? a : null;
+    at.answeredAt[i] = at.answers[i] === null ? null : Date.now();
+    persist();
+    hint.textContent = typedHint(s, input.value);
+    const n = at.answers.filter(x => !isBlank(x)).length, span = meta.querySelector("span");
+    if (span) span.textContent = `${n} of ${at.items.length} answered`;
+    document.querySelector(`[data-go="${i}"]`)?.classList.toggle("answered", !isBlank(at.answers[i]));
+  };
+  const check = () => {
+    if (input.value.trim() === "") { hint.textContent = "Type an answer first."; input.focus(); return; }
+    if (!Typed.readings(input.value, s.unit).length) { hint.textContent = "That doesn't read as a number yet."; input.focus(); return; }
+    (at.caseDone ||= [])[i] = k + 1; persist(); renderQuiz();
+    const next = document.getElementById("caseInput") || document.getElementById("caseSum");
+    next?.focus();
+  };
+  input.oninput = save;
+  input.onkeydown = e => { if (e.key === "Enter") { e.preventDefault(); check(); } };
+  document.getElementById("caseCheck").onclick = check;
 }
 
 /* Ordering questions on the quiz screen: ▲ ▼ buttons move a step; the first move (or "Use this order") answers it. */
@@ -987,11 +1081,13 @@ function submit(timedOut) {
     if (!isBlank(at.answers[i])) {
       const entry = { qid: it.id || null, cat: it.cat, ok, at: submittedAt, usedMs: at.spentMs[i], answeredAt: at.answeredAt[i], mode, i,
         timePressure: at.answeredAt[i] != null && at.answeredAt[i] >= pressureFrom };
-      const trap = it.type === "numeric" ? g.trap : !ok && it.trap ? it.trap[at.answers[i]] : null;
+      const firstWrong = it.type === "case" ? g.steps.find(s => !s.ok && !s.blank) : null;
+      const trap = it.type === "numeric" ? g.trap : it.type === "case" ? (firstWrong && firstWrong.trap) || null : !ok && it.trap ? it.trap[at.answers[i]] : null;
       if (it.type === "numeric") { entry.type = "numeric"; entry.given = g.value; if (!ok && g.cause) entry.cause = g.cause; }
       if (it.type === "order") { entry.type = "order"; entry.given = at.answers[i].slice(); }
       if (it.type === "grid") { entry.type = "grid"; entry.given = at.answers[i].slice(); entry.rowsRight = g.right; }
       if (it.type === "walk") { entry.type = "walk"; entry.given = at.answers[i]; }
+      if (it.type === "case") { entry.type = "case"; entry.given = g.steps.map(s => s.value ?? null); entry.stepsRight = g.right; if (firstWrong && firstWrong.cause) entry.cause = firstWrong.cause; }
       if (trap) entry.trap = trap;
       if (at.learning) entry.learning = true;
       if (at.calc) entry.calc = true;
@@ -1541,11 +1637,19 @@ function reviewItem(it, i, ans, marked, misread) {
   return `
     <article class="card item" id="r-${i}">
       <div class="item-top">
-        <p class="label">${esc(catById(it.cat).name)} · Question ${i + 1}${it.lv ? ` · ${LEVELS[it.lv]}` : ""}${it.gen ? " · Calculation" : ""}${it.type === "numeric" ? " · Typed answer" : it.type === "order" ? " · Ordering" : it.type === "grid" ? " · Classification" : it.type === "walk" ? " · Walk-through (self-graded)" : ""}</p>
+        <p class="label">${esc(catById(it.cat).name)} · Question ${i + 1}${it.lv ? ` · ${LEVELS[it.lv]}` : ""}${it.gen ? " · Calculation" : ""}${it.type === "numeric" ? " · Typed answer" : it.type === "order" ? " · Ordering" : it.type === "grid" ? " · Classification" : it.type === "walk" ? " · Walk-through (self-graded)" : it.type === "case" ? " · Case study" : ""}</p>
         <span class="pills">${misreadBtn}<span class="pill ${st[0]}">${st[1]}</span>${marked ? `<span class="pill flagged">Marked</span>` : ""}</span>
       </div>
       <p class="prompt">${esc(it.q)}</p>
-      ${it.type === "walk" ? `
+      ${it.type === "case" ? `
+      <p class="label">${g.ok ? `All ${it.steps.length} steps right` : `${g.right} of ${it.steps.length} steps right`}</p>
+      <ul class="ans">${it.steps.map((s, k) => {
+        const gs = g.steps[k], given = Array.isArray(ans) ? ans[k] : null, cls = gs.ok ? "right" : isBlank(given) ? "plain" : "wrong";
+        return `<li class="${cls}"><span class="mark" aria-hidden="true">${gs.ok ? "✓" : isBlank(given) ? "" : "✗"}</span><div><span><b>Step ${k + 1}.</b> ${esc(s.q)}</span>
+          <span>Answer: <b>${esc(Typed.show(s.answer, s.unit, s.dp))}</b>${isBlank(given) ? " <em>(not answered)</em>" : ` <em>(your answer: ${esc(given)})</em>`}</span>
+          ${!gs.ok && !isBlank(given) ? `<span class="note">${esc(causeText(gs))}</span>` : ""}<span class="note">${rich(s.why)}</span></div></li>`;
+      }).join("")}</ul>
+      <p class="note-block">${rich(it.why)}</p>` : it.type === "walk" ? `
       <p class="label">A strong answer covers</p>
       <ul class="walk-points">${it.points.map(p => `<li>${esc(p)}</li>`).join("")}</ul>
       <p class="note-block">${rich(it.why)}</p>` : it.type === "grid" ? `

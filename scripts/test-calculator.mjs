@@ -72,6 +72,9 @@ for (const [v, want] of fractions) if (toFraction(v) !== want) fails.push(`toFra
 const pctQ = { type: "numeric", unit: "%", answer: 12.5, tolerance: 0.05, wrongs: [{ value: 14.2, note: "No tax shield.", trap: "missed-step" }] };
 const moneyQ = { type: "numeric", unit: "US$m", answer: 1.2, tolerance: 0.01 };
 const multQ = { type: "numeric", unit: "x", answer: 2.5, tolerance: 0.05 };
+const dollarQ = { type: "numeric", unit: "US$", answer: 350000, tolerance: 500 }; // e.g. value per hotel room
+const priceQ = { type: "numeric", unit: "US$", answer: 1.85, tolerance: 0.005 };   // e.g. EPS
+const yearsQ = { type: "numeric", unit: "years", answer: 6, tolerance: 0 };
 // [question, typed text, should it be right?]
 const typedRight = [
   [pctQ, "12.5%", true], [pctQ, "0.125", true], [pctQ, "12.5 %", true], [pctQ, "12.5", true], [pctQ, " 12.50 ", true],
@@ -79,6 +82,9 @@ const typedRight = [
   [moneyQ, "1.2", true], [moneyQ, "1.2m", true], [moneyQ, "US$1.2m", true], [moneyQ, "$1,200,000", true], [moneyQ, "1200k", true],
   [moneyQ, "0.0012bn", true], [moneyQ, "12", false],
   [multQ, "2.5x", true], [multQ, "2.5", true], [multQ, "5/2", true], [multQ, "−2.5", false],
+  [dollarQ, "350000", true], [dollarQ, "350,000", true], [dollarQ, "US$350,000", true], [dollarQ, "$350k", true], [dollarQ, "0.35m", true],
+  [dollarQ, "350", false], [priceQ, "1.85", true], [priceQ, "$1.85", true], [priceQ, "1.9", false],
+  [yearsQ, "6", true], [yearsQ, "6 years", true], [yearsQ, "6yrs", true], [yearsQ, "6y", true], [yearsQ, "7", false],
 ];
 for (const [q, raw, want] of typedRight) {
   const g = Typed.grade(q, raw);
@@ -91,7 +97,8 @@ for (const [raw, cause, trap] of typedCauses) {
   if (g.cause !== cause || g.trap !== trap) fails.push(`typed ${raw}: cause ${g.cause}/${g.trap}, expected ${cause}/${trap}`);
 }
 const shows = [[12.5, "%", undefined, "12.5%"], [1.2, "US$m", undefined, "US$1.2m"], [2.5, "x", undefined, "2.5x"], [-3, "%", undefined, "−3%"],
-  [6.993811140994688, "%", 1, "7.0%"], [8.4249, "%", 2, "8.42%"]];
+  [6.993811140994688, "%", 1, "7.0%"], [8.4249, "%", 2, "8.42%"],
+  [350000, "US$", 0, "US$350,000"], [1.8512, "US$", 2, "US$1.85"], [6, "years", 0, "6 years"], [1, "years", 0, "1 year"]];
 for (const [v, u, dp, want] of shows) if (Typed.show(v, u, dp) !== want) fails.push(`Typed.show(${v}, ${u}, ${dp}) = ${Typed.show(v, u, dp)}, expected ${want}`);
 
 const total = values.length + errors.length + formats.length + fractions.length + typedRight.length + typedCauses.length + shows.length;

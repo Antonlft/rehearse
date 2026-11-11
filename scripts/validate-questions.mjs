@@ -8,7 +8,9 @@
 //  - each question is checked by its `type`: multiple choice (no type, or "mcq"), "numeric" (typed answer: a number
 //    `answer`, a `tolerance` ≥ 0, an optional `unit`, optional known `wrongs`) or "order" (an `answer` list of 3–8
 //    unique steps) or "grid" (2–4 unique `columns`, 3–8 `rows` of { text, answer: column number, note }) or "walk"
-//    (a self-graded walk-through card: 3–8 unique `points` in its model answer).
+//    (a self-graded walk-through card: 3–8 unique `points` in its model answer) or "case" (a case study: a scenario and
+//    3–8 linked typed `steps`, each checked like a typed answer, with a positive right answer, and every known wrong
+//    answer far enough away to be graded as a concept gap; case generators are sampled like the others).
 //    Fields belonging to one type (`tolerance`, `unit`, `o`, `rows`, ...) are rejected on the others.
 //  - every category has a lesson (site/lessons/<category>.js, loaded by index.html); a "stub" may be empty, but a
 //    "draft" or "reviewed" lesson needs a method, a worked example (question, working, answer) and a source;
@@ -51,9 +53,9 @@ const appSrc = readFileSync(join(SITE, "js/app.js"), "utf8");
 const appCats = new Set([...appSrc.matchAll(/\{ id: "([a-z]+)"/g)].map(m => m[1]));
 const groupIds = new Set([...(/const GROUPS = \[(.*?)\];/.exec(appSrc)?.[1] || "").matchAll(/id: "([a-z]+)"/g)].map(m => m[1]));
 const categoryIds = [...appCats].filter(id => !groupIds.has(id)); // the 18 categories (GROUPS also use "id:")
-for (const cat of new Set([...Object.keys(Bank.written), ...Object.keys(Bank.gens), ...Object.keys(Bank.numeric || {}), ...Object.keys(Bank.formats || {})])) if (!appCats.has(cat)) fail(`category "${cat}" isn't defined in app.js CATEGORIES`);
+for (const cat of new Set([...Object.keys(Bank.written), ...Object.keys(Bank.gens), ...Object.keys(Bank.numeric || {}), ...Object.keys(Bank.formats || {}), ...Object.keys(Bank.cases || {})])) if (!appCats.has(cat)) fail(`category "${cat}" isn't defined in app.js CATEGORIES`);
 
-const UNITS = ["%", "x", "US$m"];
+const UNITS = ["%", "x", "US$m", "US$", "years"];
 const isNum = v => typeof v === "number" && Number.isFinite(v);
 const notAllowed = (where, q, type, keys) => keys.forEach(k => { if (k in q) fail(`${where}: "${k}" isn't allowed on ${type} question`); });
 const checkShape = (where, q) => {
@@ -65,7 +67,8 @@ const checkShape = (where, q) => {
   if (type === "order") return checkOrder(where, q);
   if (type === "grid") return checkGrid(where, q);
   if (type === "walk") return checkWalk(where, q);
-  if (type !== "mcq") return fail(`${where}: unknown type "${type}" (expected mcq, numeric, order, grid or walk)`);
+  if (type === "case") return checkCase(where, q);
+  if (type !== "mcq") return fail(`${where}: unknown type "${type}" (expected mcq, numeric, order, grid, walk or case)`);
   notAllowed(where, q, "a multiple-choice", ["answer", "tolerance", "unit", "wrongs", "dp", "columns", "rows", "points"]);
   if (!Array.isArray(q.o) || q.o.length !== 4) fail(`${where}: needs exactly 4 options, has ${q.o?.length}`);
   else {
@@ -96,6 +99,21 @@ function checkNumeric(where, q) {
       if (isNum(w.value) && isNum(q.answer) && isNum(q.tolerance) && Math.abs(w.value - q.answer) <= q.tolerance) fail(`${where}: wrong answer ${w.value} is within the tolerance of the right answer ${q.answer}`);
     });
   }
+}
+function checkCase(where, q) {
+  notAllowed(where, q, "a case study", ["o", "x", "trap", "answer", "tolerance", "unit", "wrongs", "dp", "columns", "rows", "points"]);
+  if (!Array.isArray(q.steps) || q.steps.length < 3 || q.steps.length > 8) return fail(`${where}: steps must list 3–8 steps, has ${q.steps?.length}`);
+  q.steps.forEach((s, k) => {
+    const at = `${where} step ${k + 1}`;
+    if (typeof s.q !== "string" || !s.q.trim()) fail(`${at}: missing question text`);
+    if (typeof s.why !== "string" || !s.why.trim()) fail(`${at}: missing explanation (why)`);
+    if (BAD_TEXT.test(`${s.q} ${s.why}`)) fail(`${at}: text contains NaN/Infinity/undefined`);
+    checkNumeric(at, s);
+    if (isNum(s.answer) && !(s.answer > 0)) fail(`${at}: the right answer must be positive, got ${s.answer}`);
+    // A known wrong answer must read as a concept gap (more than 10% away), or the case can't name that mistake.
+    for (const w of s.wrongs || []) { const g = ctx.Typed.grade(s, String(w.value)); if (g.ok || g.cause !== "concept-gap") fail(`${at}: known wrong answer ${w.value} would be graded ${g.ok ? "right" : g.cause}`); }
+    if (isNum(s.answer) && !ctx.Typed.grade(s, s.answer.toFixed(s.dp ?? 6)).ok) fail(`${at}: the right answer, typed as shown, isn't graded right`);
+  });
 }
 function checkOrder(where, q) {
   notAllowed(where, q, "an ordering", ["o", "x", "trap", "tolerance", "unit", "wrongs", "dp", "columns", "rows", "points"]);
@@ -181,6 +199,25 @@ for (const [cat, list] of Object.entries(Bank.numeric || {})) {
   });
 }
 
+// Case studies (used only when new formats are on): sampled like the generators.
+let cases = 0;
+for (const [cat, list] of Object.entries(Bank.cases || {})) {
+  list.forEach((fn, i) => {
+    cases++;
+    const where = `${cat} case study #${i + 1}`;
+    for (let run = 0; run < RUNS; run++) {
+      let g;
+      try { for (let t = 0; t < 30; t++) { g = fn(); if (g.steps.every(s => isNum(s.answer))) break; } }
+      catch (e) { fail(`${where}: threw: ${e.message}`); return; }
+      const before = errors.length;
+      if (g.type !== "case") fail(`${where}: must have type "case"`);
+      checkShape(where, g);
+      if (BAD_TEXT.test(g.q + " " + g.why)) fail(`${where}: scenario or explanation contains NaN/Infinity/undefined: ${g.q}`);
+      if (errors.length > before) return;
+    }
+  });
+}
+
 // Lessons: one per category; complete once marked draft or reviewed.
 const Lessons = ctx.Lessons?.all || {};
 const text = v => typeof v === "string" && v.trim().length > 0;
@@ -244,5 +281,5 @@ if (errors.length) {
   for (const e of errors) console.error("  - " + e);
   process.exit(1);
 }
-console.log(`✓ ${written - formatQuestions} written questions, ${formatQuestions} new-format questions, ${gens} generators and ${typed} typed-answer generators (${RUNS} samples each) passed.`);
+console.log(`✓ ${written - formatQuestions} written questions, ${formatQuestions} new-format questions, ${gens} generators, ${typed} typed-answer generators and ${cases} case stud${cases === 1 ? "y" : "ies"} (${RUNS} samples each) passed.`);
 console.log(`✓ ${Object.keys(Lessons).length} lessons for ${categoryIds.length} categories (${Object.entries(lessonCounts).map(([k, v]) => `${v} ${k}`).join(", ")}).`);

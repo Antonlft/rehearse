@@ -1000,3 +1000,64 @@ Bank.calc("bt", {
   why(i) { const { P, s, f, p } = i, buyers = P * s; return `Buyers = ${P}m × ${R.pct(s, 0)} = ${R.num(buyers, 1)}m. Weekly spend = ${R.num(buyers, 1)}m × ${f} × US$${R.num(p, p % 1 ? 2 : 0)} = ${R.m(buyers * f * p, 1)}. Yearly = × 52 = ${R.m(this.solve(i), 0)}.`; },
   fmt: v => R.m(v, 0)
 });
+
+// Case study: a paper LBO in six linked steps. Figures quoted by later steps are rounded as shown.
+Bank.case("lbo", {
+  lv: 3,
+  make() {
+    for (;;) {
+      const E0 = R.step(40, 200, 5), m = R.step(8, 12, 0.5), L = R.step(4, 6, 0.5), g = R.step(0.03, 0.1, 0.01);
+      if (L > m - 3) continue;
+      const F = +((1 + g) ** 5).toFixed(3), X = Math.round(E0 * R.step(1, 2.5, 0.1) / 5) * 5, D0 = L * E0;
+      if (X >= D0) continue;
+      const E5 = +(E0 * F).toFixed(1), EVx = +(m * E5).toFixed(1), Eq0 = E0 * (m - L), EqX = +(EVx - (D0 - X)).toFixed(1), M = +(EqX / Eq0).toFixed(2);
+      if (M < 1.6 || M > 5) continue;
+      return { E0, m, L, g, F, X, D0, E5, EVx, Eq0, EqX, M };
+    }
+  },
+  intro: ({ E0, m, L, g, F, X }) => `A private equity fund buys a company with EBITDA of ${R.m(E0)} for ${R.x(m)} EBITDA, funded with debt of ${R.x(L)} EBITDA and the rest in equity. EBITDA grows ${R.pct(g, 0)} a year, so over 5 years it grows by a factor of ${F.toFixed(3)} (${(1 + g).toFixed(2)} to the power of 5). Over the 5 years the company generates ${R.m(X)} of free cash flow after interest and tax, all used to repay debt. The fund sells at the end of year 5 at the same multiple.`,
+  why: () => "The three drivers of the return are all here: EBITDA growth, debt paid down from cash flow and the exit multiple (unchanged in this case). Debt turns them into a bigger gain on a smaller equity cheque.",
+  steps: [
+    { unit: "US$m", dp: 1, tolerance: 0.1, prompt: "in US$m",
+      ask: () => "How much equity does the fund invest? Ignore fees.",
+      solve: i => i.Eq0,
+      wrongs: ({ E0, m, D0 }) => [
+        { value: E0 * m, trap: "missed-step", note: "That's the whole price (the enterprise value). Debt pays for part of it; equity pays the rest." },
+        { value: D0, trap: "inverted", note: "That's the debt. Equity is the price minus the debt." }],
+      why: ({ E0, m, L, D0, Eq0 }) => `Price = ${R.x(m)} × ${R.num(E0)} = ${R.m(E0 * m, 1)}. Debt = ${R.x(L)} × ${R.num(E0)} = ${R.m(D0, 1)}. Equity = ${R.num(E0 * m, 1)} − ${R.num(D0, 1)} = ${R.m(Eq0, 1)}.` },
+    { unit: "US$m", dp: 1, tolerance: 0.1, prompt: "in US$m, to 1 decimal place",
+      ask: () => "What is EBITDA in year 5?",
+      solve: i => i.E5,
+      wrongs: ({ E0, g }) => [
+        { value: E0, trap: "missed-step", note: "That's today's EBITDA. It grows for 5 years before the exit." },
+        { value: E0 * (1 + 5 * g), trap: "wrong-measure", note: "That adds 5 years of growth without compounding. Use the factor given." }],
+      why: ({ E0, F, E5 }) => `Year-5 EBITDA = ${R.num(E0)} × ${F.toFixed(3)} = ${R.m(E5, 1)}.` },
+    { unit: "US$m", dp: 1, tolerance: 0.1, prompt: "in US$m, to 1 decimal place",
+      ask: ({ m, E5 }) => `Year-5 EBITDA is ${R.m(E5, 1)}. Selling at the entry multiple of ${R.x(m)}, what is the exit enterprise value?`,
+      solve: i => i.EVx,
+      wrongs: ({ E0, m }) => [{ value: E0 * m, trap: "missed-step", note: "That's the entry enterprise value. The exit multiple applies to year-5 EBITDA." }],
+      why: ({ m, E5, EVx }) => `Exit enterprise value = ${R.x(m)} × ${R.num(E5, 1)} = ${R.m(EVx, 1)}.` },
+    { unit: "US$m", dp: 1, tolerance: 0.1, prompt: "in US$m, to 1 decimal place",
+      ask: ({ EVx, D0, X }) => `The exit enterprise value is ${R.m(EVx, 1)}. Debt started at ${R.m(D0, 1)} and ${R.m(X)} of it has been repaid. What is the fund's equity worth at exit?`,
+      solve: i => i.EqX,
+      wrongs: ({ EVx, D0, X }) => [
+        { value: EVx - D0, trap: "missed-step", note: "That deducts the original debt. Part of it has been repaid, so less is owed at exit." },
+        { value: EVx, trap: "missed-step", note: "That's the enterprise value. The remaining debt is repaid from it before the fund gets anything." },
+        { value: EVx - X, trap: "inverted", note: "That deducts the debt repaid. Deduct the debt still owed: the starting debt minus the repayments." }],
+      why: ({ EVx, D0, X, EqX }) => `Debt at exit = ${R.num(D0, 1)} − ${R.num(X)} = ${R.m(D0 - X, 1)}. Equity at exit = ${R.num(EVx, 1)} − ${R.num(D0 - X, 1)} = ${R.m(EqX, 1)}.` },
+    { unit: "x", dp: 2, tolerance: 0.02, prompt: "to 2 decimal places",
+      ask: ({ Eq0, EqX }) => `The fund invested ${R.m(Eq0, 1)} and receives ${R.m(EqX, 1)} at exit. What is its money multiple (MOIC: multiple on invested capital)?`,
+      solve: i => i.EqX / i.Eq0,
+      wrongs: ({ E0, m, EVx, Eq0, EqX }) => [
+        { value: EVx / (E0 * m), trap: "wrong-measure", note: "That's how much the enterprise value grew. The fund's multiple is on its equity, which grows faster thanks to debt." },
+        { value: Eq0 / EqX, trap: "inverted", note: "That's flipped: divide what the fund receives by what it invested." }],
+      why: ({ Eq0, EqX }) => `MOIC = ${R.num(EqX, 1)} ÷ ${R.num(Eq0, 1)} = ${R.x(EqX / Eq0, 2)}.` },
+    { unit: "%", dp: 1, tolerance: 1, prompt: "as a percentage (a rule-of-thumb estimate within 1 point counts)",
+      ask: ({ M }) => `A money multiple of ${R.x(M, 2)} over 5 years: roughly what IRR (internal rate of return, the yearly compound return) does it imply?`,
+      solve: ({ M }) => M ** 0.2 - 1,
+      wrongs: ({ M }) => [
+        { value: (M - 1) / 5, trap: "wrong-measure", note: "That spreads the gain evenly over 5 years without compounding, which overstates the IRR." },
+        { value: M / 5, trap: "concept", note: "Dividing the multiple by the years isn't a return. IRR = MOIC^(1/years) − 1." }],
+      why: ({ M }) => `IRR = ${M.toFixed(2)}^(1/5) − 1 = ${R.pct(M ** 0.2 - 1)}. Rules of thumb over 5 years: 2x ≈ 15%, 2.5x ≈ 20%, 3x ≈ 25%.` }
+  ]
+});
