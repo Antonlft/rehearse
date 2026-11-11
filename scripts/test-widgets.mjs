@@ -88,6 +88,11 @@ r = run("fundWaterfall", { proc: 140 }); near("fundWaterfall", "below the prefer
 r = run("fundWaterfall", { proc: 150 }); near("fundWaterfall", "catch-up incomplete", r.gp, 50 - pref5);
 r = run("fundWaterfall", { proc: 80 }); near("fundWaterfall", "loss: GP nothing", r.gp, 0); near("fundWaterfall", "loss: LPs everything", r.lp, 80);
 for (const v of [{}, { cu: 0 }, { cu: 0.5 }, { proc: 150 }, { proc: 3000, carry: 0.3 }, { pref: 0 }, { carry: 0 }]) { const x = run("fundWaterfall", v); near("fundWaterfall", `everything is paid out ${JSON.stringify(v)}`, x.gp + x.lp, v.proc ?? 200, 1e-9); }
+// REIT NAV: 60 ÷ 6% = 1,000; + 20 − 400 = 620; ÷ 50 = 12.40 a share; at US$10: −19.35%; implied cap 60 ÷ (500 + 400 − 20) = 6.818%
+r = run("reitNav", {}); near("reitNav", "property value", r.gav, 1000); near("reitNav", "NAV", r.nav, 620); near("reitNav", "NAV per share", r.navps, 12.4);
+near("reitNav", "discount", r.prem, 10 / 12.4 - 1); near("reitNav", "implied cap rate", r.impliedCap, 60 / 880);
+r = run("reitNav", { price: 12.4 }); near("reitNav", "at NAV", r.prem, 0); near("reitNav", "at NAV the implied cap rate is the market cap rate", r.impliedCap, 0.06);
+r = run("reitNav", { debt: 1100 }); is("reitNav", "negative NAV has no premium", r.prem, null);
 
 // Every widget's default view must compute and render without NaN.
 for (const [name, w] of Object.entries(W)) {

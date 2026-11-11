@@ -404,6 +404,35 @@
       note("Chart: value in US$ millions. The curve is steepest at low yields: the same 50bp move hurts a 4% asset far more than an 8% one.")
   });
 
+  define("reitNav", {
+    title: "REIT NAV: premium, discount and implied cap rate",
+    inputs: [
+      { k: "noi", label: "Portfolio NOI", min: 5, max: 300, step: 1, value: 60, fmt: usd },
+      { k: "cap", label: "Market cap rate", min: 0.03, max: 0.1, step: 0.0025, value: 0.06, fmt: v => pct(v, 2) },
+      { k: "debt", label: "Debt", min: 0, max: 3000, step: 10, value: 400, fmt: usd },
+      { k: "cash", label: "Cash", min: 0, max: 300, step: 5, value: 20, fmt: usd },
+      { k: "shares", label: "Shares (millions)", min: 10, max: 500, step: 1, value: 50, fmt: v => num(v, 0) + "m" },
+      { k: "price", label: "Share price", min: 1, max: 100, step: 0.25, value: 10, fmt: v => "US$" + num(v, 2) }
+    ],
+    compute: v => {
+      const gav = v.noi / v.cap, nav = gav + v.cash - v.debt, navps = nav / v.shares, mcap = v.price * v.shares, ev = mcap + v.debt - v.cash;
+      return { gav, nav, navps, mcap, ev, prem: nav > 0 ? v.price / navps - 1 : null, impliedCap: ev > 0 ? v.noi / ev : null };
+    },
+    render: (v, r) => stats([stat("NAV per share", r.nav > 0 ? "US$" + num(r.navps, 2) : "Negative", true),
+        stat(r.prem == null ? "Premium / discount" : r.prem >= 0 ? "Premium to NAV" : "Discount to NAV", r.prem == null ? "n/a" : pct(Math.abs(r.prem), 1)),
+        stat("Implied cap rate", r.impliedCap == null ? "n/a" : pct(r.impliedCap, 2))]) +
+      waterfall([{ label: "Property", value: r.gav, kind: "total", text: num(r.gav, 0) },
+        { label: "Cash", value: v.cash, kind: "up", text: (v.cash ? "+" : "") + num(v.cash, 0) },
+        { label: "Debt", value: v.debt, kind: "down", text: (v.debt ? "−" : "") + num(v.debt, 0) },
+        { label: "NAV", value: r.nav, kind: "total", text: num(r.nav, 0) },
+        { label: "Market", sub: "cap", value: r.mcap, kind: "total", text: num(r.mcap, 0) }]) +
+      note("Chart in US$ millions. Property = NOI ÷ cap rate; the implied cap rate = NOI ÷ (market cap + debt − cash).") +
+      note(r.nav <= 0 ? "Debt exceeds the value of the properties and cash: there's no equity value left on these assumptions."
+        : r.prem < -0.005 ? "At a discount, issuing shares to buy property would cut NAV per share; selling assets near NAV and buying back shares adds to it."
+        : r.prem > 0.005 ? "At a premium, the REIT can issue shares to buy property and add to NAV per share."
+        : "The shares trade at about NAV: the market values the portfolio at the cap rate you chose.")
+  });
+
   define("rentRoll", {
     title: "From beds to value: a PBSA scheme",
     inputs: [
