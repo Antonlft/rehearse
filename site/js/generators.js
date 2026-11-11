@@ -668,3 +668,63 @@ Bank.calc("credit", {
   why(i) { const { AR, INV, a, bi, DR } = i; return `Borrowing base = ${R.pct(a, 0)} × ${AR} + ${R.pct(bi, 0)} × ${INV} = ${R.m(AR * a, 1)} + ${R.m(INV * bi, 1)} = ${R.m(AR * a + INV * bi, 1)}. Available = ${R.num(AR * a + INV * bi, 1)} − ${R.num(DR)} = ${R.m(this.solve(i), 1)}.`; },
   fmt: v => R.m(v, 1)
 });
+
+// Valuation: calendarise EBITDA for a company whose financial year ends in March or September.
+// Multiple choice only: the usual mistakes land close to the right answer, so a typed version couldn't tell them from slips.
+Bank.gen("val", () => {
+  let m, F1, F2, o;
+  for (let k = 0; k < 50; k++) {
+    m = R.pick([3, 9]); F1 = R.step(100, 800, 10); F2 = Math.round(F1 * (1 + R.step(0.1, 0.35, 0.05)) / 5) * 5;
+    o = [m / 12 * F1 + (12 - m) / 12 * F2, (12 - m) / 12 * F1 + m / 12 * F2, F1, (F1 + F2) / 2].map(v => R.m(v, 1));
+    if (new Set(o).size === 4) break;
+  }
+  const mon = m === 3 ? "March" : "September";
+  return { lv: 2, trap: ["inverted", "missed-step", "wrong-measure"],
+    q: `A company's financial year ends in ${mon}. EBITDA was ${R.m(F1)} for the year to ${mon} 2026 and is forecast at ${R.m(F2)} for the year to ${mon} 2027. What is its calendar 2026 EBITDA?`,
+    o,
+    why: `Calendar 2026 takes ${m} months from the year to ${mon} 2026 and ${12 - m} months from the next: ${m}/12 × ${R.num(F1)} + ${12 - m}/12 × ${R.num(F2)} = ${o[0]}.`,
+    x: [`The weights are swapped. The year to ${mon} 2026 covers only ${m} months of calendar 2026.`, "That uses only the financial year ending in 2026, which mostly covers 2025.", "A simple average ignores how many months of each financial year fall in 2026."]
+  };
+});
+
+// Valuation: the EV/EBITDA multiple implied by a Gordon growth terminal value.
+Bank.calc("val", {
+  lv: 3, unit: "x", tolerance: 0.05, dp: 1, prompt: "as a multiple, to 1 decimal place",
+  make() {
+    for (;;) {
+      const F = R.step(50, 400, 5), E = Math.round(F / R.step(0.4, 0.7, 0.05) / 5) * 5, W = R.step(0.07, 0.11, 0.0025), g = R.step(0.015, 0.035, 0.0025);
+      const i = { F, E, W, g };
+      if (mnaFar(this.solve(i), this.wrongs(i).map(w => w.value), 0.12, 0.2)) return i;
+    }
+  },
+  solve: ({ F, E, W, g }) => F * (1 + g) / (W - g) / E,
+  wrongs: ({ F, E, W, g }) => [
+    { value: (1 + g) / (W - g), trap: "wrong-measure", note: "That divides the terminal value by free cash flow, not by EBITDA." },
+    { value: F * (1 + g) / W / E, trap: "missed-step", note: "The Gordon formula divides by WACC minus the growth rate, not by WACC alone." },
+    { value: F * (1 + g) / (W + g) / E, trap: "sign", note: "Growth is subtracted from WACC in the denominator, not added." }
+  ],
+  ask: ({ F, E, W, g }) => `In a DCF, final-year unlevered free cash flow is ${R.m(F)} and final-year EBITDA is ${R.m(E)}. With a WACC of ${R.pct(W, 2)} and perpetual growth of ${R.pct(g, 2)}, what EV/EBITDA multiple does the Gordon growth terminal value imply?`,
+  why(i) { const { F, E, W, g } = i, TV = F * (1 + g) / (W - g); return `Terminal value = ${R.num(F)} × ${(1 + g).toFixed(4)} ÷ (${R.pct(W, 2)} − ${R.pct(g, 2)}) = ${R.m(TV, 1)}. Implied multiple = ${R.num(TV, 1)} ÷ ${R.num(E)} = ${R.x(this.solve(i))}. Compare it with where similar companies trade.`; },
+  fmt: v => R.x(v)
+});
+
+// Valuation: PEG ratio.
+Bank.calc("val", {
+  lv: 1, unit: "x", tolerance: 0.01, dp: 2, prompt: "to 2 decimal places",
+  make() {
+    for (;;) {
+      const PE = R.step(8, 40, 0.5), g = R.int(4, 30);
+      const i = { PE, g };
+      if (mnaFar(this.solve(i), this.wrongs(i).map(w => w.value), 0.12, 0.05)) return i;
+    }
+  },
+  solve: ({ PE, g }) => PE / g,
+  wrongs: ({ PE, g }) => [
+    { value: g / PE, trap: "inverted", note: "That divides growth by the P/E. PEG = P/E ÷ growth." },
+    { value: PE * g / 100, trap: "wrong-measure", note: "The P/E is divided by growth, not multiplied by it." },
+    { value: PE / (g / 100), trap: "units", note: "Growth goes in as a number of percentage points (20, not 0.20)." }
+  ],
+  ask: ({ PE, g }) => `A company trades at ${R.num(PE, 1)}x forward earnings and analysts expect its EPS to grow ${g}% a year. What is its PEG ratio?`,
+  why(i) { const { PE, g } = i; return `PEG = P/E ÷ growth = ${R.num(PE, 1)} ÷ ${g} = ${this.solve(i).toFixed(2)}. Below about 1.0 is often read as cheap for the growth, above as expensive.`; },
+  fmt: v => v.toFixed(2)
+});
