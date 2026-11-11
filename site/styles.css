@@ -488,6 +488,16 @@ sup { font-size: 0.72em; line-height: 0; vertical-align: super; }
 
 /* Question style selector (home) */
 .style-bar { margin-bottom: 14px; }
+/* Home: compact tiles under the main test */
+.home-tiles { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; margin-top: 14px; }
+.home-tile { display: flex; flex-direction: column; gap: 6px; padding: 16px 18px; }
+.home-tiles .card + .card { margin-top: 0; } /* the grid gap spaces the tiles */
+.home-tile h2 { font-size: 15px; font-weight: 600; }
+.home-tile p { margin: 0; font-size: 13px; color: var(--muted); flex: 1; }
+.home-tile p b { color: var(--ink); font-weight: 600; }
+.tile-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 14px; margin-top: 6px; }
+.tile-actions .link { font-size: 13px; }
+@media (max-width: 760px) { .home-tiles { grid-template-columns: minmax(0, 1fr); } }
 /* Home: section tabs (same pill pattern as the other selectors, a little larger, full width on phones) */
 .home-tabs { margin: -6px 0 20px; }
 .home-tabs .seg { display: flex; width: fit-content; max-width: 100%; }

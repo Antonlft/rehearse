@@ -618,16 +618,6 @@ function renderPracticeTab() {
         ${hist.length ? `<span>Last <b>${hist[hist.length - 1].pct}%</b></span><button class="link" type="button" data-review="mixed">Review last round</button>` : ""}
       </div>` : ""}
     </section>
-    <section class="card test-card sprint-card">
-      <div class="test-row">
-        <div>
-          <p class="label">No calculator</p>
-          <h2>Mental maths sprint</h2>
-          <ul class="facts"><li><b>2</b> minutes of quick sums: percentages, multiples, yields, basis points</li>${db.sprints.length ? `<li>Best <b>${sprintBest()}</b> right</li>` : ""}</ul>
-        </div>
-        <div class="test-actions"><button class="btn primary" type="button" data-sprint>Start sprint</button><button class="btn" type="button" data-sprint-overview>Progress &amp; tips</button></div>
-      </div>
-    </section>
     ${db.attempts[RETRY] ? (() => { const at = db.attempts[RETRY], done = at.answers.filter(a => !isBlank(a)).length; return `
     <section class="card test-card retry-card">
       <div class="test-row">
@@ -635,7 +625,38 @@ function renderPracticeTab() {
         <div class="test-actions"><button class="btn primary" type="button" data-resume="${RETRY}">Resume · ${done}/${at.items.length}</button><button class="btn" type="button" data-discard="${RETRY}">Discard</button></div>
       </div>
     </section>`; })() : ""}
-    ${db.log.some(isAnswer) ? `<p class="report-link"><button class="link" type="button" data-report>See your weak spots</button></p>` : ""}`;
+    <div class="home-tiles">
+      <section class="card home-tile">
+        <h2>Mental maths sprint</h2>
+        <p>2 minutes of quick sums, no calculator.${db.sprints.length ? ` Best <b>${sprintBest()}</b> right.` : ""}</p>
+        <div class="tile-actions"><button class="btn" type="button" data-sprint>Start sprint</button><button class="link" type="button" data-sprint-overview>Progress &amp; tips</button></div>
+      </section>
+      ${dueTile()}
+      <section class="card home-tile">
+        <h2>Lessons</h2>
+        <p>A method, a worked example and a source for every category.</p>
+        <div class="tile-actions"><button class="btn" type="button" data-lessons>Open lessons</button></div>
+      </section>
+    </div>`;
+}
+
+// Practice tile: questions due for review in the categories the main test draws from. Its button is the main test's
+// own button (Start round opens the setup screen; Resume if a round is in progress): due questions already come
+// first in rounds when spaced repetition is on, so there's no separate review round.
+function dueTile() {
+  const cats = selectedCats().filter(srsOn), due = cats.reduce((s, c) => s + dueCount(c), 0);
+  const text = !db.srsEnabled ? "Spaced repetition is off, so nothing is scheduled for review."
+    : !Object.keys(db.schedule).length ? "Questions you answer are scheduled to come back: wrong ones the next day, right ones later."
+    : due ? `<b>${due}</b> question${due > 1 ? "s" : ""} due in your selected categories. They come first in your next round.`
+    : "Nothing due in your selected categories right now.";
+  const action = !db.srsEnabled ? `<button class="link" type="button" data-goto-tab="progress">Turn it on in Progress &amp; settings</button>`
+    : db.attempts.mixed ? `<button class="btn" type="button" data-resume="mixed">Resume round</button>`
+    : `<button class="btn" type="button" data-new="mixed">Start round</button>`;
+  return `<section class="card home-tile">
+        <h2>Due for review</h2>
+        <p>${text}</p>
+        <div class="tile-actions">${action}</div>
+      </section>`;
 }
 
 // Browse categories: the category table.
@@ -659,7 +680,8 @@ function renderBrowseTab() {
 
 // Progress & settings.
 function renderProgressTab() {
-  return srsPanel();
+  return `${db.log.some(isAnswer) ? `<p class="report-link"><button class="link" type="button" data-report>See your weak spots</button></p>` : ""}
+    ${srsPanel()}`;
 }
 
 // Every home handler in one place. Each is wired only if its control is on screen, so moving markup between tabs
@@ -669,6 +691,11 @@ function wireHome() {
     homeTab = b.dataset.homeTab; renderHome();
     document.querySelector(`[data-home-tab="${homeTab}"]`).focus();
   });
+  app.querySelectorAll("[data-goto-tab]").forEach(b => b.onclick = () => {
+    homeTab = b.dataset.gotoTab; renderHome(); window.scrollTo(0, 0);
+    document.querySelector(`[data-home-tab="${homeTab}"]`).focus();
+  });
+  app.querySelectorAll("[data-lessons]").forEach(b => b.onclick = () => go({ name: "lessons" }));
   if (document.getElementById("srs")) wireSrsPanel();
   app.querySelectorAll("[data-new]").forEach(b => b.onclick = () => b.dataset.new === "mixed" ? go({ name: "setup" }) : newRound(b.dataset.new));
   app.querySelectorAll("[data-setup]").forEach(b => b.onclick = () => go({ name: "setup" }));
