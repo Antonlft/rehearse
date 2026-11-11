@@ -367,7 +367,7 @@ function render() {
   // The Lessons button is hidden during a round or sprint, so it can't pull you out of one by accident.
   const lessonsLink = document.getElementById("lessonsLink");
   if (lessonsLink) {
-    lessonsLink.hidden = view.name === "quiz" || (view.name === "sprint" && !view.result); // shown again on sprint results
+    lessonsLink.hidden = view.name === "quiz" || (view.name === "sprint" && !view.result && !view.overview); // shown on sprint results and the overview
     if (view.name === "lessons") lessonsLink.setAttribute("aria-current", "page"); else lessonsLink.removeAttribute("aria-current");
   }
   app.classList.toggle("wide", view.name === "lessons"); // the lessons grid uses the full header width
@@ -517,7 +517,7 @@ function renderHome() {
           <h2>Mental maths sprint</h2>
           <ul class="facts"><li><b>2</b> minutes of quick sums: percentages, multiples, yields, basis points</li>${db.sprints.length ? `<li>Best <b>${sprintBest()}</b> right</li>` : ""}</ul>
         </div>
-        <div class="test-actions"><button class="btn primary" type="button" data-sprint>Start sprint</button></div>
+        <div class="test-actions"><button class="btn primary" type="button" data-sprint>Start sprint</button><button class="btn" type="button" data-sprint-overview>Progress &amp; tips</button></div>
       </div>
     </section>
     ${db.attempts[RETRY] ? (() => { const at = db.attempts[RETRY], done = at.answers.filter(a => !isBlank(a)).length; return `
@@ -548,6 +548,7 @@ function renderHome() {
   app.querySelectorAll("[data-new]").forEach(b => b.onclick = () => b.dataset.new === "mixed" ? go({ name: "setup" }) : newRound(b.dataset.new));
   app.querySelectorAll("[data-setup]").forEach(b => b.onclick = () => go({ name: "setup" }));
   app.querySelectorAll("[data-sprint]").forEach(b => b.onclick = startSprint);
+  app.querySelectorAll("[data-sprint-overview]").forEach(b => b.onclick = () => go({ name: "sprint", overview: true }));
   app.querySelectorAll("[data-backup]").forEach(b => b.onclick = exportBackup);
   app.querySelectorAll("[data-report]").forEach(b => b.onclick = () => go({ name: "report", back: { name: "home" } }));
   app.querySelectorAll("[data-learn]").forEach(b => b.onclick = () => go({ name: "lesson", cat: b.dataset.learn, back: { name: "home" } }));
@@ -1067,6 +1068,7 @@ function startSprint() {
 
 function renderSprint() {
   if (view.result) return renderSprintResults();
+  if (view.overview) return renderSprintOverview();
   if (!sprint) return go({ name: "home" });
   const it = sprint.cur, right = sprint.items.filter(i => i.ok).length;
   meta.innerHTML = `<button class="link" id="sprintStop" type="button">Stop sprint</button>`;
@@ -1140,6 +1142,51 @@ function finishSprint() {
   go({ name: "sprint", result, prevBest, sums: items });
 }
 
+// Accuracy by kind over a list of sprints: { kind: { n, ok } }.
+const sprintKindTotals = runs => { const t = {}; for (const s of runs) for (const [k, v] of Object.entries(s.kinds || {})) { const x = (t[k] ||= { n: 0, ok: 0 }); x.n += v.n; x.ok += v.ok; } return t; };
+const sprintPct = v => v && v.n ? Math.round(v.ok / v.n * 100) : null;
+const sprintTipHtml = k => `<div class="mblock mb-how"><span class="mb-label">How to get faster</span>
+    <p class="mb-text">${Sprint.tip(k).split("\n").map(line => `<span class="mb-line">${rich(line)}</span>`).join("")}</p></div>`;
+// One collapsible row: kind name, a coloured badge and a short note on the right; the body opens below.
+const sprintKindRow = (k, [cls, txt], side, body) => `<details class="sp-kind">
+    <summary><span class="sp-kname">${esc(Sprint.label(k))}</span><span class="sp-kstats"><span class="sp-badge ${cls}">${txt}</span>${side}</span></summary>
+    <div class="sp-kbody">${body}</div>
+  </details>`;
+
+/* Sprint overview: progress and tricks without doing a sprint (from the home card's "Progress & tips"). */
+function renderSprintOverview() {
+  const runs = db.sprints, recent = runs.slice(-10), long = sprintKindTotals(recent);
+  const answered = recent.reduce((s, r) => s + r.answered, 0), right = recent.reduce((s, r) => s + r.ok, 0);
+  const kinds = Object.keys(Sprint.KINDS).sort((a, b) => (sprintPct(long[a]) ?? 101) - (sprintPct(long[b]) ?? 101));
+  const badge = k => { const p = sprintPct(long[k]); return p == null ? ["none", "Not tried yet"] : [p >= 80 ? "good" : p >= 50 ? "mid" : "bad", `${p}%`]; };
+  meta.innerHTML = `<button class="link" id="sprintHome" type="button">All assessments</button>`;
+  app.innerHTML = `
+    <div class="title-row"><div><h1>Mental maths sprint</h1><p>Your progress and tricks</p></div></div>
+    <section class="card sprint-result">
+      ${runs.length ? `<ul class="facts">
+        <li>Sprints done <b>${runs.length}</b></li>
+        <li>Personal best <b>${sprintBest()}</b> right</li>
+        <li>Accuracy over your last ${recent.length} <b>${answered ? Math.round(right / answered * 100) : 0}%</b></li>
+        <li>On average <b>${(answered / recent.length).toFixed(1)}</b> sums answered per sprint</li>
+      </ul>` : `<p class="muted">You haven't done a sprint yet. Read the tricks below, then try one: 2 minutes, no calculator.</p>`}
+    </section>
+    <section class="card">
+      <h2 class="sprint-h first">By kind of sum</h2>
+      <p class="muted sp-hint">${runs.length ? `Your accuracy over your last ${recent.length} sprint${recent.length > 1 ? "s" : ""}, weakest first.` : "Eight kinds of sum come up."} Open a kind for a trick to get faster.</p>
+      <div class="sp-kind-list">${kinds.map(k => sprintKindRow(k, badge(k),
+          long[k] ? `<span class="sp-k10">${long[k].ok} of ${long[k].n}</span>` : "",
+          sprintTipHtml(k))).join("")}</div>
+      ${runs.length ? `<p class="muted sp-hint">Your individual sums are shown on each sprint's results page.</p>` : ""}
+    </section>
+    ${runs.length >= 2 ? `<section class="card"><h2 class="sprint-h first">Your progress</h2>${sprintChart(runs.slice(-20))}</section>` : ""}
+    <div class="result-actions">
+      <button class="btn primary lg" id="sprintStart" type="button">Start sprint</button>
+      <button class="btn lg" id="sprintBack" type="button">Back</button>
+    </div>`;
+  document.getElementById("sprintStart").onclick = startSprint;
+  document.getElementById("sprintHome").onclick = document.getElementById("sprintBack").onclick = () => go({ name: "home" });
+}
+
 // Progress chart: one bar per sprint (sums answered: right in green, wrong in red) and a line for accuracy.
 function sprintChart(runs) {
   const W = 340, H = 190, L = 30, R = 34, T = 12, B = 26, n = runs.length;
@@ -1195,19 +1242,9 @@ function renderSprintResults() {
     <section class="card">
       <h2 class="sprint-h first">By kind of sum</h2>
       <p class="muted sp-hint">Weakest first. Open a kind to see your sums and a trick to get faster.</p>
-      <div class="sp-kind-list">${kinds.map(k => { const [cls, txt] = badge(r.kinds[k]), mine = sums.filter(m => m.kind === k);
-        return `<details class="sp-kind">
-          <summary>
-            <span class="sp-kname">${esc(Sprint.label(k))}</span>
-            <span class="sp-kstats"><span class="sp-badge ${cls}">${txt}</span><span class="sp-k10">Last ${recent.length}: <b>${pct(long[k]) != null ? pct(long[k]) + "%" : "–"}</b></span></span>
-          </summary>
-          <div class="sp-kbody">
-            ${mine.length ? `<ul class="sp-sums">${mine.map(sumRow).join("")}</ul>` : `<p class="muted">None in this sprint.</p>`}
-            <div class="mblock mb-how"><span class="mb-label">How to get faster</span>
-              <p class="mb-text">${Sprint.tip(k).split("\n").map(line => `<span class="mb-line">${rich(line)}</span>`).join("")}</p>
-            </div>
-          </div>
-        </details>`; }).join("")}</div>
+      <div class="sp-kind-list">${kinds.map(k => { const mine = sums.filter(m => m.kind === k);
+        return sprintKindRow(k, badge(r.kinds[k]), `<span class="sp-k10">Last ${recent.length}: <b>${pct(long[k]) != null ? pct(long[k]) + "%" : "–"}</b></span>`,
+          (mine.length ? `<ul class="sp-sums">${mine.map(sumRow).join("")}</ul>` : `<p class="muted">None in this sprint.</p>`) + sprintTipHtml(k)); }).join("")}</div>
       <p class="muted sp-hint">Sprints are kept separate from your rounds and weak-spots report.</p>
     </section>
     <section class="card">
