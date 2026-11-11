@@ -4,7 +4,8 @@ Lessons.add("econ", {
   "status": "draft",
   "method": [
     "Central banks set short-term interest rates (in the US, the Federal Reserve's federal funds rate) to keep inflation near target: they raise rates to cool demand and cut them to support it. Longer-term yields reflect expected future short rates plus a term premium for lending for longer.",
-    "The yield curve plots yields by maturity and normally slopes up. When short rates rise above long rates the curve is inverted, usually because markets expect rate cuts; in the US an inversion has often come before a recession. The real rate is the nominal rate minus inflation, or exactly (1 + nominal) ÷ (1 + inflation) − 1."
+    "The yield curve plots yields by maturity and normally slopes up. When short rates rise above long rates the curve is inverted, usually because markets expect rate cuts; in the US an inversion has often come before a recession. The real rate is the nominal rate minus inflation, or exactly (1 + nominal) ÷ (1 + inflation) − 1.",
+    "Inflation and real rates link most of these ideas. Headline CPI covers everything; core strips out food and energy to show the trend. The real rate is roughly the nominal rate minus inflation, and when policy rates are already near zero, further cuts can stop working (a liquidity trap), so central banks turn to quantitative easing and forward guidance. Markets show inflation expectations directly: breakeven inflation = nominal Treasury yield − TIPS real yield, so a 4.3% Treasury and a 1.9% TIPS imply about 2.4% a year. Central banks steer short-term rates day to day through repo operations, and the VIX shows how much volatility the options market expects."
   ],
   "example": {
     "question": "The 3-month Treasury bill yields 5.2% and the 10-year Treasury 4.3%, with inflation at 3%. What shape is the curve, and what is the 10-year real yield?",

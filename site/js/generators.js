@@ -799,3 +799,25 @@ Bank.calc("rx", {
   why(i) { const { C, AR, INV, PPE, W, r1, r2, r3 } = i; return `Recoveries: cash ${R.num(C)} + receivables ${R.num(AR * r1, 1)} + inventory ${R.num(INV * r2, 1)} + PP&E ${R.num(PPE * r3, 1)} = ${R.m(C + AR * r1 + INV * r2 + PPE * r3, 1)}. Less costs of ${R.num(W)} = ${R.m(this.solve(i), 1)}, which is then shared out by priority.`; },
   fmt: v => R.m(v, 1)
 });
+
+// Economics: breakeven inflation from a nominal Treasury yield and a TIPS real yield. Same redraw guard (mnaFar).
+Bank.calc("econ", {
+  lv: 2, unit: "%", tolerance: 0.01, dp: 2, prompt: "as a percentage, to 2 decimal places",
+  make() {
+    for (;;) {
+      const n = R.step(0.02, 0.06, 0.0005), r = R.step(0.002, 0.025, 0.0005);
+      const i = { n, r };
+      if (n - r < 0.005) continue;
+      if (mnaFar(this.solve(i), this.wrongs(i).map(w => w.value), 0.12, 0.001)) return i;
+    }
+  },
+  solve: ({ n, r }) => n - r,
+  wrongs: ({ n, r }) => [
+    { value: n + r, trap: "sign", note: "The real yield is subtracted from the nominal yield, not added." },
+    { value: r, trap: "wrong-measure", note: "That's the real yield on TIPS, not the inflation the market expects." },
+    { value: n, trap: "missed-step", note: "The nominal yield includes a real return as well as expected inflation; take the real yield off." }
+  ],
+  ask: ({ n, r }) => `A 10-year Treasury yields ${R.pct(n, 2)} and a 10-year TIPS yields ${R.pct(r, 2)}. What is the breakeven inflation rate?`,
+  why(i) { const { n, r } = i; return `Breakeven inflation ≈ nominal yield − real yield = ${R.pct(n, 2)} − ${R.pct(r, 2)} = ${R.pct(this.solve(i), 2)}: the average inflation at which TIPS and ordinary Treasuries return the same.`; },
+  fmt: v => R.pct(v, 2)
+});

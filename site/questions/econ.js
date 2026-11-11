@@ -46,7 +46,31 @@ Bank.add("econ", [
   { id: "ec-18", lv: 2, q: "The yield curve 'steepens'. What does that mean?",
     o: ["The gap between long-term and short-term yields widens", "All yields fall by the same amount", "Short-term yields rise above long-term yields", "Bond prices stop moving"],
     why: "Steepening often happens when markets expect stronger growth or inflation, or when short rates are cut.",
-    x: ["A parallel move keeps the slope unchanged.", "That's an inversion.", "Steepening is all about yields, and so prices, moving."] }
+    x: ["A parallel move keeps the slope unchanged.", "That's an inversion.", "Steepening is all about yields, and so prices, moving."] },
+  { id: "ec-19", lv: 1, trap: ["inverted", "concept", "concept"], q: "What is the difference between headline and core inflation?",
+    o: ["Core inflation excludes volatile food and energy prices, so it shows the underlying trend", "Core inflation includes only food and energy", "Headline inflation excludes housing costs", "Only the central bank can measure core inflation"],
+    why: "Headline CPI covers the whole basket; core strips out food and energy, whose prices swing with the weather and commodity markets. Central banks watch core closely because it says more about persistent inflation. The Fed's preferred measure is core PCE.",
+    x: ["It's the other way round: core removes food and energy.", "Headline CPI includes housing costs.", "Statistics agencies publish both, and anyone can use them."] },
+  { id: "ec-20", lv: 2, trap: ["sign", "concept", "inverted"], q: "A deposit pays 2% while inflation is 4%. What is the real interest rate, and why might a central bank set its policy rate below zero?",
+    o: ["About −2%; negative policy rates push banks and savers to lend and spend rather than hold cash", "+6%; negative rates reward saving", "+2%; real rates can't be negative", "About −2%; negative rates are meant to strengthen the currency"],
+    why: "Real rate ≈ nominal rate − inflation = 2% − 4% = −2%, so savers lose purchasing power. Some central banks (the ECB, the Bank of Japan, the Swiss National Bank) have set negative policy rates to stimulate weak economies, though they squeeze bank margins and have limits, since people can hold physical cash.",
+    x: ["Inflation is subtracted, not added, and negative rates discourage saving.", "Real rates are negative whenever inflation exceeds the nominal rate.", "Negative rates tend to weaken a currency, not strengthen it."] },
+  { id: "ec-21", lv: 3, trap: ["concept", "wrong-measure", "concept"], q: "What is a liquidity trap?",
+    o: ["Rates are near zero and further monetary easing stops boosting spending, because people and banks hoard cash", "A bank runs out of cash to meet withdrawals", "Rates are so high that nobody can borrow", "A company can't sell its assets quickly enough"],
+    why: "When rates are already close to zero, cutting further does little, and extra money is held rather than spent. Japan from the 1990s and the years after 2008 are the usual examples. Policymakers then turn to quantitative easing, forward guidance and fiscal stimulus.",
+    x: ["That's a bank run: a liquidity crisis at one bank.", "It's the reverse: rates are already very low.", "That's an illiquid asset at a single company."] },
+  { id: "ec-22", lv: 1, trap: ["wrong-measure", "wrong-measure", "concept"], q: "What does the VIX index measure?",
+    o: ["The volatility the market expects for the S&P 500 over the next 30 days, implied by option prices", "The S&P 500's actual volatility over the past year", "The average level of US share prices", "Expected US inflation"],
+    why: "The VIX is calculated from S&P 500 option prices, so it reflects expected (implied) volatility, not past volatility. It usually jumps when shares fall, which is why it's called the 'fear gauge'; long-run levels of around 15–20 are typical.",
+    x: ["That's historical (realised) volatility, not implied volatility.", "It measures expected volatility, not the level of prices.", "Inflation expectations come from TIPS breakevens and surveys."] },
+  { id: "ec-23", lv: 2, trap: ["inverted", "concept", "concept"], q: "How does a central bank use repos (repurchase agreements) in its market operations?",
+    o: ["It lends cash to banks for a short time against high-quality collateral, adding liquidity and steering short-term rates", "It sells government bonds permanently to raise taxes", "It lends directly to the government to fund its deficit", "It buys shares in commercial banks"],
+    why: "In a repo, one party sells securities and agrees to buy them back later at a slightly higher price: effectively a secured loan. Central banks use repos and reverse repos to add or drain reserves and keep market rates near their policy target.",
+    x: ["Selling bonds outright drains reserves, and it has nothing to do with taxes.", "Major central banks are generally barred from financing deficits directly.", "Buying bank shares isn't part of normal market operations."] },
+  { id: "ec-24", lv: 2, trap: ["wrong-measure", "concept", "wrong-measure"], q: "A 10-year Treasury yields 4.3% and a 10-year TIPS yields 1.9%. What does the difference tell you?",
+    o: ["The market expects inflation to average about 2.4% a year over 10 years (the breakeven rate)", "Real growth is expected to be 2.4% a year", "TIPS are riskier than ordinary Treasuries", "Inflation today is 4.3%"],
+    why: "TIPS pay a real yield, with their principal indexed to CPI. Breakeven inflation ≈ nominal yield − real yield = 4.3% − 1.9% = 2.4%. If inflation turns out higher than that, TIPS beat ordinary Treasuries. The gap also includes small risk and liquidity premiums.",
+    x: ["The gap measures expected inflation, not growth.", "Both are US government debt; the difference is the inflation protection.", "Today's inflation is a separate figure; the nominal yield combines expected inflation and a real return."] }
 ]);
 
 // New-format questions (shown only when "new formats" is on).
@@ -61,5 +85,16 @@ Bank.addFormat("econ", [
       { text: "More government infrastructure spending", answer: 1, note: "Government spending is fiscal policy." },
       { text: "Cutting VAT", answer: 1, note: "A tax change by government is fiscal." }
     ],
-    why: "Monetary policy is run by the central bank through interest rates, its balance sheet and banking rules. Fiscal policy is the government's taxing and spending." }
+    why: "Monetary policy is run by the central bank through interest rates, its balance sheet and banking rules. Fiscal policy is the government's taxing and spending." },
+  { id: "econ-grid-02", lv: 1, type: "grid", q: "Is each central bank action hawkish or dovish?",
+    columns: ["Hawkish", "Dovish"],
+    rows: [
+      { text: "Raising the policy rate", answer: 0, note: "Tighter policy to bring inflation down." },
+      { text: "Signalling that rates will stay low for longer", answer: 1, note: "Forward guidance that keeps borrowing costs down." },
+      { text: "Shrinking the balance sheet (quantitative tightening)", answer: 0, note: "Draining money from the system pushes long-term rates up." },
+      { text: "Restarting quantitative easing", answer: 1, note: "Buying bonds pushes long-term rates down." },
+      { text: "Warning that inflation is still too high", answer: 0, note: "It signals more tightening to come." },
+      { text: "Cutting the interest rate paid on bank reserves", answer: 1, note: "A lower floor for short-term rates eases policy." }
+    ],
+    why: "Hawkish means tighter policy to fight inflation; dovish means looser policy to support growth and jobs." }
 ]);
