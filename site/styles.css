@@ -488,6 +488,14 @@ sup { font-size: 0.72em; line-height: 0; vertical-align: super; }
 
 /* Question style selector (home) */
 .style-bar { margin-bottom: 14px; }
+/* Home: section tabs (same pill pattern as the other selectors, a little larger, full width on phones) */
+.home-tabs { margin: -6px 0 20px; }
+.home-tabs .seg { display: flex; width: fit-content; max-width: 100%; }
+.home-tabs .seg button { padding: 6px 16px; font-size: 13px; line-height: 1.25; }
+@media (max-width: 520px) {
+  .home-tabs .seg { width: 100%; }
+  .home-tabs .seg button { flex: 1 1 0; padding: 6px 8px; }
+}
 .style-row { display: flex; align-items: center; gap: 10px 14px; flex-wrap: wrap; }
 .style-label { font-size: 13px; font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase; color: var(--muted); }
 .style-note { margin: 6px 0 0; font-size: 13px; color: var(--muted); max-width: 70ch; }

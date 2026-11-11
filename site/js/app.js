@@ -560,17 +560,35 @@ function catRow(c) {
     </div>`;
 }
 
+/* Home: a title, a tab bar and one of three sections. The open tab is transient (not saved): a reload always lands
+   on Practice, while coming back from a screen opened inside the site returns to the tab you left. */
+let homeTab = "practice";
+const HOME_TABS = [["practice", "Practice"], ["browse", "Browse categories"], ["progress", "Progress & settings"]];
+
 function renderHome() {
   meta.innerHTML = `<span>Progress is saved in this browser</span>`;
-  const t = db.totals.mixed;
-  const seen = CATEGORIES.reduce((s, c) => s + (db.seen[c.id] || []).length, 0);
-  const hist = db.history.mixed || [];
-  const reminder = backupReminder();
+  const body = homeTab === "browse" ? renderBrowseTab() : homeTab === "progress" ? renderProgressTab() : renderPracticeTab();
   app.innerHTML = `
     <div class="page-head">
       <h1>Assessments</h1>
       <p>Every round draws a new set of questions. Written questions don't repeat until you've seen them all, except ones you got wrong, which come back sooner. Calculation questions get new numbers each time.</p>
     </div>
+    <nav class="home-tabs" aria-label="Home sections">
+      <div class="seg" role="group" aria-label="Home sections">
+        ${HOME_TABS.map(([v, l]) => `<button type="button" data-home-tab="${v}" aria-pressed="${homeTab === v}">${esc(l)}</button>`).join("")}
+      </div>
+    </nav>
+    ${body}`;
+  wireHome();
+}
+
+// Practice: the landing section.
+function renderPracticeTab() {
+  const t = db.totals.mixed;
+  const seen = CATEGORIES.reduce((s, c) => s + (db.seen[c.id] || []).length, 0);
+  const hist = db.history.mixed || [];
+  const reminder = backupReminder();
+  return `
     ${reminder ? `<div class="nudge" role="status">
       <p>${esc(reminder)} Your progress is saved only in this browser.</p>
       <div class="nudge-actions"><button class="link" type="button" data-backup>Download backup</button><button class="link" type="button" data-snooze>Not now</button></div>
@@ -617,7 +635,12 @@ function renderHome() {
         <div class="test-actions"><button class="btn primary" type="button" data-resume="${RETRY}">Resume · ${done}/${at.items.length}</button><button class="btn" type="button" data-discard="${RETRY}">Discard</button></div>
       </div>
     </section>`; })() : ""}
-    ${db.log.some(isAnswer) ? `<p class="report-link"><button class="link" type="button" data-report>See your weak spots</button></p>` : ""}
+    ${db.log.some(isAnswer) ? `<p class="report-link"><button class="link" type="button" data-report>See your weak spots</button></p>` : ""}`;
+}
+
+// Browse categories: the category table.
+function renderBrowseTab() {
+  return `
     <div class="section-head">
       <h2>Practise one category</h2>
       <div class="section-tools">
@@ -631,9 +654,22 @@ function renderHome() {
     <div class="cat-table">
       <div class="cat-row cat-head" aria-hidden="true"><span>Category</span><span>Question bank</span><span>Your accuracy</span><span></span></div>
       ${GROUPS.map(g => `<div class="cat-group">${esc(g.name)}</div>` + CATEGORIES.filter(c => c.group === g.id).map(catRow).join("")).join("")}
-    </div>
-    ${srsPanel()}`;
-  wireSrsPanel();
+    </div>`;
+}
+
+// Progress & settings.
+function renderProgressTab() {
+  return srsPanel();
+}
+
+// Every home handler in one place. Each is wired only if its control is on screen, so moving markup between tabs
+// can never leave a button without its handler.
+function wireHome() {
+  app.querySelectorAll("[data-home-tab]").forEach(b => b.onclick = () => {
+    homeTab = b.dataset.homeTab; renderHome();
+    document.querySelector(`[data-home-tab="${homeTab}"]`).focus();
+  });
+  if (document.getElementById("srs")) wireSrsPanel();
   app.querySelectorAll("[data-new]").forEach(b => b.onclick = () => b.dataset.new === "mixed" ? go({ name: "setup" }) : newRound(b.dataset.new));
   app.querySelectorAll("[data-setup]").forEach(b => b.onclick = () => go({ name: "setup" }));
   app.querySelectorAll("[data-sprint]").forEach(b => b.onclick = startSprint);
@@ -647,7 +683,7 @@ function renderHome() {
     persist(); renderHome(); document.querySelector(`[data-style="${s}"]`).focus();
   });
   const practiceCalc = document.getElementById("practiceCalc");
-  practiceCalc.onchange = () => {
+  if (practiceCalc) practiceCalc.onchange = () => {
     db.calcPrefs[calcKey("practice", db.roundModes.practice === "learning")] = practiceCalc.checked;
     persist(); renderHome(); document.getElementById("practiceCalc").focus();
   };
