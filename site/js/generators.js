@@ -148,6 +148,41 @@ Bank.gen("acc", () => {
   };
 });
 
+// Tax losses carried forward (US: NOLs): tax paid once the losses are used.
+Bank.calc("acc", {
+  lv: 2, unit: "US$m", tolerance: 0.05, dp: 1, prompt: "in US$m, to 1 decimal place",
+  make() {
+    const t = R.pick([0.21, 0.25, 0.3]);
+    let L, P;
+    do { L = R.step(40, 200, 10); P = R.step(60, 300, 10); } while (P <= L || P === 2 * L);
+    return { L, P, t };
+  },
+  solve: ({ L, P, t }) => (P - L) * t,
+  wrongs: ({ L, P, t }) => [
+    { value: P * t, trap: "missed-step", note: "That ignores the tax losses. They reduce taxable profit before the tax rate is applied." },
+    { value: L * t, trap: "wrong-measure", note: "That's the tax the losses save, not the tax the company still pays." },
+    { value: (P + L) * t, trap: "sign", note: "Tax losses reduce taxable profit; they're never added to it." }
+  ],
+  ask: ({ L, P, t }) => `A company has ${R.m(L)} of tax losses carried forward (in the US, NOLs) and makes ${R.m(P)} of taxable profit this year before using them. The tax rate is ${R.pct(t, 0)} and the losses can be used in full. How much tax does it pay this year?`,
+  why(i) { const { L, P, t } = i; return `Taxable profit after losses = ${P} − ${L} = ${R.m(P - L)}. Tax = ${P - L} × ${R.pct(t, 0)} = ${R.m(this.solve(i), 1)}. (US federal NOLs from 2018 onwards can only offset 80% of taxable income; here there's no cap.)`; },
+  fmt: v => R.m(v, 1)
+});
+
+// Deferred tax liability from faster tax depreciation, in year 1.
+Bank.calc("acc", {
+  lv: 2, unit: "US$m", tolerance: 0.005, dp: 2, prompt: "in US$m, to 2 decimal places",
+  make() { return { C: R.pick([120, 240, 360, 480, 600]), nb: R.pick([8, 10, 12]), nt: R.pick([3, 4, 5]), t: R.pick([0.21, 0.25, 0.3]) }; },
+  solve: ({ C, nb, nt, t }) => (C / nt - C / nb) * t,
+  wrongs: ({ C, nb, nt, t }) => [
+    { value: C / nt - C / nb, trap: "missed-step", note: "That's the timing difference itself. The deferred tax is that difference times the tax rate." },
+    { value: C / nt * t, trap: "wrong-measure", note: "That's the whole tax saving from tax depreciation. Only the part above book depreciation is deferred." },
+    { value: (C / nt - C / nb) * (1 - t), trap: "wrong-measure", note: "That multiplies by (1 − tax rate). Deferred tax is the timing difference times the tax rate." }
+  ],
+  ask: ({ C, nb, nt, t }) => `A company buys equipment for ${R.m(C)}. In its accounts it depreciates it straight-line over ${nb} years; for tax it deducts it straight-line over ${nt} years. The tax rate is ${R.pct(t, 0)}. By how much does its deferred tax liability increase in year 1?`,
+  why(i) { const { C, nb, nt, t } = i; return `Tax depreciation ${C} ÷ ${nt} = ${R.num(C / nt)}; book depreciation ${C} ÷ ${nb} = ${R.num(C / nb)}. Timing difference = ${R.num(C / nt - C / nb)}. Deferred tax liability +${R.num(C / nt - C / nb)} × ${R.pct(t, 0)} = ${R.m(this.solve(i), 2)}: tax saved now, paid later.`; },
+  fmt: v => R.m(v, 2)
+});
+
 Bank.gen("econ", () => {
   const i = R.step(0.03, 0.09, 0.0025), p = R.step(0.02, 0.06, 0.0025), real = (1 + i) / (1 + p) - 1;
   return { trap: ["wrong-measure", "sign", "sign"],

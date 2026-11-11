@@ -4,7 +4,8 @@ Lessons.add("acc", {
   "status": "draft",
   "method": [
     "The three statements are linked. Net income from the income statement starts the cash flow statement; non-cash items such as depreciation are added back and working capital changes adjusted to reach operating cash flow; closing cash goes to the balance sheet, and net income flows into retained earnings within equity.",
-    "The classic test is a change in depreciation. Under IFRS (IAS 16), depreciation spreads an asset's cost over its useful life; it isn't a cash payment. Higher depreciation lowers profit and tax, so cash rises by the tax saved, PP&E falls by the depreciation, and equity falls by the after-tax amount, which keeps the balance sheet in balance."
+    "The classic test is a change in depreciation. Under IFRS (IAS 16), depreciation spreads an asset's cost over its useful life; it isn't a cash payment. Higher depreciation lowers profit and tax, so cash rises by the tax saved, PP&E falls by the depreciation, and equity falls by the after-tax amount, which keeps the balance sheet in balance.",
+    "Deferred tax (IAS 12) appears when the accounts and the tax return recognise the same item in different years. If tax depreciation runs ahead of book depreciation, the company pays less tax now and more later: a deferred tax liability. Tax losses carried forward (in the US, NOLs) create a deferred tax asset, but only if future taxable profit to use them is probable. Both reverse over time: they move tax between years rather than removing it."
   ],
   "example": {
     "question": "Depreciation rises by US$20 and the tax rate is 25%. What happens to net income, cash, PP&E and equity?",

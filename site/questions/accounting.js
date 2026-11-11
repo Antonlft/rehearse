@@ -66,7 +66,47 @@ Bank.add("acc", [
   { id: "acc-17", lv: 3, q: "How does an investor account for an associate under the equity method?",
     o: ["It records its share of the associate's net income in a single line", "It consolidates the associate's revenue and costs line by line", "It records only dividends received, as revenue", "It marks the stake to market through profit each quarter"],
     why: "For associates, usually 20–50% stakes, the investor books its share of profit in one line and adjusts the investment's carrying value.",
-    x: ["Line-by-line consolidation is for subsidiaries the parent controls.", "Under the equity method dividends reduce the carrying value; they aren't revenue.", "Fair value through profit applies to some financial investments, not associates."] }
+    x: ["Line-by-line consolidation is for subsidiaries the parent controls.", "Under the equity method dividends reduce the carrying value; they aren't revenue.", "Fair value through profit applies to some financial investments, not associates."] },
+  { id: "acc-18", lv: 2, trap: ["inverted", "concept", "wrong-measure"], q: "A company depreciates an asset faster for tax purposes than in its accounts. What does this create?",
+    o: ["A deferred tax liability, because it pays less tax now and more later", "A deferred tax asset, because its tax deductions are higher", "A permanent difference, with no deferred tax", "A current tax receivable from the tax authority"],
+    why: "Faster tax depreciation lowers taxable profit and the tax paid today. The difference reverses once the tax deductions run out, so the company records a deferred tax liability for the extra tax it will pay then (IAS 12).",
+    x: ["It's the other way round. A deferred tax asset arises when tax is paid earlier than the accounts suggest, for example with tax losses carried forward.", "It's a timing difference: total depreciation over the asset's life is the same, only the timing differs.", "Nothing is owed back by the tax authority; the company has simply paid less tax so far."] },
+  { id: "acc-19", lv: 2, trap: ["missed-step", "concept", "concept"], q: "A company makes a tax loss it can carry forward against future taxable profit (in the US, a net operating loss or NOL). Under IFRS, when does it recognise a deferred tax asset for it?",
+    o: ["Only to the extent future taxable profit to use the loss is probable", "Always, for the full loss times the tax rate", "Never: tax losses are only disclosed in the notes", "Only once the tax authority refunds the loss in cash"],
+    why: "IAS 12 allows a deferred tax asset for unused tax losses only if future taxable profit is probable. The asset is the usable loss times the tax rate; a history of losses is strong evidence against recognising it.",
+    x: ["Recognition depends on expected future profit. US GAAP reaches a similar result by booking the asset and then a valuation allowance against it.", "When the test is met, the asset goes on the balance sheet; it isn't just disclosed.", "A carry-forward lowers future tax bills; it doesn't trigger a cash refund."] },
+  { id: "acc-20", lv: 3, trap: ["sign", "missed-step", "wrong-measure"], q: "In a share acquisition, the buyer writes up the target's PP&E to fair value but the tax base stays the same. What does the purchase accounting record for the write-up?",
+    o: ["A deferred tax liability (write-up × tax rate), which adds to goodwill", "A deferred tax asset equal to the write-up times the tax rate", "Nothing: a write-up has no tax effect", "A tax charge in the income statement at completion"],
+    why: "The extra book value will be depreciated in the accounts but not for tax, so taxable profit will exceed book profit: a deferred tax liability. It reduces the net identifiable assets acquired, so goodwill rises by the same amount (IFRS 3, IAS 12).",
+    x: ["It's a liability: as the write-up is depreciated, the company pays more tax than its accounts suggest.", "Book and tax values now differ, so deferred tax arises. There would be none if the tax base were stepped up too, as in many asset deals.", "Nothing goes through the income statement on day one. The liability sits on the balance sheet and unwinds as the asset is depreciated."] },
+  { id: "acc-21", lv: 2, trap: ["wrong-measure", "wrong-measure", "concept"], q: "A company's statutory tax rate is 25% but its effective tax rate is 18%. Which of these could explain the gap?",
+    o: ["Part of its profit is earned in countries with lower tax rates", "Its interest expense rose this year", "Its revenue grew faster than its costs", "It paid a larger dividend"],
+    why: "Effective tax rate = tax expense ÷ pre-tax profit. It moves away from the statutory rate when some profit is taxed at other rates or not at all: foreign profits, tax credits, non-deductible costs or tax losses used. Analysts usually use the statutory (marginal) rate for the interest tax shield.",
+    x: ["Deductible interest lowers pre-tax profit and tax together, so on its own it doesn't change the ratio.", "More profit taxed at the same rate leaves the ratio unchanged.", "Dividends come out of after-tax profit; they don't change the tax charge on it."] },
+  { id: "acc-22", lv: 2, trap: ["missed-step", "sign", "wrong-measure"], q: "A company writes down US$40m of obsolete inventory. The write-down is tax-deductible, the tax rate is 25% and tax is paid in the same year. What is the effect?",
+    o: ["Net income −US$30m, cash +US$10m, inventory −US$40m", "Net income −US$40m, cash −US$40m, inventory −US$40m", "Net income −US$30m, cash −US$30m, inventory −US$40m", "Net income −US$30m, cash unchanged, inventory −US$30m"],
+    why: "Pre-tax profit falls 40 and tax falls 10, so net income −30. The non-cash write-down is added back in the cash flow statement (+40), leaving cash +10 from the lower tax bill. Assets fall 30 (inventory −40, cash +10) and equity falls 30, so the balance sheet balances.",
+    x: ["That ignores tax and treats the write-down as a cash payment. It's non-cash, and tax falls by 10.", "Cash moves the other way. The write-down is added back, so only the tax saving touches cash, as an inflow.", "Inventory falls by the full 40. Tax affects profit and cash, not the inventory figure."] },
+  { id: "acc-23", lv: 1, trap: ["concept", "missed-step", "concept"], q: "A company declares and pays a US$50m cash dividend. How does it show up in its financial statements?",
+    o: ["Cash and retained earnings each fall by US$50m; the income statement is unaffected", "An expense of US$50m that lowers net income", "Cash falls by US$50m and a US$50m liability remains on the balance sheet", "Retained earnings fall by US$50m, but cash is unchanged until year-end"],
+    why: "A dividend is a distribution to shareholders, not an expense. Paying it reduces cash (usually a financing outflow) and retained earnings by the same amount, so the balance sheet still balances.",
+    x: ["Dividends are paid out of profit already earned; they never go through the income statement.", "A liability exists between declaration and payment, but paying the dividend settles it.", "Paying the dividend takes cash out straight away."] },
+  { id: "acc-24", lv: 2, trap: ["concept", "sign", "concept"], q: "A company increases its allowance for doubtful accounts (its loss allowance on receivables) by US$8m. What happens?",
+    o: ["A US$8m expense lowers profit and net receivables fall by US$8m; no cash moves", "Cash falls by US$8m as customers default", "Receivables rise by US$8m to reflect the higher risk", "Nothing is recorded until a customer actually fails to pay"],
+    why: "The allowance is a contra-asset: it reduces gross receivables to what the company expects to collect. Increasing it books an expense now (expected credit losses under IFRS 9), lowering profit and net receivables. Cash only moves when customers pay, or don't.",
+    x: ["No cash leaves the business; the company is recognising that some cash may never arrive.", "The allowance reduces net receivables; it never increases them.", "Under IFRS 9, losses are provided for when they are expected, not only after a default."] },
+  { id: "acc-25", lv: 3, trap: ["concept", "missed-step", "missed-step"], q: "A company has US$100m of PIK (payment-in-kind) notes at 10%. The interest is tax-deductible and the tax rate is 25%. What happens over the year?",
+    o: ["Net income −US$7.5m, cash +US$2.5m, debt +US$10m", "Net income −US$7.5m, cash −US$7.5m, debt unchanged", "Net income −US$10m, cash −US$10m, debt unchanged", "Net income unchanged, debt +US$10m"],
+    why: "PIK interest is an expense (−10 before tax, −7.5 after) but it isn't paid in cash: it's added to the debt. The cash flow statement adds it back as non-cash (+10), so cash rises by the 2.5 tax saving. Balance sheet: assets +2.5 = debt +10 and equity −7.5.",
+    x: ["That treats PIK as cash interest. It accrues onto the debt instead, so debt rises and only the tax saving touches cash.", "That treats it as cash interest and also leaves out the tax deduction.", "PIK interest is still an expense, so it lowers net income."] },
+  { id: "acc-26", lv: 2, trap: ["concept", "concept", "concept"], q: "A company's net income includes US$30m of share-based compensation. How should an analyst treat it?",
+    o: ["It's added back as non-cash, but it's still a real cost through dilution", "It's a cash cost like salaries, so nothing is added back", "It's a one-off item that can always be ignored", "It reduces cash when the shares are granted"],
+    why: "Share-based payment (IFRS 2) is an expense settled in shares, not cash, so it's added back to reach operating cash flow. But it transfers value from existing shareholders: excluding it flatters adjusted EBITDA and cash flow. Count it once, either as a cost or through the diluted share count.",
+    x: ["No cash leaves the company: employees receive shares or options.", "At most companies it recurs every year, so ignoring it overstates sustainable profit.", "Granting shares doesn't move cash. If anything, cash comes in when employees exercise options."] },
+  { id: "acc-27", lv: 2, trap: ["wrong-measure", "double-count", "missed-step"], q: "A company sells equipment with a book value of US$60m for US$80m in cash. Ignoring tax, how does the sale appear in the cash flow statement (indirect method)?",
+    o: ["The US$20m gain is subtracted from operating cash flow and US$80m appears in investing", "US$80m appears in operating cash flow", "The US$20m gain stays in operating cash flow and US$80m appears in investing", "Only the US$20m gain appears, in investing"],
+    why: "Net income includes the 20 gain, but the cash came from selling a long-term asset, which is investing. So the gain is subtracted from operating cash flow and the full 80 goes in investing; otherwise 20 would be counted twice.",
+    x: ["Selling long-term assets is an investing activity, not operating.", "Leaving the gain in operating cash flow counts it twice: once in net income and again inside the 80 of proceeds.", "The cash received is the full 80, not just the gain."] }
 ]);
 
 // New-format questions (shown only when "new formats" is on).
@@ -81,5 +121,36 @@ Bank.addFormat("acc", [
       { text: "Dividends paid to shareholders", answer: 2, note: "Returns to shareholders are financing. US GAAP requires it; IFRS also allows operating, but most companies choose financing." },
       { text: "Repayment of a bank loan", answer: 2, note: "Raising or repaying debt principal is financing." }
     ],
-    why: "Operating cash flow comes from running the business, investing from buying and selling long-term assets and businesses, and financing from dealings with lenders and shareholders." }
+    why: "Operating cash flow comes from running the business, investing from buying and selling long-term assets and businesses, and financing from dealings with lenders and shareholders." },
+  // 3-statement "ripple" drills: one event, and how each line moves.
+  { id: "acc-grid-02", lv: 2, type: "grid", q: "A company writes down US$40m of inventory. The write-down is tax-deductible and the tax rate is 25%. Over the year, does each line go up, go down or stay the same?",
+    columns: ["Up", "Down", "No change"],
+    rows: [
+      { text: "Net income", answer: 1, note: "Pre-tax profit −40, tax −10: net income −30." },
+      { text: "Operating cash flow", answer: 0, note: "Net income −30, plus the non-cash write-down added back +40: +10 from the lower tax bill." },
+      { text: "Inventory", answer: 1, note: "Inventory falls by the full 40." },
+      { text: "Shareholders' equity", answer: 1, note: "Retained earnings −30, matching assets −30 (inventory −40, cash +10)." },
+      { text: "Debt", answer: 2, note: "Nothing is borrowed or repaid." }
+    ],
+    why: "A write-down is a non-cash expense: it lowers profit and the asset, while cash only benefits from the tax saved." },
+  { id: "acc-grid-03", lv: 1, type: "grid", q: "A company declares and pays a US$50m cash dividend. Does each line go up, go down or stay the same?",
+    columns: ["Up", "Down", "No change"],
+    rows: [
+      { text: "Net income", answer: 2, note: "A dividend is a distribution, not an expense." },
+      { text: "Cash", answer: 1, note: "Cash −50." },
+      { text: "Retained earnings", answer: 1, note: "Retained earnings −50, matching the fall in cash." },
+      { text: "Operating cash flow", answer: 2, note: "Dividends paid are financing under US GAAP. IFRS also allows operating, but most companies choose financing." },
+      { text: "Total liabilities", answer: 2, note: "The liability created on declaration is settled when the dividend is paid." }
+    ],
+    why: "A dividend moves cash to shareholders: cash and equity fall together, and profit is untouched." },
+  { id: "acc-grid-04", lv: 3, type: "grid", q: "A company accrues US$10m of tax-deductible PIK interest. The tax rate is 25%. Over the year, does each line go up, go down or stay the same?",
+    columns: ["Up", "Down", "No change"],
+    rows: [
+      { text: "Net income", answer: 1, note: "Interest −10, tax −2.5: net income −7.5." },
+      { text: "Operating cash flow", answer: 0, note: "Net income −7.5, plus non-cash PIK interest added back +10: +2.5." },
+      { text: "Debt", answer: 0, note: "The interest is added to the principal: +10." },
+      { text: "Shareholders' equity", answer: 1, note: "Retained earnings −7.5." },
+      { text: "Cash interest paid", answer: 2, note: "That's the point of PIK: no cash interest until the notes are repaid." }
+    ],
+    why: "PIK interest is a real expense paid by growing the debt: profit falls, debt rises, and cash only gains the tax saving." }
 ]);
