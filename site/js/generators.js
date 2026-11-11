@@ -1277,3 +1277,67 @@ Bank.case("rev", {
       why: ({ V, L, ir, NOI, Eq, Int, CoC }) => `Interest = ${R.num(V * L, 1)} × ${R.pct(ir, 2)} = ${R.m(Int, 2)}. Cash after interest = ${R.num(NOI, 2)} − ${R.num(Int, 2)} = ${R.m(NOI - Int, 2)}. Cash-on-cash = ${R.num(NOI - Int, 2)} ÷ ${R.num(Eq, 1)} = ${R.pct(CoC)}.` }
   ]
 });
+
+// FIG: net interest margin. Same redraw guard (mnaFar).
+Bank.calc("fig", {
+  lv: 1, unit: "%", tolerance: 0.02, dp: 2, prompt: "as a percentage, to 2 decimal places",
+  make() {
+    for (;;) {
+      const A = R.step(20000, 200000, 1000), y = R.step(0.03, 0.07, 0.0025), II = Math.round(A * y / 10) * 10, IE = Math.round(II * R.step(0.35, 0.6, 0.05) / 10) * 10, TA = Math.round(A * R.step(1.15, 1.4, 0.05) / 1000) * 1000;
+      const i = { A, II, IE, TA };
+      if (mnaFar(this.solve(i), this.wrongs(i).map(w => w.value), 0.12, 0.0005)) return i;
+    }
+  },
+  solve: ({ A, II, IE }) => (II - IE) / A,
+  wrongs: ({ A, II, IE, TA }) => [
+    { value: (II - IE) / TA, trap: "wrong-measure", note: "That divides by total assets. NIM uses the assets that earn interest, which leaves out cash, buildings and other non-earning assets." },
+    { value: II / A, trap: "missed-step", note: "That's the yield on assets. NIM nets off the interest paid to depositors and lenders." },
+    { value: IE / A, trap: "wrong-measure", note: "That's the cost of funding. NIM is income minus expense, over earning assets." }
+  ],
+  ask: ({ A, II, IE, TA }) => `A bank earns ${R.m(II)} of interest income and pays ${R.m(IE)} of interest expense. Its average interest-earning assets are ${R.m(A)}, out of total assets of ${R.m(TA)}. What is its net interest margin (NIM)?`,
+  why(i) { const { A, II, IE } = i; return `Net interest income = ${R.num(II)} − ${R.num(IE)} = ${R.m(II - IE)}. NIM = ${R.num(II - IE)} ÷ ${R.num(A)} = ${R.pct(this.solve(i), 2)}.`; },
+  fmt: v => R.pct(v, 2)
+});
+
+// FIG: the P/TBV justified by returns, growth and the cost of equity. Same redraw guard (mnaFar).
+Bank.calc("fig", {
+  lv: 2, unit: "x", tolerance: 0.02, dp: 2, prompt: "as a multiple, to 2 decimal places",
+  make() {
+    for (;;) {
+      const r = R.step(0.06, 0.2, 0.005), k = R.step(0.09, 0.13, 0.005), g = R.step(0.02, 0.04, 0.005);
+      const i = { r, k, g };
+      if (mnaFar(this.solve(i), this.wrongs(i).map(w => w.value), 0.12, 0.03)) return i;
+    }
+  },
+  solve: ({ r, k, g }) => (r - g) / (k - g),
+  wrongs: ({ r, k, g }) => [
+    { value: r / k, trap: "missed-step", note: "That leaves out growth. Take g off both the return and the cost of equity." },
+    { value: (k - g) / (r - g), trap: "inverted", note: "That's flipped: returns go on top, the cost of equity underneath." },
+    { value: (r - g) / k, trap: "missed-step", note: "Growth comes off the cost of equity too: (ROTE − g) ÷ (cost of equity − g)." }
+  ],
+  ask: ({ r, k, g }) => `A bank's return on tangible equity (ROTE) is ${R.pct(r)}. Its cost of equity is ${R.pct(k)} and its long-run growth rate is ${R.pct(g)}. What price to tangible book value (P/TBV) does that justify?`,
+  why(i) { const { r, k, g } = i, v = this.solve(i); return `P/TBV = (ROTE − g) ÷ (cost of equity − g) = (${R.pct(r)} − ${R.pct(g)}) ÷ (${R.pct(k)} − ${R.pct(g)}) = ${R.x(v, 2)}. ${v >= 1 ? "Above 1.0x: the bank earns more than its cost of equity." : "Below 1.0x: the bank earns less than its cost of equity."}`; },
+  fmt: v => R.x(v, 2)
+});
+
+// FIG: CET1 capital above the bank's target, which it could return to shareholders. Same redraw guard (mnaFar).
+Bank.calc("fig", {
+  lv: 2, unit: "US$m", tolerance: 1, dp: 0, prompt: "in US$m, to the nearest million",
+  make() {
+    for (;;) {
+      const RWA = R.step(20000, 300000, 1000), c = R.step(0.12, 0.16, 0.0025), t = R.step(0.1, 0.125, 0.0025), at1 = Math.round(RWA * R.step(0.01, 0.02, 0.0025) / 10) * 10;
+      if (c - t < 0.01) continue;
+      const K = Math.round(RWA * c / 10) * 10, i = { RWA, K, t, at1 };
+      if (mnaFar(this.solve(i), this.wrongs(i).map(w => w.value), 0.12, 5)) return i;
+    }
+  },
+  solve: ({ RWA, K, t }) => K - t * RWA,
+  wrongs: ({ RWA, K, t, at1 }) => [
+    { value: K + at1 - t * RWA, trap: "wrong-measure", note: "That counts the AT1 bonds as CET1. A CET1 target can only be met with CET1 capital." },
+    { value: t * RWA, trap: "inverted", note: "That's the CET1 the bank needs to hold. The excess is what it has above that." },
+    { value: K, trap: "missed-step", note: "That's all its CET1. Only the part above the target could be returned." }
+  ],
+  ask: ({ RWA, K, t, at1 }) => `A bank has risk-weighted assets (RWA) of ${R.m(RWA)}, CET1 capital of ${R.m(K)} and ${R.m(at1)} of AT1 bonds. Its target CET1 ratio is ${R.pct(t, 2)}. How much CET1 capital does it hold above its target?`,
+  why(i) { const { RWA, K, t } = i; return `CET1 needed = ${R.pct(t, 2)} × ${R.num(RWA)} = ${R.m(t * RWA)}. Excess = ${R.num(K)} − ${R.num(t * RWA)} = ${R.m(this.solve(i))}. That's the capital it could pay out through dividends or buybacks, if the regulator agrees.`; },
+  fmt: v => R.m(v, 0)
+});

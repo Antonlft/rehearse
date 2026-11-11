@@ -64,3 +64,53 @@ Bank.add("fig", [
     why: "Little capital is needed, most earnings convert to cash and there's no credit risk on the balance sheet, all of which supports higher multiples.",
     x: ["Asset managers usually run with little leverage; banks are far more levered.", "They are regulated, just with lighter capital rules.", "Credit-cycle exposure lowers multiples; that describes banks."] }
 ]);
+
+// New-format questions (shown only when "new formats" is on).
+Bank.addFormat("fig", [
+  { id: "fig-grid-01", lv: 1, type: "grid", q: "Which kind of financial institution is each metric mainly used for?",
+    columns: ["Bank", "Insurer", "Asset manager"],
+    rows: [
+      { text: "Net interest margin (NIM)", answer: 0, note: "Net interest income ÷ average interest-earning assets: the spread a bank earns on lending." },
+      { text: "CET1 ratio", answer: 0, note: "Common equity tier 1 capital ÷ risk-weighted assets: the core measure of a bank's capital strength." },
+      { text: "Loan-to-deposit ratio", answer: 0, note: "Loans ÷ deposits: how far lending is funded by deposits rather than markets." },
+      { text: "Combined ratio", answer: 1, note: "(Claims + expenses) ÷ earned premiums: below 100% means underwriting makes money." },
+      { text: "Solvency II ratio", answer: 1, note: "Own funds ÷ the solvency capital requirement, for insurers in Europe." },
+      { text: "Embedded value", answer: 1, note: "Net assets plus the value of profits expected from policies already sold: used for life insurers." },
+      { text: "Net flows of assets under management (AUM)", answer: 2, note: "Money clients put in minus money they take out, before market moves." },
+      { text: "Fee margin in basis points of AUM", answer: 2, note: "Revenue ÷ average AUM: an asset manager's price for managing money." }
+    ],
+    why: "Banks live on spread and capital, insurers on underwriting and solvency, asset managers on the assets they manage and the fees they charge on them." },
+  { id: "fig-grid-02", lv: 2, type: "grid", q: "Where does each item sit in a bank's regulatory capital?",
+    columns: ["CET1", "AT1", "Tier 2", "Not capital"],
+    rows: [
+      { text: "Ordinary shares and retained earnings", answer: 0, note: "Common equity tier 1 (CET1): the first and best loss absorber." },
+      { text: "Goodwill (deducted when it's calculated)", answer: 0, note: "Goodwill and intangibles are deducted from CET1, because they can't absorb losses in a crisis." },
+      { text: "A perpetual bond that converts to shares or is written down if CET1 falls below a trigger", answer: 1, note: "Additional tier 1 (AT1), also called a CoCo (contingent convertible) bond." },
+      { text: "Dated subordinated debt with at least 5 years to maturity at issue", answer: 2, note: "Tier 2: absorbs losses once the bank is failing (gone concern)." },
+      { text: "Senior unsecured bonds", answer: 3, note: "Not regulatory capital, though they can count towards bail-in buffers (TLAC/MREL)." },
+      { text: "Customer deposits", answer: 3, note: "Deposits are funding, not capital." }
+    ],
+    why: "CET1 is equity; AT1 and Tier 2 are bonds built to absorb losses, AT1 while the bank is still going and Tier 2 once it's failing. Everything else is funding." },
+  { id: "fig-ord-01", lv: 2, type: "order", q: "Under EU bail-in rules, who absorbs a failing bank's losses? Put them in order, first to last.",
+    answer: ["Ordinary shareholders (CET1)", "AT1 bondholders", "Tier 2 bondholders", "Senior non-preferred bondholders", "Senior preferred bondholders", "Insured deposits (protected)"],
+    why: "Losses run up the capital structure from the bottom: equity first, then the most junior bonds, then senior debt. Insured deposits (up to €100,000 in the EU) are protected. In Switzerland in 2023, Credit Suisse's AT1 bonds were written off while shareholders still received something, because of the bonds' own terms and Swiss law, not the usual order." },
+  // Walk-through cards: answer out loud, then grade yourself against the model answer.
+  { id: "fig-walk-01", lv: 2, type: "walk", q: "How would you value a bank?",
+    points: [
+      "Value the equity directly, not enterprise value: deposits and debt are the bank's raw material, not just financing.",
+      "Price to tangible book (P/TBV), set by returns: justified P/TBV = (ROTE − g) ÷ (cost of equity − g), where ROTE is the return on tangible equity.",
+      "P/E against peers, on forward earnings.",
+      "A dividend discount model: project earnings, pay out what's left after keeping the target CET1 ratio, and discount at the cost of equity.",
+      "Explain why EV/EBITDA and a DCF of unlevered free cash flow don't work: interest is an operating cost for a bank."
+    ],
+    why: "Link the methods: a bank earning above its cost of equity deserves a premium to tangible book, and capital rules limit how much it can pay out." },
+  { id: "fig-walk-02", lv: 2, type: "walk", q: "How do rising interest rates affect a bank?",
+    points: [
+      "Net interest margin usually widens at first: floating-rate loans reprice faster than deposit rates.",
+      "Deposit beta (how much of a rate rise is passed to depositors) climbs over time as customers move to higher-paying products, squeezing the margin back.",
+      "Fixed-rate bonds held by the bank lose value; if it has to sell them, the losses become real (the 2023 failures of Silicon Valley Bank and others).",
+      "Credit quality weakens as borrowers pay more interest, so loan loss provisions rise.",
+      "Loan demand slows, and mortgage and refinancing activity falls."
+    ],
+    why: "Give both sides: a better margin in the short run, against funding pressure, bond losses and credit risk. Which wins depends on the balance sheet." }
+]);
