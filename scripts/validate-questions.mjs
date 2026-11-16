@@ -22,6 +22,9 @@
 //  - the glossary (site/js/glossary.js, loaded by index.html): every entry has a unique term, a full name, a definition
 //    and a real category; and every acronym used in a lesson has an entry (plurals like "LPs" count via "LP",
 //    compounds like "EV/EBITDA" via their parts), so a lesson can't use a term the glossary doesn't explain
+//  - answer length doesn't give the answer away in written multiple choice: in a balanced category, no right option is
+//    both the longest and 30%+ longer than the average wrong one, and the right option is the longest in at most 40% of
+//    the category's questions. Categories join BALANCED as their options are rebalanced; the bank-wide rate is reported.
 // Exits with code 1 on any violation.
 import { readFileSync, readdirSync } from "node:fs";
 import { join, dirname } from "node:path";
@@ -289,6 +292,25 @@ for (const [cat, l] of Object.entries(Lessons)) {
     if (!l.source) fail(`${where}: a ${l.status} lesson needs a source`);
   }
 }
+// Answer length: the right option mustn't stand out as the longest. Enforced for categories already rebalanced.
+const BALANCED = new Set(["rx"]);
+const mcqs = Object.entries(Bank.written).flatMap(([cat, list]) => list.filter(q => !q.type || q.type === "mcq").map(q => ({ cat, q })));
+const lengthStats = {};
+let longestRight = 0;
+for (const { cat, q } of mcqs) {
+  if (!Array.isArray(q.o) || q.o.length !== 4) continue;
+  const L = q.o.map(s => String(s).length), right = L[0], wrongs = L.slice(1), mean = wrongs.reduce((a, b) => a + b, 0) / 3;
+  const isLongest = wrongs.every(w => right > w);
+  if (isLongest) longestRight++;
+  const st = (lengthStats[cat] ||= { n: 0, longest: 0 });
+  st.n++; if (isLongest) st.longest++;
+  if (BALANCED.has(cat) && isLongest && right >= 1.3 * mean) fail(`${q.id}: the right option (${right} characters) stands out as the longest (wrong ones average ${Math.round(mean)}); balance the lengths`);
+}
+for (const cat of BALANCED) {
+  const st = lengthStats[cat];
+  if (st && st.longest / st.n > 0.4) fail(`category ${cat}: the right option is the longest in ${st.longest} of ${st.n} questions (${Math.round(st.longest / st.n * 100)}%); keep it at 40% or less`);
+}
+
 // Glossary: well-formed entries, and every acronym in a lesson explained there.
 const Glossary = ctx.Glossary || [];
 if (!Array.isArray(Glossary) || !Glossary.length) fail("js/glossary.js must define a non-empty window.Glossary list");
@@ -324,3 +346,4 @@ if (errors.length) {
 console.log(`✓ ${written - formatQuestions} written questions, ${formatQuestions} new-format questions, ${gens} generators, ${typed} typed-answer generators and ${cases} case stud${cases === 1 ? "y" : "ies"} (${RUNS} samples each) passed.`);
 console.log(`✓ ${Object.keys(Lessons).length} lessons for ${categoryIds.length} categories (${Object.entries(lessonCounts).map(([k, v]) => `${v} ${k}`).join(", ")}).`);
 console.log(`✓ ${Glossary.length} glossary terms; every acronym in the lessons has one.`);
+console.log(`✓ Answer length checked in ${BALANCED.size} rebalanced categor${BALANCED.size === 1 ? "y" : "ies"}; across the bank the right option is the longest in ${Math.round(longestRight / mcqs.length * 100)}% of multiple-choice questions (25% would be chance).`);
