@@ -22,9 +22,9 @@
 //  - the glossary (site/js/glossary.js, loaded by index.html): every entry has a unique term, a full name, a definition
 //    and a real category; and every acronym used in a lesson has an entry (plurals like "LPs" count via "LP",
 //    compounds like "EV/EBITDA" via their parts), so a lesson can't use a term the glossary doesn't explain
-//  - answer length doesn't give the answer away in written multiple choice: in a balanced category, no right option is
+//  - answer length doesn't give the answer away in written multiple choice: in every category, no right option is
 //    both the longest and 30%+ longer than the average wrong one, and the right option is the longest in at most 40% of
-//    the category's questions. Categories join BALANCED as their options are rebalanced; the bank-wide rate is reported.
+//    the category's questions. The bank-wide rate is reported.
 // Exits with code 1 on any violation.
 import { readFileSync, readdirSync } from "node:fs";
 import { join, dirname } from "node:path";
@@ -292,8 +292,8 @@ for (const [cat, l] of Object.entries(Lessons)) {
     if (!l.source) fail(`${where}: a ${l.status} lesson needs a source`);
   }
 }
-// Answer length: the right option mustn't stand out as the longest. Enforced for categories already rebalanced.
-const BALANCED = new Set(["rx", "cm", "econ", "hds", "hom", "liv", "mna", "lbo", "credit", "fig", "val", "rev"]);
+// Answer length: the right option mustn't stand out as the longest. Enforced in every category, new ones included.
+const BALANCED = new Set(Object.keys(Bank.written));
 const mcqs = Object.entries(Bank.written).flatMap(([cat, list]) => list.filter(q => !q.type || q.type === "mcq").map(q => ({ cat, q })));
 const lengthStats = {};
 let longestRight = 0;
