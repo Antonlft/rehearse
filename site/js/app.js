@@ -1800,14 +1800,46 @@ function methodHtml(items) {
       ${b.kind === "formula" ? `<p class="mb-eq">${b.text.split("\n").map(line => `<span class="mb-line">${rich(line)}</span>`).join("")}</p>` : `<p class="mb-text">${b.text.split("\n").map(line => `<span class="mb-line">${rich(line)}</span>`).join("")}</p>`}
       ${b.note ? `<p class="mb-note">${b.note.split("\n").map(line => `<span class="mb-line">${rich(line)}</span>`).join("")}</p>` : ""}
     </div>`;
-  let html = "";
+  const item = b => typeof b === "string" ? `<p>${rich(b)}</p>`
+    : b && b.check ? `<div class="mblock mb-check" data-check="${esc(b.check)}"></div>` // filled by mountCheck()
+    : block(b);
+  const sections = items.filter(b => b && b.section).length;
+  // One section or none: the blocks read straight down, with a heading if there is one.
+  if (sections < 2) return items.map(b => b && b.section ? `<h3 class="mb-section">${esc(b.section)}</h3>` : item(b)).join("");
+  // Two or more: an accordion. Each section is a numbered line that opens and closes; all start closed, so the page
+  // opens on the lesson's map (the summary, then one line per section).
+  // Section titles may carry their own "1." numbering, which is dropped in favour of the accordion's.
+  const groups = [];
   for (const b of items) {
-    if (typeof b === "string") { html += `<p>${rich(b)}</p>`; continue; }
-    if (b && b.section) { html += `<h3 class="mb-section">${esc(b.section)}</h3>`; continue; }
-    if (b && b.check) { html += `<div class="mblock mb-check" data-check="${esc(b.check)}"></div>`; continue; } // filled by mountCheck()
-    html += block(b);
+    if (b && b.section) groups.push({ title: b.section.replace(/^\d+\.\s*/, ""), items: [] });
+    else (groups[groups.length - 1] || groups[groups.push({ title: "", items: [] }) - 1]).items.push(b);
   }
-  return html;
+  return `<div class="mb-secs">
+    <div class="mb-secs-tools"><span class="label">${groups.length} sections</span><button class="link" type="button" data-sec-all>Open all</button></div>
+    ${groups.map((g, i) => `<details class="mb-sec">
+      <summary class="mb-sec-head"><span class="mb-sec-num" aria-hidden="true">${i + 1}</span><span class="mb-sec-title">${esc(g.title)}</span>${g.items.some(b => b && b.check) ? `<span class="mb-sec-meta">${mbIcon("check")}<span class="mb-sec-meta-text">Quick check</span></span>` : ""}</summary>
+      <div class="mb-sec-body">${g.items.map(item).join("")}
+        <p class="mb-sec-back"><button class="link" type="button" data-sec-back>Back to sections</button></p>
+      </div>
+    </details>`).join("")}
+  </div>`;
+}
+
+/* Lesson sections as an accordion: "Open all / Close all" follows what's open, and "Back to sections" closes the
+   section it's in and returns to its line in the list. Nothing is saved: a lesson always opens with every section closed. */
+function wireSections() {
+  const box = app.querySelector(".mb-secs");
+  if (!box) return;
+  const secs = [...box.querySelectorAll("details.mb-sec")], all = box.querySelector("[data-sec-all]");
+  const sync = () => { all.textContent = secs.every(d => d.open) ? "Close all" : "Open all"; };
+  secs.forEach(d => d.addEventListener("toggle", sync));
+  all.onclick = () => { const open = !secs.every(d => d.open); secs.forEach(d => { d.open = open; }); sync(); };
+  box.querySelectorAll("[data-sec-back]").forEach(b => b.onclick = () => {
+    const d = b.closest("details"), head = d.querySelector("summary");
+    d.open = false; sync();
+    head.scrollIntoView({ block: "nearest" }); head.focus();
+  });
+  sync();
 }
 
 /* Worked example, one step at a time: each click reveals the next step, then the answer, so you can try each step
@@ -1987,6 +2019,7 @@ function renderLesson() {
   tries.forEach((w, i) => Widgets.mount(document.getElementById("lessonWidget" + i), w.type, w.values || {}));
   app.querySelectorAll("[data-check]").forEach(el => mountCheck(el, view.cat));
   wireStepper(document.getElementById("stepper"));
+  wireSections();
 }
 
 /* Results */

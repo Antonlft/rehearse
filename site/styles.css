@@ -497,6 +497,24 @@ sup { font-size: 0.72em; line-height: 0; vertical-align: super; }
 .big-paren { display: inline-block; font-size: 2.1em; font-weight: 300; line-height: 1; vertical-align: middle; transform: translateY(-0.06em); }
 .lesson .mb-section { font-size: 15px; font-weight: 600; margin: 22px 0 10px; padding-bottom: 6px; border-bottom: 1px solid var(--rule); }
 .lesson .mb-section:first-of-type { margin-top: 4px; }
+/* Lessons with several sections: an accordion of numbered sections, the first one open. */
+.mb-secs-tools { display: flex; align-items: center; justify-content: space-between; margin: 0 0 8px; }
+.mb-secs-tools .link { font-size: 13px; }
+.mb-sec { border: 1px solid var(--rule); border-radius: 6px; margin-bottom: 8px; }
+.mb-sec-head { display: flex; align-items: center; gap: 10px; padding: 12px 14px; cursor: pointer; list-style: none; font-size: 15px; font-weight: 600; color: var(--ink); border-radius: 6px; }
+.mb-sec-head::-webkit-details-marker { display: none; }
+.mb-sec-head::after { content: ""; flex: none; width: 7px; height: 7px; margin-left: 6px; border-right: 2px solid var(--muted); border-bottom: 2px solid var(--muted); transform: rotate(45deg); transition: transform 0.15s; }
+.mb-sec[open] > .mb-sec-head::after { transform: rotate(-135deg); }
+.mb-sec-head:hover { background: var(--select); }
+.mb-sec-head:focus-visible { outline: 2px solid var(--navy); outline-offset: 2px; }
+.mb-sec[open] > .mb-sec-head { border-bottom: 1px solid var(--rule); border-radius: 6px 6px 0 0; }
+.mb-sec-num { flex: none; width: 24px; height: 24px; border-radius: 50%; display: grid; place-items: center; font-size: 12px; background: var(--navy-bg); color: var(--navy); border: 1px solid var(--navy-line); }
+.mb-sec-title { flex: 1; min-width: 0; }
+.mb-sec-meta { flex: none; display: inline-flex; align-items: center; gap: 5px; font-size: 12px; font-weight: 500; color: var(--muted); }
+.mb-sec-body { padding: 14px 14px 4px; }
+.lesson .mb-sec-back { margin: 2px 0 10px; font-size: 13px; }
+@media (max-width: 480px) { .mb-sec-meta-text { display: none; } .mb-sec-head { padding: 12px; } .mb-sec-body { padding: 12px 10px 4px; } }
+@media (prefers-reduced-motion: reduce) { .mb-sec-head::after { transition: none; } }
 .lesson .mblock .mb-note { margin-top: 4px; font-size: 12.5px; color: var(--muted); }
 .mblock.mb-idea { border-left: 0; padding: 2px 0 6px; }
 .mb-idea .mb-text { font-size: 15px; }
