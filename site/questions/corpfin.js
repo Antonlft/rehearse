@@ -70,3 +70,66 @@ Bank.addFormat("cf", [
     ],
     why: "Explain that WACC is the average return all capital providers require, which is why it discounts unlevered free cash flow to enterprise value." }
 ]);
+
+// More new formats: answer + reason and spot the error.
+Bank.addFormat("cf", [
+  { id: "cf-why-01", lv: 2, type: "reason",
+    q: "A company returns US$100m to shareholders, either as a special dividend or as a share buyback at the market price. Ignoring taxes, which leaves a shareholder who doesn't sell any shares better off?",
+    answers: ["Neither", "The buyback", "The dividend"],
+    answerNotes: [
+      "Earnings per share rise, but your stake in a smaller company is worth the same in total.",
+      "With a buyback, a holder who doesn't sell owns a bigger share of the company, which makes up for not getting cash."],
+    reasons: [
+      "The same US$100m leaves the company either way, and each holder's value is unchanged",
+      "A buyback lifts earnings per share, so the remaining shares are worth more in total",
+      "A dividend puts cash in your hand, while a buyback only benefits those who sell",
+      "Buybacks and dividends are taxed the same way, so the results always match"],
+    reasonNotes: [
+      "EPS goes up, but the company is US$100m smaller, so the value of your stake doesn't change.",
+      "Holders who don't sell gain too: each of their shares is now a slightly bigger slice of the company.",
+      "Taxes often differ between the two in practice; the question ignores them. They're equal because the same cash leaves and each holder's value is unchanged."],
+    why: "Say a company is worth US$1,000m with 100m shares at US$10, and you own 1m shares. A US$100m dividend pays you US$1m and drops the price to US$9: US$10m in total. A US$100m buyback at US$10 cancels 10m shares; the company is worth US$900m over 90m shares, still US$10 each, so your 1m shares are worth US$10m. Same total. Taxes, signalling and flexibility are what really separate the two." },
+
+  { id: "cf-why-02", lv: 2, type: "reason",
+    q: "Two companies run identical businesses. One has no debt; the other has debt worth as much as its equity. How do their equity betas compare?",
+    answers: ["The indebted one's is higher", "The debt-free one's is higher", "They're the same"],
+    answerNotes: [
+      "With no debt, shareholders carry only the business's own risk, so its beta is the lower of the two.",
+      "Their asset (unlevered) betas are the same, but debt concentrates that risk on the equity, so the equity betas differ."],
+    reasons: [
+      "Debt makes shareholders' returns swing more for the same business risk",
+      "Debt-free companies grow faster, which makes their shares more volatile",
+      "Beta measures how risky the business is, and the businesses are identical",
+      "Indebted companies tend to be smaller, and smaller companies have higher betas"],
+    reasonNotes: [
+      "Growth isn't the issue here: the businesses are identical.",
+      "That's true of the asset beta. The equity beta also reflects how much debt sits ahead of the shareholders.",
+      "Size isn't the reason, and here the businesses are identical. Debt raises the equity beta because shareholders absorb all the swings in profit after a fixed interest bill."],
+    why: "Debt adds financial risk on top of business risk: interest is fixed, so any swing in profit lands entirely on shareholders. Ignoring taxes, equity beta = asset beta × (1 + debt ÷ equity). With debt equal to equity, the indebted company's equity beta is twice the debt-free one's. That's why you unlever peers' betas before comparing them." },
+
+  { id: "cf-spot-01", lv: 2, type: "spot",
+    q: "A company has equity worth US$600m and debt of US$400m. Its cost of equity is 10%, its pre-tax cost of debt 5% and its tax rate 25%. A candidate works out its WACC. Which line contains the mistake?",
+    lines: [
+      "Weights: equity 600 ÷ 1,000 = 60%, debt 400 ÷ 1,000 = 40%",
+      "After-tax cost of debt: 5% × 25% = 1.25%",
+      "Equity part: 60% × 10% = 6.0%",
+      "Debt part: 40% × 1.25% = 0.5%",
+      "WACC: 6.0% + 0.5% = 6.5%"],
+    wrong: 1,
+    lineNotes: [
+      "Weights use market values: 600 and 400 out of 1,000. That's right.",
+      null,
+      "60% × 10% = 6.0% is right.",
+      "Weighting by 40% is right, but it uses the wrong cost from line 2.",
+      "Adding the two parts is right, but it carries the mistake forward."],
+    fixes: [
+      "Multiply by (1 − tax): 5% × 75% = 3.75%, so the WACC is 7.5%",
+      "Use the 5% pre-tax cost, as interest is paid in full: WACC is 8.0%",
+      "Add the tax to the rate: 5% × 1.25 = 6.25%, so the WACC is 8.5%",
+      "Take the tax off the cost of equity too, so the WACC comes to 6.0%"],
+    fixNotes: [
+      "Interest is tax-deductible, so the company's real cost of debt is lower than 5%.",
+      "Tax makes debt cheaper, not dearer, because interest reduces the tax bill.",
+      "Dividends aren't tax-deductible, so the cost of equity gets no tax adjustment."],
+    why: "Interest is tax-deductible, so the after-tax cost of debt is the pre-tax rate × (1 − tax rate): 5% × 0.75 = 3.75%. WACC = 60% × 10% + 40% × 3.75% = 6.0% + 1.5% = 7.5%. Multiplying by the tax rate instead of by one minus it keeps only the tax saving and throws away the cost." }
+]);

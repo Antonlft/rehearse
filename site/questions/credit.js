@@ -140,3 +140,64 @@ Bank.addFormat("credit", [
     ],
     why: "Lenders care about two questions: will the company pay, and what do I get back if it doesn't? Cover both." }
 ]);
+
+// More new formats: answer + reason and spot the error.
+Bank.addFormat("credit", [
+  { id: "cr-why-01", lv: 2, type: "reason",
+    q: "A company with net debt/EBITDA of 4.0x sells a division for exactly 4.0x that division's EBITDA, and uses all the cash to repay debt. What happens to its leverage ratio?",
+    answers: ["It stays at 4.0x", "It falls below 4.0x", "It rises above 4.0x"],
+    answerNotes: [
+      "Debt does fall, but EBITDA falls too, by the same proportion.",
+      "It would rise only if the division were sold below 4.0x. At exactly 4.0x, the two effects cancel out."],
+    reasons: [
+      "Debt and EBITDA both fall by the same proportion, so the ratio holds",
+      "Repaying debt always lowers leverage, because less debt is owed",
+      "The company loses EBITDA, so each dollar of debt is covered by less profit",
+      "Leverage covenants ignore asset sales, so the reported ratio doesn't move"],
+    reasonNotes: [
+      "Not if EBITDA falls too. Leverage is a ratio, so both sides matter.",
+      "EBITDA falls, but debt falls by the same proportion, so the cover per dollar of debt is unchanged.",
+      "Asset sales do change both parts of the ratio. Here they just move in proportion."],
+    why: "Say EBITDA is US$100m and net debt US$400m (4.0x). Selling a division with US$20m of EBITDA for 4.0x raises US$80m, which repays debt: net debt becomes US$320m and EBITDA US$80m, still 4.0x. Selling above the company's own leverage multiple reduces leverage; selling below it increases leverage." },
+
+  { id: "cr-why-02", lv: 2, type: "reason",
+    q: "A company has two bonds maturing on the same day: one senior secured, one subordinated. Which usually trades at the higher yield?",
+    answers: ["The subordinated bond", "The senior secured bond", "Both trade at the same yield"],
+    answerNotes: [
+      "Security makes the senior bond safer, so it needs a lower yield, not a higher one.",
+      "The chance of default is the same, but recovery isn't: the subordinated bond loses more in a default, so it pays more."],
+    reasons: [
+      "It's repaid after the senior debt in a default, so investors expect to recover less",
+      "Secured bondholders have to monitor the collateral, so they demand a higher return",
+      "The same company is behind both, so the default risk and the yield are identical",
+      "Subordinated bonds default more often than senior bonds of the same company"],
+    reasonNotes: [
+      "Security lowers risk, so secured lenders accept a lower return, monitoring or not.",
+      "Default risk is the same, but the loss in a default isn't, and investors price both.",
+      "Both bonds default together: if the company fails, both stop paying. The difference is how much each recovers afterwards."],
+    why: "Both bonds default at the same time, because the same company stands behind them. What differs is recovery: secured debt is repaid from its collateral first, while subordinated debt is paid only after the senior claims. Expected loss = chance of default × loss when it happens, and the subordinated bond loses more, so investors demand a higher yield." },
+
+  { id: "cr-spot-01", lv: 1, type: "spot",
+    q: "A company has EBITDA of US$200m, debt of US$900m, cash of US$100m and yearly interest of US$60m. A candidate checks two covenants: net debt/EBITDA of at most 4.5x, and interest cover of at least 3.0x. Which line contains the mistake?",
+    lines: [
+      "Net debt: US$900m − US$100m = US$800m",
+      "Leverage: US$800m ÷ US$200m = 4.0x, inside the 4.5x limit",
+      "Interest cover: US$60m ÷ US$200m = 0.3x",
+      "0.3x is below the 3.0x minimum, so the cover covenant is breached"],
+    wrong: 2,
+    lineNotes: [
+      "Net debt is debt less cash. That's right.",
+      "Net debt ÷ EBITDA = 4.0x, below the 4.5x cap, so the test passes. That's right.",
+      null,
+      "The comparison is right, but it uses the upside-down ratio from line 3, so the conclusion is wrong."],
+    fixes: [
+      "Divide EBITDA by interest: 200 ÷ 60 = 3.3x, so the cover test passes",
+      "Use net debt instead of interest: 800 ÷ 200 = 4.0x, so it passes",
+      "Use gross debt: interest cover is 900 ÷ 200 = 4.5x, right at the limit",
+      "Compare interest with cash: 60 ÷ 100 = 0.6x, so the test fails"],
+    fixNotes: [
+      "That's the leverage ratio again. Interest cover compares profit with the interest bill.",
+      "Debt isn't part of interest cover: it compares EBITDA with interest.",
+      "Interest cover measures how many times profit covers interest, not cash."],
+    why: "Interest cover = EBITDA ÷ interest: how many times profit covers the interest bill. Here 200 ÷ 60 = 3.3x, above the 3.0x minimum, so both covenants pass. Flipping a ratio upside down is easy under time pressure. A quick sense check helps: a healthy company's profit should be several times its interest." }
+]);

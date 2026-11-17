@@ -121,3 +121,68 @@ Bank.addFormat("bt", [
     ],
     why: "Two routes landing in the same range is the strongest sanity check. Round numbers keep the arithmetic in your head and easy to follow." }
 ]);
+
+// More new formats: answer + reason and spot the error.
+Bank.addFormat("bt", [
+  { id: "bt-why-01", lv: 1, type: "reason",
+    q: "You flip a fair coin and get heads five times in a row. What's the chance that the next flip is heads?",
+    answers: ["50%", "Less than 50%", "More than 50%", "About 2%"],
+    answerNotes: [
+      "Tails isn't 'due': the coin has no memory of the last five flips.",
+      "The question says the coin is fair, so a run of heads tells you nothing about the next flip.",
+      "About 2% (1 in 64) is the chance of six heads in a row before any flips. Five have already happened."],
+    reasons: [
+      "Each flip is independent: the coin has no memory of past flips",
+      "Tails is now overdue, so it's more likely to come up next time",
+      "Six heads in a row has a 1 in 64 chance, so another head is very unlikely",
+      "Over many flips heads and tails even out, so the next one is 50/50"],
+    reasonNotes: [
+      "Outcomes are never 'overdue'. Thinking so is the gambler's fallacy.",
+      "1 in 64 is the chance of six heads before you start. The first five have already happened, so only the next flip is uncertain.",
+      "Results don't even out by correcting themselves; an early run just gets diluted by many later flips. The next flip is 50/50 because each flip is on its own."],
+    why: "Each flip of a fair coin is independent, so the chance of heads is 50% whatever happened before. The run of five is already history. Thinking tails is 'due' is the gambler's fallacy, a classic interview trap." },
+
+  { id: "bt-why-02", lv: 2, type: "reason",
+    q: "You're asked to size the yearly US market for school backpacks. Which starting point is most reliable?",
+    answers: ["School-age children", "US households", "Total US retail sales", "The number of schools"],
+    answerNotes: [
+      "Households without children buy none, and some have several children, so households are a weaker driver.",
+      "Taking a share of total retail sales needs a guess at that share, which is the hard part, so it adds error.",
+      "Schools rarely buy backpacks; families do, one per child."],
+    reasons: [
+      "Backpacks are bought per child, so children drive how many are needed",
+      "Households make the buying decisions, so households are the natural unit",
+      "Starting from total spending and taking a share keeps the answer realistic",
+      "Every child buys a new backpack each term, so children set the number"],
+    reasonNotes: [
+      "Households decide, but how many backpacks they need depends on how many children they have.",
+      "A share of a huge total is hard to estimate well. A per-child build is easier to check.",
+      "Backpacks last a year or two, not a term. Children drive the count, but at about one every one to two years."],
+    why: "Start from the unit that actually drives demand. Each school-age child needs a backpack, replaced every year or two. So: about 55m US school-age children × roughly 0.6 backpacks a year × about US$35 each ≈ US$1.2bn a year. Each step can be sense-checked, which is what interviewers look for." },
+
+  { id: "bt-spot-01", lv: 1, type: "spot",
+    q: "A candidate estimates the yearly membership revenue of all the gyms in a city of 2 million people. Which line contains the mistake?",
+    lines: [
+      "About 15% of people are gym members: 2m × 15% = 300,000 members",
+      "The average membership fee is about US$50 a month",
+      "Yearly fees per member: US$50 × 12 = US$600",
+      "Total: 300,000 × US$600 = US$18m",
+      "So gyms in the city earn about US$18m a year from memberships"],
+    wrong: 3,
+    lineNotes: [
+      "15% is a reasonable assumption, and 2m × 15% = 300,000 is right.",
+      "US$50 a month is a reasonable average fee.",
+      "Turning a monthly fee into a yearly one by × 12 is right.",
+      null,
+      "The conclusion follows from line 4, so it carries the mistake forward."],
+    fixes: [
+      "300,000 × US$600 is US$180m: the total is out by a factor of 10",
+      "Use 52 weeks, not 12 months: US$50 × 52 = US$2,600 a member",
+      "Count only adults: 2m × 15% × 80% gives 240,000 members",
+      "Add the gyms' 50% profit margin on top: revenue is about US$27m"],
+    fixNotes: [
+      "The fee is monthly, so × 12 is right. × 52 would treat it as a weekly fee.",
+      "That changes an assumption, not a mistake: 15% of the whole population is already a fair estimate.",
+      "Revenue is what members pay. Margin is a separate question about profit."],
+    why: "300,000 × US$600 = US$180m, not US$18m. A factor-of-10 slip is the most common error in market sizing, so work the zeros out loud: 3 × 6 = 18, then add the 5 + 2 = 7 zeros, giving 180,000,000. Then sense-check: US$180m over 2 million people is US$90 a person a year, which sounds plausible." }
+]);
