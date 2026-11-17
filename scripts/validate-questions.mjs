@@ -293,7 +293,7 @@ for (const [cat, l] of Object.entries(Lessons)) {
   }
 }
 // Answer length: the right option mustn't stand out as the longest. Enforced for categories already rebalanced.
-const BALANCED = new Set(["rx", "cm", "econ", "hds", "hom"]);
+const BALANCED = new Set(["rx", "cm", "econ", "hds", "hom", "liv", "mna", "lbo", "credit"]);
 const mcqs = Object.entries(Bank.written).flatMap(([cat, list]) => list.filter(q => !q.type || q.type === "mcq").map(q => ({ cat, q })));
 const lengthStats = {};
 let longestRight = 0;
