@@ -73,3 +73,89 @@ Bank.add("hk", [
     why: "Non-room revenue explains the gap. F&B and events are labour-heavy, so they add profit but dilute the margin compared with rooms.",
     x: ["Select-service hotels have little non-room revenue, so their TRevPAR sits close to RevPAR.", "The RevPARs are equal, so occupancy doesn't explain the gap.", "More revenue doesn't mean a higher margin; F&B margins are thin."] }
 ]);
+
+// New-format questions (shown only when "new formats" is on).
+Bank.addFormat("hk", [
+  { id: "hk-why-01", lv: 1, type: "reason",
+    q: "A hotel cuts its average daily rate (ADR) by 10%, and occupancy rises from 70% to 77%. What happens to its revenue per available room (RevPAR)?",
+    answers: ["It falls about 1%", "It rises about 10%", "It stays the same", "It rises about 1%"],
+    answerNotes: [
+      "That counts the occupancy gain but forgets the 10% lower rate.",
+      "Close, but a 10% rise and a 10% fall don't cancel: 1.10 × 0.90 = 0.99.",
+      "The two changes combine to 0.99, a 1% fall, not a rise."],
+    reasons: [
+      "RevPAR is occupancy × rate, and 1.10 × 0.90 = 0.99, just below 1",
+      "The extra rooms sold exactly make up for the lower rate charged",
+      "RevPAR follows occupancy, which has risen by 10% from 70% to 77%",
+      "Each room night now sells for 10% less, so revenue per room falls"],
+    reasonNotes: [
+      "They don't quite: a 10% rise and a 10% fall combine to 0.99, not 1.",
+      "RevPAR depends on the rate too. Occupancy alone isn't enough.",
+      "That would mean a 10% fall, but more rooms are sold, so the fall is only about 1%."],
+    why: "RevPAR = occupancy × ADR. Occupancy rose 10% (77 ÷ 70 = 1.10) and ADR fell 10% (× 0.90), so RevPAR changes by 1.10 × 0.90 = 0.99: about 1% lower. Profit falls by more than that, because the extra occupied rooms bring extra cleaning, laundry and booking costs." },
+
+  { id: "hk-why-02", lv: 2, type: "reason",
+    q: "Two hotels have the same RevPAR. Hotel A gets there with 90% occupancy at a lower rate; Hotel B with 60% occupancy at a higher rate. Which usually has the higher gross operating profit (GOP) margin?",
+    answers: ["Hotel B", "Hotel A", "They're the same"],
+    answerNotes: [
+      "A earns the same room revenue as B but has to service 50% more occupied rooms to get it, and each one costs money.",
+      "The same revenue doesn't mean the same profit: costs depend on how many rooms are actually occupied."],
+    reasons: [
+      "It sells fewer rooms for the same revenue, so it spends less on servicing them",
+      "Higher occupancy spreads the hotel's fixed costs over more guests, lifting its margin",
+      "The same RevPAR means the same room revenue, and so the same profit from rooms",
+      "A higher rate shows a more upmarket hotel, and upmarket hotels earn higher margins"],
+    reasonNotes: [
+      "Fixed costs are spread over the same number of available rooms in both hotels. What differs is the cost of the 50% extra rooms A has to clean and service.",
+      "Revenue is the same, but A's costs are higher because it services more occupied rooms.",
+      "Upmarket hotels often have lower margins, with more staff per room. The reason here is that B sells fewer rooms for the same revenue."],
+    why: "RevPAR is revenue per available room, so both hotels earn the same room revenue. But A sells 50% more room nights (90% against 60% occupancy) to get it, and each occupied room costs money: housekeeping, laundry, amenities and booking commissions. B earns the same revenue from fewer occupied rooms, so it usually keeps more of it as GOP. That's why growth that comes from a higher rate is worth more than growth from occupancy." },
+
+  { id: "hk-spot-01", lv: 1, type: "spot",
+    q: "A 200-room hotel open all year runs at 75% occupancy with an ADR of US$160. A candidate works out its yearly room revenue and its RevPAR. Which line contains the mistake?",
+    lines: [
+      "Rooms available in a year: 200 × 365 = 73,000",
+      "Rooms sold: 73,000 × 75% = 54,750",
+      "Room revenue: 54,750 × US$160 = US$8.76m",
+      "RevPAR: US$8.76m ÷ 54,750 rooms sold = US$160",
+      "So the hotel earns US$160 a night for every room it has"],
+    wrong: 3,
+    lineNotes: [
+      "Rooms available = rooms × nights open. That's right.",
+      "Rooms sold = rooms available × occupancy. That's right.",
+      "Room revenue = rooms sold × ADR. That's right.",
+      null,
+      "This reads line 4's figure as revenue per available room, so it carries the mistake forward."],
+    fixes: [
+      "Divide by the 73,000 rooms available instead: RevPAR is US$120",
+      "Divide by the 200 rooms instead: RevPAR is US$43,800 a room",
+      "Divide by the 365 days instead: RevPAR is about US$24,000 a day",
+      "Use the hotel's total revenue on top, not just its room revenue"],
+    fixNotes: [
+      "That's room revenue per room for the whole year. RevPAR is per available room, per night.",
+      "That's the whole hotel's room revenue per day, not per room.",
+      "Total revenue divided by rooms available is TRevPAR, a different measure. RevPAR uses room revenue only."],
+    why: "RevPAR is room revenue divided by rooms available, so empty rooms count. Here US$8.76m ÷ 73,000 = US$120, which matches occupancy × ADR = 75% × US$160. Dividing by rooms sold just gives back the ADR, US$160, and ignores the 25% of rooms left empty." },
+
+  { id: "hk-grid-01", lv: 1, type: "grid",
+    q: "Which measure does each calculation give?",
+    columns: ["Occupancy", "ADR", "RevPAR"],
+    rows: [
+      { text: "Room revenue ÷ rooms sold", answer: 1, note: "The average price of the rooms actually sold." },
+      { text: "Rooms sold ÷ rooms available", answer: 0, note: "The share of rooms that were sold." },
+      { text: "Room revenue ÷ rooms available", answer: 2, note: "Revenue per room the hotel has, sold or not." },
+      { text: "Occupancy × ADR", answer: 2, note: "The share of rooms sold times their average price gives revenue per available room." },
+      { text: "RevPAR ÷ ADR", answer: 0, note: "Rearranging RevPAR = occupancy × ADR." },
+      { text: "RevPAR ÷ occupancy", answer: 1, note: "Rearranging RevPAR = occupancy × ADR the other way." }
+    ],
+    why: "The three are linked: RevPAR = occupancy × ADR. Knowing any two gives you the third, which is a quick way to check a hotel's figures in an interview." },
+
+  { id: "hk-ord-01", lv: 2, type: "order",
+    q: "For a typical full-service hotel, rank these figures per available room from largest to smallest.",
+    answer: [
+      "Total revenue (TRevPAR)",
+      "Room revenue (RevPAR)",
+      "Gross operating profit (GOPPAR)",
+      "EBITDA, after management fees and fixed charges"],
+    why: "Total revenue includes rooms plus food, drink and other departments, so it's the largest. Rooms are usually around 60–70% of it. GOP takes off the departments' and the hotel's operating costs, typically leaving 30–40% of total revenue: less than room revenue alone. Management fees, insurance and property taxes then come off to reach EBITDA." }
+]);

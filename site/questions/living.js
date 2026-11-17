@@ -87,3 +87,91 @@ Bank.addFormat("liv", [
     ],
     why: "Lead with demand against supply: PBSA income depends on filling every bed for the next academic year." }
 ]);
+
+// More new formats: answer + reason, spot the error, a grid and an ordering.
+Bank.addFormat("liv", [
+  { id: "liv-why-01", lv: 2, type: "reason",
+    q: "A 600-bed student housing (PBSA) scheme moves 200 of its beds from direct lets to a 10-year nomination agreement with a university, at a slightly lower rent. What usually happens to its valuation yield?",
+    answers: ["It falls, so value rises", "It rises, so value falls", "It doesn't change"],
+    answerNotes: [
+      "The lower rent trims income a little, but the yield reflects risk, and the risk has fallen.",
+      "Who pays the rent matters: a university committed for 10 years is a stronger tenant than individual students."],
+    reasons: [
+      "Part of the income is now secured by a university, so it carries less risk",
+      "The lower rent means lower income, so investors want a higher yield to compensate",
+      "Valuers capitalise the total income, whoever happens to pay the rent",
+      "Nominated beds can never be empty, so the whole scheme is now always full"],
+    reasonNotes: [
+      "Lower income lowers value through the income itself; the yield reflects risk, which has gone down.",
+      "The yield is about how secure the income is, and a university commitment makes it more secure.",
+      "Only the 200 nominated beds are secured. The other 400 still carry letting risk. The yield falls because part of the income is safer, not because the whole scheme is full."],
+    why: "A valuation yield reflects risk. Directly let beds have to be re-let every year, while nominated beds are paid for by the university for the length of the agreement. Moving a third of the beds to a 10-year nomination makes the income more secure, so investors accept a lower yield, which can more than offset the slightly lower rent." },
+
+  { id: "liv-why-02", lv: 2, type: "reason",
+    q: "A build-to-rent (BTR) block and a co-living scheme collect the same gross rent. Which usually produces more net operating income (NOI)?",
+    answers: ["The BTR block", "The co-living scheme", "They're about the same"],
+    answerNotes: [
+      "Co-living usually keeps less of its gross rent, because much of it pays for services included in the rent.",
+      "The gap is large: BTR typically loses around 20–25% of gross rent to costs, co-living often 35–45%."],
+    reasons: [
+      "Co-living rent covers bills, cleaning and more staff, so more of it goes on costs",
+      "Co-living residents stay for shorter periods, so there are fewer empty rooms between them",
+      "Both are rental housing, so costs take about the same share of gross rent",
+      "BTR tenants pay all their own bills, so the landlord has almost no costs at all"],
+    reasonNotes: [
+      "Shorter stays mean more turnover, so more empty periods and re-letting costs, not fewer.",
+      "The services included in co-living rent make its costs a much bigger share of the rent.",
+      "BTR landlords still pay for management, repairs, insurance and empty flats. They just don't pay their tenants' bills."],
+    why: "NOI is gross rent less the landlord's operating costs. In BTR, tenants usually pay their own utilities and council tax, so the landlord loses around 20–25% of the rent to costs. Co-living rent usually includes utilities, wifi, cleaning and community staff, and shorter stays mean more re-letting, so costs often take 35–45%. With the same gross rent, BTR keeps more." },
+
+  { id: "liv-spot-01", lv: 1, type: "spot",
+    q: "A 500-bed PBSA scheme charges US$200 per bed per week on 51-week tenancies and expects 98% occupancy. Operating costs are 30% of rent. A candidate values it at a 5% yield. Which line contains the mistake?",
+    lines: [
+      "Rent per bed per year: US$200 × 51 weeks = US$10,200",
+      "Rent at full occupancy: 500 × US$10,200 = US$5.10m",
+      "Rent at 98% occupancy: US$5.10m × 98% = US$5.00m",
+      "Net operating income: US$5.00m × 30% = US$1.50m",
+      "Value at a 5% yield: US$1.50m ÷ 5% = US$30.0m"],
+    wrong: 3,
+    lineNotes: [
+      "Rent is charged for the 51 weeks of the tenancy, so that's right.",
+      "Rent per bed times 500 beds is right.",
+      "Allowing for 2% of beds being empty is right.",
+      null,
+      "Dividing NOI by the yield is the right method, but it carries the mistake from line 4 forward."],
+    fixes: [
+      "NOI is the 70% left after costs: US$3.50m, so the value is US$70.0m",
+      "Use 52 weeks, not 51: rent per bed is US$10,400, so the value is higher",
+      "Leave costs out: NOI is the full US$5.00m, so the value is US$100m",
+      "Add the 30% costs on top of the rent: NOI is US$6.50m, value US$130m"],
+    fixNotes: [
+      "The tenancies run for 51 weeks. Any 52nd week would be summer income at best, not tenancy rent.",
+      "Value is based on net operating income, after the landlord's costs, not on gross rent.",
+      "Costs reduce income. They're never added to it."],
+    why: "Value = net operating income ÷ yield. NOI is the rent actually collected less operating costs: US$5.00m × (1 − 30%) = US$3.50m. At a 5% yield that's US$70m, or US$140,000 a bed. Multiplying by 30% keeps the costs instead of the income, which makes the scheme look worth less than half its value." },
+
+  { id: "liv-grid-01", lv: 1, type: "grid",
+    q: "Which living sector does each statement describe best?",
+    columns: ["PBSA", "BTR", "Co-living"],
+    rows: [
+      { text: "Let per bed on academic-year tenancies", answer: 0, note: "Student housing is let by the bed, for the academic year." },
+      { text: "Self-contained flats let to households, often for a year or more", answer: 1, note: "BTR is ordinary rented homes, held and managed by one owner." },
+      { text: "Small private rooms, large shared spaces and an all-inclusive rent", answer: 2, note: "Co-living trades private space for shared space and services." },
+      { text: "Income can be backed by a university nomination agreement", answer: 0, note: "Universities reserve, and often pay for, a block of beds." },
+      { text: "Extra income from summer lets and summer schools", answer: 0, note: "Rooms empty between academic years can be let short-term." },
+      { text: "Tenants usually pay their own utilities and council tax", answer: 1, note: "That keeps the landlord's costs relatively low." },
+      { text: "Flexible stays of a few months, aimed at young professionals", answer: 2, note: "Co-living offers shorter, more flexible stays than BTR." }
+    ],
+    why: "All three are rented homes run as businesses, but they differ in who lives there, how the space is let and how much the rent includes, which drives their costs, their risks and how they're valued." },
+
+  { id: "liv-ord-01", lv: 1, type: "order",
+    q: "Put a PBSA scheme's letting year in order, starting from the booking season.",
+    answer: [
+      "Bookings open for the next academic year, often the autumn before",
+      "Students book rooms and arrange guarantors or pay upfront",
+      "Students move in at the start of term in September",
+      "Rent is paid in instalments through the academic year",
+      "Tenancies end in early summer",
+      "Summer lets, summer schools and conferences fill some of the rooms"],
+    why: "PBSA is let once a year, well in advance. That's why the booking position months before September tells you most of the year's income, and why a bed empty in September usually stays empty all year." }
+]);

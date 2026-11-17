@@ -81,3 +81,89 @@ Bank.addFormat("hds", [
       "Data room and due diligence", "Final (binding) bids", "SPA negotiated and signed"],
     why: "The process widens interest first, then narrows the field and deepens the information at each stage. The teaser is anonymous, nothing confidential is shared before an NDA, the IM supports first-round bids, and only a shortlist gets data room access before binding bids and the SPA." }
 ]);
+
+// More new formats: answer + reason, spot the error, a grid and a walk-through.
+Bank.addFormat("hds", [
+  { id: "hds-why-01", lv: 2, type: "reason",
+    q: "A buyer can acquire a UK hotel directly (an asset deal) or buy the company that owns it (a share deal). The seller asks a higher price for the share deal. Can the share deal still be better for the buyer?",
+    answers: ["Yes, often", "No, never", "Only if the company holds no debt"],
+    answerNotes: [
+      "Share deals are common in UK property precisely because the tax saving can be shared between buyer and seller.",
+      "Debt in the company is repaid or reflected in the price. It doesn't decide whether a share deal makes sense."],
+    reasons: [
+      "Stamp duty on shares is far lower than SDLT on property, which can outweigh the higher price",
+      "A share deal lets the buyer skip most due diligence, saving time and adviser fees",
+      "The buyer inherits no tax on past gains, because the company is bought as a whole",
+      "The buyer can claim tax allowances on the building again, from its full market value"],
+    reasonNotes: [
+      "It's the other way round: a share deal needs more due diligence, because the buyer takes on the company's history and liabilities.",
+      "The opposite: the buyer inherits the company's untaxed gain, which is why it usually asks for a price cut for it.",
+      "The company keeps its existing tax position, so allowances don't restart at market value. That's one of the costs of a share deal."],
+    why: "In the UK, buying a property directly triggers Stamp Duty Land Tax (SDLT) of about 5% of the price, while buying shares in the company that owns it costs 0.5% stamp duty. On a US$100m hotel that saves about US$4.5m, so the buyer can pay a somewhat higher price and still come out ahead. The catch is that it takes on the company's liabilities and untaxed gains, which due diligence and the price have to cover." },
+
+  { id: "hds-why-02", lv: 2, type: "reason",
+    q: "In a hotel joint venture, the operating partner puts in 10% of the equity and gets 30% of the profits above a 12% IRR hurdle. The project ends up returning a 9% IRR. What share of the profits does the operating partner get?",
+    answers: ["10%", "30%", "Nothing", "20%"],
+    answerNotes: [
+      "The 30% share only applies to profits above the 12% hurdle, which is never reached.",
+      "The operating partner still earns its share as an investor. It only misses out on the extra reward (the promote).",
+      "There's no blending: below the hurdle, profits are simply split in line with the equity."],
+    reasons: [
+      "Below the hurdle, profits are split in line with the equity each partner put in",
+      "The promote applies to all of the profits once the project makes any profit at all",
+      "The capital partner takes every dollar of profit until the 12% hurdle is reached",
+      "The promote is only paid when the hotel is sold, never out of yearly income"],
+    reasonNotes: [
+      "The promote is earned only on profits above the hurdle. That's what makes it an incentive to outperform.",
+      "Not here: both partners share profits in line with their equity until the hurdle is reached, and only then does the split change.",
+      "Promotes can be paid from yearly income or on a sale, depending on the agreement. What matters here is that the 12% hurdle isn't reached."],
+    why: "A promote rewards the operating partner only for outperformance. Up to the hurdle (here a 12% IRR), both partners share in line with the equity they put in: 90% and 10%. Above it, the operating partner's share jumps, here to 30%. At a 9% IRR the hurdle is never reached, so the operating partner simply gets 10% of the profits, like any other investor." },
+
+  { id: "hds-spot-01", lv: 2, type: "spot",
+    q: "A hotel owner-operator with EBITDAR of US$12m plans a sale-and-leaseback. The buyer wants rent cover of at least 2.0x and prices the deal at a 6% yield. Sale costs are 2% of the price. A candidate works out the net proceeds. Which line contains the mistake?",
+    lines: [
+      "The rent must be at least 2.0x EBITDAR, so the maximum rent is US$12m × 2.0 = US$24m",
+      "Price = rent ÷ yield = US$24m ÷ 6% = US$400m",
+      "Sale costs: 2% × US$400m = US$8m",
+      "Net proceeds: US$400m − US$8m = US$392m"],
+    wrong: 0,
+    lineNotes: [
+      null,
+      "Price = rent ÷ yield is the right formula. It's the rent going into it that's wrong.",
+      "Sale costs of 2% of the price are worked out correctly.",
+      "Subtracting the costs is right, but it carries the mistake from line 1 forward."],
+    fixes: [
+      "Rent cover is EBITDAR ÷ rent, so rent is at most US$6m and net proceeds are US$98m",
+      "Keep the US$24m rent, but price it at a higher yield to reflect the weak cover",
+      "Apply the yield to EBITDAR, not rent: the price is US$200m and proceeds US$196m",
+      "Cover is profit after rent ÷ rent, so rent is at most US$4m and proceeds about US$65m"],
+    fixNotes: [
+      "A rent twice the size of EBITDAR can't be paid at any yield: the operator would run out of cash. The rent itself has to come down.",
+      "The investor buys the property and is paid rent. The yield applies to that rent, not to the operator's profit.",
+      "Rent cover is EBITDAR (profit before rent) ÷ rent. Using profit after rent is a different, stricter test."],
+    why: "In a sale-and-leaseback, the price depends on the rent: price = rent ÷ yield. The rent is capped by what the operator can afford, measured by rent cover = EBITDAR ÷ rent. A 2.0x cover allows a rent of US$12m ÷ 2.0 = US$6m, so the price is US$6m ÷ 6% = US$100m, and net proceeds after 2% costs are US$98m. Setting the rent too high raises the price on paper but leaves an operator that can't pay it." },
+
+  { id: "hds-grid-01", lv: 1, type: "grid",
+    q: "For a UK hotel sale, does each statement describe an asset deal (buying the property) or a share deal (buying the company that owns it)?",
+    columns: ["Asset deal", "Share deal"],
+    rows: [
+      { text: "The buyer takes on the company's past liabilities", answer: 1, note: "Buying the company means buying its history, which is why warranties and indemnities matter so much." },
+      { text: "SDLT is charged on the property price", answer: 0, note: "Stamp Duty Land Tax applies when the property itself changes hands." },
+      { text: "Stamp duty of 0.5% is charged on the price of the shares", answer: 1, note: "Shares carry a much lower stamp duty than property, which is the main attraction." },
+      { text: "The property's tax base resets to the price paid", answer: 0, note: "A direct purchase starts a fresh tax base, so the buyer inherits no untaxed gain." },
+      { text: "Hotel staff move to the buyer under TUPE", answer: 0, note: "In a share deal the employer is still the same company, so TUPE isn't triggered." },
+      { text: "Existing contracts stay in place without being transferred", answer: 1, note: "The company that signed them doesn't change, so nothing needs to move across." }
+    ],
+    why: "An asset deal buys the property itself: a clean history and a fresh tax base, but SDLT on the full price. A share deal buys the company that owns it: much lower stamp duty, but the buyer inherits everything the company has done, including its liabilities and untaxed gains." },
+
+  { id: "hds-walk-01", lv: 2, type: "walk",
+    q: "Walk me through the main ways a hotel owner-operator can raise cash from its hotels, and the trade-offs of each.",
+    points: [
+      "Sale-and-leaseback: sell the hotel to an investor and lease it back. It raises the most cash and keeps operations, but adds a long rent commitment, which sits on the balance sheet as a lease liability under IFRS 16.",
+      "Sale with a management contract back: sell the hotel and keep running it for fees. The new owner takes the trading risk, and the operator becomes asset-light.",
+      "Borrowing secured on the hotel: keeps ownership and upside, but adds leverage, covenants and refinancing risk.",
+      "Selling a stake to a joint venture partner: raises part of the value and keeps a share of the upside, but control is shared.",
+      "In each case, the price depends on the income the buyer or lender gets (rent, fees or cash flow) and how secure it is, such as rent cover, the operator's strength and the lease length."
+    ],
+    why: "Interviewers look for the trade-off behind each route: how much cash it raises, who keeps the trading risk, what stays on the balance sheet, and how much control is given up." }
+]);

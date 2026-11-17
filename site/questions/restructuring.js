@@ -106,3 +106,92 @@ Bank.addFormat("rx", [
     ],
     why: "Chapter 11 is US law. The UK equivalents are administration, schemes of arrangement and restructuring plans, but the logic of a stay, new money and a creditor vote is similar." }
 ]);
+
+// More new formats: answer + reason, spot the error, a grid and an ordering.
+Bank.addFormat("rx", [
+  { id: "rx-why-01", lv: 2, type: "reason",
+    q: "A company is worth US$500m. It owes US$300m of senior secured loans and US$400m of unsecured bonds. In a restructuring, who usually ends up owning most of the new equity?",
+    answers: ["The unsecured bondholders", "The senior secured lenders", "The existing shareholders"],
+    answerNotes: [
+      "They're fully covered by the US$500m of value, so they usually keep their debt or get repaid in full.",
+      "The value runs out before it reaches the shareholders, so they're usually wiped out."],
+    reasons: [
+      "The value runs out within their claim, which makes them the fulcrum security",
+      "Secured lenders rank first, so they always take control of the new equity",
+      "Shareholders keep their shares because the company is still worth US$500m",
+      "Bondholders are owed the most money, so they're given the most equity"],
+    reasonNotes: [
+      "Senior lenders are covered in full (US$500m of value against US$300m of debt), so they're usually repaid or keep new debt, not equity.",
+      "Shareholders rank last. They get nothing until creditors are paid in full, and here the bondholders recover only US$200m of US$400m.",
+      "The size of a claim doesn't decide it; where the value runs out does. A larger claim that was fully covered still wouldn't get the equity."],
+    why: "Line the claims up against the value. US$500m covers the US$300m of senior loans in full, leaving US$200m for US$400m of bonds: a 50% recovery, with nothing left for shareholders. The class where the value runs out (the fulcrum security) usually swaps its claim for most of the new equity, because its recovery depends on how the business does next." },
+
+  { id: "rx-why-02", lv: 2, type: "reason",
+    q: "A stressed company's bonds trade at 40% of face value. It uses cash to buy back US$100m (face value) of them in the market. What happens to its net debt?",
+    answers: ["It falls by US$60m", "It falls by US$100m", "It falls by US$40m", "It doesn't change"],
+    answerNotes: [
+      "Debt falls by US$100m, but cash also falls by US$40m, so net debt falls by US$60m.",
+      "US$100m of bonds is cancelled, not US$40m. The US$40m is the cash spent to do it.",
+      "Cash falls by US$40m but debt falls by US$100m, so net debt goes down."],
+    reasons: [
+      "It cancels US$100m of debt but spends only US$40m of cash to do it",
+      "Debt is measured at face value, so cancelling US$100m cuts it by US$100m",
+      "Only the US$40m of cash paid out counts as debt being reduced",
+      "Bondholders forgive US$60m of the debt in return for being paid early"],
+    reasonNotes: [
+      "Debt does fall by US$100m, but the US$40m of cash spent pushes net debt back up by that much.",
+      "The whole US$100m of bonds is cancelled. The US$40m is only what it costs.",
+      "Nobody forgives anything: holders simply sell at the market price. The US$60m is a gain because the bonds trade below face value."],
+    why: "Buying back debt below face value is a classic tool for a stressed company with spare cash. Here US$40m of cash (40% of US$100m) cancels US$100m of bonds, so debt falls by US$100m and cash by US$40m: net debt falls by US$60m, and the company books a gain of about US$60m. The catch is that it uses cash a stressed company may need, and the remaining lenders may object." },
+
+  { id: "rx-spot-01", lv: 2, type: "spot",
+    q: "A company is restructured at an enterprise value of US$600m. It has a US$100m super-senior revolving credit facility, US$400m of first-lien term loans and US$300m of unsecured bonds. A candidate works out each class's recovery. Which line contains the mistake?",
+    lines: [
+      "Revolver: repaid first, US$100m of US$100m = 100%",
+      "Value left after the revolver: US$600m − US$100m = US$500m",
+      "Term loans and bonds share the US$500m: 500 ÷ 700 = 71% each",
+      "Bonds recover 71% of US$300m, about US$214m",
+      "Shareholders: no value is left, so they recover nothing"],
+    wrong: 2,
+    lineNotes: [
+      "A super-senior revolver is repaid first, and US$600m covers it in full.",
+      "That's the value left for everyone ranking below the revolver.",
+      null,
+      "Multiplying the recovery by the claim is right, but it carries the mistake from line 3 forward.",
+      "Right: the value runs out before it reaches the shareholders."],
+    fixes: [
+      "First-lien loans rank ahead: they get 100%, and the bonds get US$100m, or 33%",
+      "Share the full US$600m across all US$800m of debt: a 75% recovery for every class",
+      "Give the shareholders 10% and cut both debt classes to the same 64% recovery",
+      "Rank the bonds first, since bondholders lent most recently: they recover 100%"],
+    fixNotes: [
+      "A super-senior revolver ranks first and is repaid in full. It doesn't share the value pro rata with the others.",
+      "Shareholders get nothing until creditors are paid in full. Any gift to them needs the creditors' agreement.",
+      "Priority depends on security and ranking, not on when the money was lent."],
+    why: "Recoveries follow priority. The super-senior revolver takes the first US$100m. The first-lien term loans are secured, so they rank ahead of the unsecured bonds and take the next US$400m in full. That leaves US$100m for US$300m of bonds, a 33% recovery, which makes the bonds the fulcrum: the class most likely to end up owning the company." },
+
+  { id: "rx-grid-01", lv: 1, type: "grid",
+    q: "Is each tool a deal done by agreement, out of court, or a formal court or insolvency process?",
+    columns: ["By agreement", "Formal process"],
+    rows: [
+      { text: "An exchange offer to bondholders", answer: 0, note: "Bondholders swap their bonds voluntarily; only those who accept are bound." },
+      { text: "An amend-and-extend of a loan", answer: 0, note: "Lenders agree to change the terms; no court is involved." },
+      { text: "A standstill agreement with lenders", answer: 0, note: "Lenders agree not to enforce for a period while a deal is worked out." },
+      { text: "A Chapter 11 plan with a cramdown", answer: 1, note: "A US court confirms the plan and can bind a class that voted against it." },
+      { text: "A UK scheme of arrangement", answer: 1, note: "A court sanctions it, which binds every creditor in the class once the vote passes." },
+      { text: "A pre-pack administration", answer: 1, note: "The sale is agreed in advance but done through administration, an insolvency process." },
+      { text: "A Section 363 sale of the business", answer: 1, note: "An asset sale approved by the US bankruptcy court." }
+    ],
+    why: "Out-of-court deals are faster and cheaper, but they only bind those who agree, so holdouts can block them. Court processes cost more and take longer, but they can bind dissenting creditors, which is often why a company ends up in court." },
+
+  { id: "rx-ord-01", lv: 2, type: "order",
+    q: "Put the main stages of a US Chapter 11 case in order.",
+    answer: [
+      "The company files its petition, and the automatic stay begins",
+      "The court approves first-day motions and debtor-in-possession (DIP) financing",
+      "The company negotiates a plan of reorganisation with its creditors",
+      "Creditors vote on the plan, class by class",
+      "The court holds a hearing and confirms the plan",
+      "The plan takes effect and the company emerges from Chapter 11"],
+    why: "The stay and DIP financing come first, to keep the business running. The plan comes next, then the vote by class, and the court confirms the plan only if it meets tests such as the best interests of creditors and feasibility." }
+]);
