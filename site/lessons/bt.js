@@ -13,6 +13,7 @@ Lessons.add("bt", {
     {"kind": "idea", "text": "Brain teasers test structured thinking, not trivia. Interviewers care more about how you get there than about speed."},
     {"kind": "formula", "text": "P(at least one) = 1 − P(none)"},
     {"kind": "how", "text": "Talk through your approach: restate the problem, look for a shortcut (symmetry, working backwards, the complement), then sanity-check the answer."},
+    {"kind": "example", "text": "The chance of at least one head in three coin flips: the chance of no head is (1/2)^3 = 12.5%, so at least one head = 1 − 12.5% = 87.5%."},
     {"kind": "watch", "text": "Probability puzzles often hide a trap. Check whether events are independent and whether the first draw changes the second. Count outcomes carefully, and when intuition says 50/50, ask what information you've actually been given."},
     {"check": "bt-why-01"},
     {"section": "2. Market sizing"},
@@ -20,8 +21,8 @@ Lessons.add("bt", {
     {"kind": "formula", "text": "Market size = units × frequency × price", "note": "Units = how many buyers (people, households, companies, hotel rooms).\nFrequency = how often each one buys, per year.\nPrice = the average amount paid each time."},
     {"kind": "how", "text": "Top-down: start from a total (population, households) and narrow it with shares and frequencies.\nBottom-up: start from what you can count (shops, rooms, seats) and multiply up by usage and price.\nUse round numbers and think aloud, so the interviewer can follow and correct an assumption."},
     {"kind": "read", "text": "An answer within a factor of 2 to 3 of reality is usually fine.\nWhat matters is that each step is sensible and that you can say which assumption drives the result."},
+    {"kind": "example", "text": "A city with 120,000 hotel rooms, 80% occupancy and a US$300 average daily rate (ADR):\n120,000 × 80% × US$300 × 365 ≈ US$10.5bn of room revenue a year."},
     {"kind": "watch", "text": "Keep the units consistent.\nExample: 20m people × 2 sandwiches a week × US$5 = US$200m a week, not a year; × 52 gives about US$10bn.\nDon't mix people and households: the US has about 335m people but only about 130m households."},
-    {"kind": "practice", "text": "A city with 120,000 hotel rooms, 80% occupancy and a US$300 average daily rate (ADR):\n120,000 × 80% × US$300 × 365 ≈ US$10.5bn of room revenue a year."},
     {"check": "bt-16"}
   ],
   "example": {

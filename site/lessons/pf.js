@@ -13,6 +13,7 @@ Lessons.add("pf", {
     {"kind": "formula", "text": "LTV = {{loan // property value}}\nICR = {{NOI // annual interest}}\nDSCR = {{NOI // annual interest + principal repayments}}\nDebt yield = {{NOI // loan}}"},
     {"kind": "read", "title": "What each test protects", "text": "LTV caps the loan against the property's value; ICR and DSCR check that income covers the payments; debt yield shows the lender's return on income if it had to take the property."},
     {"kind": "read", "title": "Positive and negative leverage", "text": "Leverage is positive when the property's yield is above the cost of debt, and negative when it's below."},
+    {"kind": "example", "text": "A property worth US$100m earns NOI of US$6m, and debt costs 6%.\n60% LTV allows US$60m. Interest cover of 1.75x allows interest of 6 ÷ 1.75 = US$3.43m, so a loan of about US$57m. The lender offers the lower: about US$57m."},
     {"kind": "watch", "text": "Higher rates hit twice: they shrink the loan the ICR test allows, and they push yields up and so values down."},
     {"kind": "practice", "text": "Floating-rate loans are priced at a benchmark (the Secured Overnight Financing Rate, SOFR, in the US; the Sterling Overnight Index Average, SONIA, in the United Kingdom) plus a margin; swaps or caps fix or limit the cost."},
     {"check": "pf-why-01"}

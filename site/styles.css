@@ -474,16 +474,12 @@ main { padding-block: 30px 48px; }
 sup { font-size: 0.72em; line-height: 0; vertical-align: super; }
 
 /* Worked example: the working and answer open and close under the question */
-.lesson-reveal { margin-top: 4px; }
-.lesson-reveal > summary { display: inline-flex; align-items: center; gap: 8px; padding: 7px 14px; border: 1px solid var(--rule-strong); border-radius: 5px; background: var(--page); color: var(--ink); font-size: 13.5px; font-weight: 500; cursor: pointer; list-style: none; user-select: none; }
-.lesson-reveal > summary::-webkit-details-marker { display: none; }
-.lesson-reveal > summary::before { content: ""; width: 7px; height: 7px; border-right: 2px solid currentColor; border-bottom: 2px solid currentColor; transform: rotate(-45deg); transition: transform 0.15s; margin-right: 2px; }
-.lesson-reveal[open] > summary::before { transform: rotate(45deg); }
-.lesson-reveal > summary:hover { border-color: var(--navy); }
-.lesson-reveal > summary:focus-visible { outline: 2px solid var(--navy); outline-offset: 2px; }
-.lesson-reveal[open] .when-closed, .lesson-reveal:not([open]) .when-open { display: none; }
-.lesson-reveal[open] > summary { margin-bottom: 12px; }
-@media (prefers-reduced-motion: reduce) { .lesson-reveal > summary::before { transition: none; } }
+.stepper { margin-top: 4px; }
+.stepper [hidden] { display: none !important; }
+.lesson .stepper .typed-hint { margin-bottom: 8px; }
+.stepper .lesson-steps { margin-bottom: 10px; }
+.stepper-actions { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; margin-top: 6px; }
+.stepper-actions .link { font-size: 13px; }
 
 /* Lesson method blocks: neutral blocks in one column, each label with an icon. Only Formula (blue) and Watch out (red)
    carry a colour, and the Key idea opens its section as a lead line without a box. The same in every lesson. */

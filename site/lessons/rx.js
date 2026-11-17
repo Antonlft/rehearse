@@ -13,12 +13,14 @@ Lessons.add("rx", {
     {"kind": "idea", "text": "When a company can't pay its debts, its value is shared out by priority: secured lenders first (up to the value of their collateral), then unsecured creditors, then subordinated debt, and shareholders last. This is the absolute priority rule."},
     {"kind": "how", "text": "The key question is how far down the capital structure the enterprise value reaches. The class where value runs out, so it's only partly repaid, is the fulcrum security. It usually swaps its claim for most of the new equity; classes below it typically get little or nothing."},
     {"kind": "read", "text": "That's why distressed investors buy the fulcrum: it's where a restructuring turns debt into ownership."},
+    {"kind": "example", "text": "A company worth US$600m owes US$400m of secured loans and US$300m of unsecured bonds.\nThe loans recover 100%, the bonds get the remaining US$200m (67%), and shareholders get nothing. The bonds are the fulcrum."},
     {"kind": "practice", "text": "In the US, Chapter 11 keeps the business running while a plan restructures its debts; Chapter 7 liquidates it."},
     {"check": "rx-why-01"},
     {"section": "Restructuring in and out of court"},
     {"kind": "formula", "text": "Liquidation value = each asset × its expected recovery − wind-down costs", "note": "The best-interests test: anyone who votes against a plan must get at least this much."},
     {"kind": "how", "title": "Inside Chapter 11", "text": "A company can sell assets quickly through a Section 363 sale, where secured lenders may 'credit bid' their debt instead of cash. To confirm a plan, the court checks that it's feasible (unlikely to fail again) and in the best interests of creditors."},
     {"kind": "how", "title": "Outside court", "text": "Exchange offers swap old bonds for new ones, but some holders refuse (holdouts); exit consents, which strip covenants from the old bonds, make holding out less attractive.\nRestructuring support agreements (RSAs) lock in key creditors before a filing, so a quick pre-packaged plan can follow."},
+    {"kind": "example", "text": "A retailer's stores, stock and brand would raise US$250m in a liquidation, after wind-down costs, but the business is worth US$400m if it keeps trading.\nRestructuring keeps US$150m more value for creditors."},
     {"check": "rx-16"}
   ],
   "example": {

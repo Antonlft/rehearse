@@ -12,11 +12,13 @@ Lessons.add("hds", {
     {"section": "The sale process"},
     {"kind": "idea", "text": "A sell-side process widens interest, then narrows the field."},
     {"kind": "how", "text": "An anonymous teaser, a non-disclosure agreement (NDA), an information memorandum, first-round indicative bids, data room access and due diligence for a shortlist, binding bids, then the purchase agreement."},
+    {"kind": "example", "text": "Selling a hotel: a teaser goes to 80 investors, 30 sign a confidentiality agreement and get the information memorandum, 10 make first bids, 4 enter the data room, and 2 make final bids."},
     {"kind": "practice", "text": "A deal can be an asset deal (buy the property) or a share deal (buy the company that owns it, with its liabilities and tax position)."},
     {"check": "hds-02"},
     {"section": "The capital stack"},
     {"kind": "formula", "text": "Blended cost = senior debt % × its cost + mezzanine % × its cost + equity % × its cost", "note": "Each % is that layer's share of the total funding. 60% senior at 6%, 15% mezzanine at 11% and 25% equity at 15% gives 3.6% + 1.65% + 3.75% = 9.0%."},
     {"kind": "how", "text": "The capital stack shows who funds a deal and in what order they're repaid: senior debt (cheapest, repaid first, sized as a share of the property's value: the loan-to-value, or LTV), mezzanine, preferred equity, then common equity (most expensive, first to lose)."},
+    {"kind": "example", "text": "60% senior debt at 6%, 15% mezzanine at 11% and 25% equity targeting 18%:\nblended cost = 0.60 × 6% + 0.15 × 11% + 0.25 × 18% = 3.6% + 1.65% + 4.5% = 9.75%."},
     {"kind": "practice", "text": "Sale-and-leasebacks, joint ventures with a promote and forward funding all reshape who takes which risk."},
     {"check": "hds-12"}
   ],

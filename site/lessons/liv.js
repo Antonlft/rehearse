@@ -14,6 +14,7 @@ Lessons.add("liv", {
     {"kind": "how", "title": "Purpose-built student accommodation (PBSA)", "text": "Let per bed on academic-year tenancies (often 44–51 weeks), sometimes backed by university nomination agreements."},
     {"kind": "how", "title": "Build-to-rent (BTR) and co-living", "text": "BTR is single-owner rental housing with on-site management; co-living offers small private rooms with shared spaces and all-inclusive rents."},
     {"kind": "read", "text": "Schemes in strong university cities with limited new supply, and stabilised assets, trade at lower yields than developments still letting up."},
+    {"kind": "example", "text": "500 beds × US$200 a week × 51 weeks × 97% occupancy = about US$4.95m of income a year.\nAfter 30% costs, net operating income is about US$3.46m; at a 5% yield, the scheme is worth about US$69m."},
     {"kind": "practice", "text": "Operating costs (the 'gross-to-net') are often around 25–35% of income for PBSA and 20–30% for BTR."},
     {"check": "liv-why-01"}
   ],

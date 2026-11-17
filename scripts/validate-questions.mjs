@@ -24,6 +24,7 @@
 //    "draft" or "reviewed" lesson needs a method, a worked example (question, working, answer) and a source;
 //    method items are paragraphs, { section } headings or blocks { kind, title?, text, note? } (kinds: Lessons.BLOCKS);
 //    within each section blocks follow Lessons.ORDER, and a kind repeated in a section needs a title on each block;
+//    every section of a draft or reviewed lesson has an Example block, right under the rule it illustrates;
 //    a draft or reviewed lesson has an "In 30 seconds" summary of 3–4 short takeaways, and any acronym in it is spelled
 //    out the first time it's used, as "full term (ACR)", unless the category's description above it already does;
 //    in a category with written questions, every section ends with exactly one quick check { check: "question id" },
@@ -334,6 +335,7 @@ for (const [cat, l] of Object.entries(Lessons)) {
     }
     for (const sec of sections) {
       if (!sec.blocks.length) fail(`${where}: section "${sec.name}" has no blocks`);
+      if (l.status !== "stub" && !sec.blocks.some(b => b.kind === "example")) fail(`${where}: section "${sec.name}" needs an Example block`);
       sec.blocks.forEach((b, n) => {
         const prev = sec.blocks[n - 1];
         if (prev && ORDER.indexOf(b.kind) < ORDER.indexOf(prev.kind)) fail(`${where}: in "${sec.name}", "${BLOCKS[b.kind]}" comes after "${BLOCKS[prev.kind]}"; blocks follow the order ${ORDER.map(k => BLOCKS[k]).join(" → ")}`);

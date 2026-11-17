@@ -1787,6 +1787,7 @@ const MB_ICONS = {
   formula: `<path d="M14 4h-2a2 2 0 0 0-2 1.8L8.6 18.2A2 2 0 0 1 6.6 20H5"/><path d="M7 10h6M15 13l5 6M20 13l-5 6"/>`,
   how: `<circle cx="12" cy="12" r="3"/><path d="M12 2.5v3M12 18.5v3M2.5 12h3M18.5 12h3M5.3 5.3l2.1 2.1M16.6 16.6l2.1 2.1M5.3 18.7l2.1-2.1M16.6 7.4l2.1-2.1"/>`,
   read: `<path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/>`,
+  example: `<path d="M4 20h4L19 9a2.8 2.8 0 0 0-4-4L4 16v4z"/><path d="M13.5 6.5l4 4"/>`,
   watch: `<path d="M12 3.5 2.5 20h19L12 3.5z"/><path d="M12 10v4.5M12 17.5v.01"/>`,
   practice: `<rect x="3" y="7" width="18" height="13" rx="2"/><path d="M8.5 7V5.5A1.5 1.5 0 0 1 10 4h4a1.5 1.5 0 0 1 1.5 1.5V7M3 13h18"/>`,
   check: `<circle cx="12" cy="12" r="9"/><path d="M9.6 9.4a2.5 2.5 0 1 1 3.4 2.4c-.6.3-1 .8-1 1.5v.6M12 17v.01"/>`,
@@ -1807,6 +1808,26 @@ function methodHtml(items) {
     html += block(b);
   }
   return html;
+}
+
+/* Worked example, one step at a time: each click reveals the next step, then the answer, so you can try each step
+   before seeing it. "Show everything" reveals it all at once; "Start again" hides it again. Nothing is saved. */
+function wireStepper(box) {
+  if (!box) return;
+  const steps = [...box.querySelectorAll(".lesson-steps li")], answer = box.querySelector(".lesson-answer");
+  const next = box.querySelector("[data-step-next]"), all = box.querySelector("[data-step-all]"), reset = box.querySelector("[data-step-reset]");
+  let shown = 0; // steps revealed; steps.length + 1 once the answer is showing too
+  const draw = () => {
+    steps.forEach((li, k) => { li.hidden = k >= shown; });
+    answer.hidden = shown <= steps.length;
+    const done = shown > steps.length;
+    next.hidden = all.hidden = done; reset.hidden = shown === 0;
+    next.textContent = shown < steps.length ? `Show step ${shown + 1} of ${steps.length}` : "Show the answer";
+  };
+  next.onclick = () => { shown++; draw(); (shown > steps.length ? answer : steps[shown - 1])?.scrollIntoView({ block: "nearest" }); (next.hidden ? reset : next).focus(); };
+  all.onclick = () => { shown = steps.length + 1; draw(); reset.focus(); };
+  reset.onclick = () => { shown = 0; draw(); next.focus(); };
+  draw();
 }
 
 /* Quick check at the end of a lesson section: one question from the bank (multiple choice or answer + reason), answered
@@ -1941,11 +1962,16 @@ function renderLesson() {
       ${l.method && l.method.length ? methodHtml(l.method) : missing}
       <h2>Worked example</h2>
       ${ex ? `<p class="prompt">${rich(ex.question)}</p>
-        <details class="lesson-reveal">
-          <summary><span class="when-closed">Show working and answer</span><span class="when-open">Hide working and answer</span></summary>
-          ${ex.working && ex.working.length ? `<ol class="lesson-steps">${ex.working.map(w => `<li>${rich(w)}</li>`).join("")}</ol>` : ""}
-          <p class="lesson-answer"><b>Answer:</b> ${rich(ex.answer)}</p>
-        </details>` : missing}
+        <div class="stepper" id="stepper">
+          <p class="typed-hint">Try each step yourself before you reveal it.</p>
+          ${ex.working && ex.working.length ? `<ol class="lesson-steps" aria-live="polite">${ex.working.map(w => `<li hidden>${rich(w)}</li>`).join("")}</ol>` : ""}
+          <p class="lesson-answer" hidden><b>Answer:</b> ${rich(ex.answer)}</p>
+          <div class="stepper-actions">
+            <button class="btn" type="button" data-step-next></button>
+            <button class="link" type="button" data-step-all>Show everything</button>
+            <button class="link" type="button" data-step-reset hidden>Start again</button>
+          </div>
+        </div>` : missing}
       ${tries.length ? `<h2>Try it</h2>${tries.map((_, i) => `<div class="lesson-widget" id="lessonWidget${i}"></div>`).join("")}` : ""}
       <h2>Source</h2>
       ${src ? `<p>${safeUrl ? `<a href="${esc(safeUrl)}" target="_blank" rel="noopener noreferrer">${esc(src.text)}</a>` : esc(src.text)}</p>` : missing}
@@ -1960,6 +1986,7 @@ function renderLesson() {
   app.querySelectorAll("[data-glossary]").forEach(b => b.onclick = () => go({ name: "glossary", back: { ...view } }));
   tries.forEach((w, i) => Widgets.mount(document.getElementById("lessonWidget" + i), w.type, w.values || {}));
   app.querySelectorAll("[data-check]").forEach(el => mountCheck(el, view.cat));
+  wireStepper(document.getElementById("stepper"));
 }
 
 /* Results */

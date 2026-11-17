@@ -13,6 +13,7 @@ Lessons.add("maths", {
     {"kind": "formula", "title": "Compound annual growth rate (CAGR)", "text": "CAGR = ({{end value // start value}})^(1/n) − 1", "note": "n = number of years of growth."},
     {"kind": "formula", "title": "Discounting", "text": "Present value = {{future value // (1 + r)^n}}", "note": "r = discount rate per year; n = number of years until the money arrives."},
     {"kind": "read", "text": "A fall of x needs a bigger rise to get back: rise needed = {{x // 1 − x}}.\nA 20% fall needs a 25% rise: 0.2 ÷ 0.8 = 0.25. A 50% fall needs a 100% rise."},
+    {"kind": "example", "text": "Revenue grows from US$100m in 2020 to US$161m in 2025. That's 5 years of growth, so CAGR = (161 ÷ 100)^(1/5) − 1 ≈ 10% a year."},
     {"kind": "watch", "text": "n is the number of years of growth, not the number of years listed. Revenue measured in 2020 (start) and in 2025 (end) has grown in 2021, 2022, 2023, 2024 and 2025: that's 5 years, so n = 5, not 6.\nQuick check: n = end year − start year = 2025 − 2020 = 5."},
     {"kind": "practice", "text": "Rule of 72: doubling time ≈ 72 ÷ the annual rate in %. At 8% a year, money doubles in about 72 ÷ 8 = 9 years.\nMoney multiple to internal rate of return (IRR): IRR ≈ MOIC^(1/n) − 1, where MOIC is the multiple on invested capital and n is the number of years. So 2x in 5 years ≈ 15% a year, and 3x in 5 years ≈ 25% a year."}
   ],
