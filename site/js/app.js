@@ -1778,25 +1778,30 @@ function renderSprintResults() {
   wireSprintChart(db.sprints.slice(-20));
 }
 
-// A lesson's method: plain paragraphs stay paragraphs; typed blocks become coloured cards (Lessons.BLOCKS), and
-// { section } items start a named section. Formulas always take the full width (one per line, "\n" for more lines);
-// two other short blocks in a row share a line on wider screens.
-const METHOD_SHORT = 190;
+// A lesson's method: plain paragraphs stay paragraphs; typed blocks (Lessons.BLOCKS) become blocks with an icon on
+// their label, and { section } items start a named section. Blocks read in one column, in the order they're written;
+// formulas show one per line ("\n" for more lines). Only Formula and Watch out carry a colour (see styles.css).
+// Line icons for the block labels, drawn in the label's colour.
+const MB_ICONS = {
+  idea: `<path d="M9 18h6M10 21h4"/><path d="M12 3a6 6 0 0 0-3.6 10.8c.7.5 1.1 1.3 1.1 2.2h5c0-.9.4-1.7 1.1-2.2A6 6 0 0 0 12 3z"/>`,
+  formula: `<path d="M14 4h-2a2 2 0 0 0-2 1.8L8.6 18.2A2 2 0 0 1 6.6 20H5"/><path d="M7 10h6M15 13l5 6M20 13l-5 6"/>`,
+  how: `<circle cx="12" cy="12" r="3"/><path d="M12 2.5v3M12 18.5v3M2.5 12h3M18.5 12h3M5.3 5.3l2.1 2.1M16.6 16.6l2.1 2.1M5.3 18.7l2.1-2.1M16.6 7.4l2.1-2.1"/>`,
+  read: `<path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/>`,
+  watch: `<path d="M12 3.5 2.5 20h19L12 3.5z"/><path d="M12 10v4.5M12 17.5v.01"/>`,
+  practice: `<rect x="3" y="7" width="18" height="13" rx="2"/><path d="M8.5 7V5.5A1.5 1.5 0 0 1 10 4h4a1.5 1.5 0 0 1 1.5 1.5V7M3 13h18"/>`
+};
+const mbIcon = k => MB_ICONS[k] ? `<svg class="mb-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${MB_ICONS[k]}</svg>` : "";
 function methodHtml(items) {
   const block = b => `<div class="mblock mb-${esc(b.kind)}">
-      <span class="mb-label">${esc(Lessons.BLOCKS[b.kind] || b.kind)}${b.title ? ` · ${esc(b.title)}` : ""}</span>
+      <span class="mb-label">${mbIcon(b.kind)}${esc(Lessons.BLOCKS[b.kind] || b.kind)}${b.title ? ` · ${esc(b.title)}` : ""}</span>
       ${b.kind === "formula" ? `<p class="mb-eq">${b.text.split("\n").map(line => `<span class="mb-line">${rich(line)}</span>`).join("")}</p>` : `<p class="mb-text">${b.text.split("\n").map(line => `<span class="mb-line">${rich(line)}</span>`).join("")}</p>`}
       ${b.note ? `<p class="mb-note">${b.note.split("\n").map(line => `<span class="mb-line">${rich(line)}</span>`).join("")}</p>` : ""}
     </div>`;
-  const isBlock = b => b && typeof b === "object" && b.kind;
-  const short = b => isBlock(b) && b.kind !== "formula" && (b.text.length + (b.note || "").length + (b.title || "").length) <= METHOD_SHORT;
   let html = "";
-  for (let i = 0; i < items.length; i++) {
-    const b = items[i];
+  for (const b of items) {
     if (typeof b === "string") { html += `<p>${rich(b)}</p>`; continue; }
     if (b && b.section) { html += `<h3 class="mb-section">${esc(b.section)}</h3>`; continue; }
-    if (short(b) && short(items[i + 1])) { html += `<div class="mb-grid">${block(b)}${block(items[i + 1])}</div>`; i++; continue; }
-    html += `<div class="mb-grid">${block(b)}</div>`;
+    html += block(b);
   }
   return html;
 }

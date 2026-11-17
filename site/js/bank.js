@@ -127,7 +127,7 @@ window.Lessons = {
   all: {},
   // Method blocks: a lesson's method can mix plain paragraphs (strings) with typed blocks { kind, title?, text, note? }.
   // When a kind appears more than once in a lesson, each of those blocks needs a short title ("How it works · The fund").
-  // Each kind has one label and one colour, the same in every lesson.
+  // Each kind has one label and one icon, the same in every lesson; only Formula and Watch out carry a colour.
   BLOCKS: { idea: "Key idea", how: "How it works", formula: "Formula", read: "How to read it", watch: "Watch out", practice: "In practice" },
   // Blocks always appear in this order. A lesson that covers several topics splits into sections ({ section: "Title" }),
   // and each section follows the order on its own. Formulas can show fractions as {{numerator // denominator}}, and

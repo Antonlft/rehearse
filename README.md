@@ -88,7 +88,7 @@ Each category has a lesson in `site/lessons/<category>.js`, reachable from "Lear
 ```js
 Lessons.add("val", {
   status: "draft",            // "stub" (not written yet) → "draft" → "reviewed"
-  method: [                    // plain paragraphs, or coloured blocks { kind, title?, text, note? }
+  method: [                    // plain paragraphs, or labelled blocks { kind, title?, text, note? }
     { kind: "idea", text: "What it is, in a sentence or two." },
     { kind: "formula", text: "Value = NOI ÷ yield", note: "optional line under a formula" },
     "A plain paragraph still works."

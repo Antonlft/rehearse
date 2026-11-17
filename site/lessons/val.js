@@ -1,5 +1,5 @@
 // Lesson: Valuation. Status "draft": written by Claude, to be reviewed; change to "reviewed" once checked.
-// Fields: method (sections { section } and coloured blocks { kind, title?, text, note? }, in the order of Lessons.ORDER), example (question, working steps, answer), source (text, optional url), widget (interactive "Try it"), widgets (optional extra ones).
+// Fields: method (sections { section } and labelled blocks { kind, title?, text, note? }, in the order of Lessons.ORDER), example (question, working steps, answer), source (text, optional url), widget (interactive "Try it"), widgets (optional extra ones).
 Lessons.add("val", {
   "status": "draft",
   "method": [
