@@ -24,6 +24,8 @@
 //    "draft" or "reviewed" lesson needs a method, a worked example (question, working, answer) and a source;
 //    method items are paragraphs, { section } headings or blocks { kind, title?, text, note? } (kinds: Lessons.BLOCKS);
 //    within each section blocks follow Lessons.ORDER, and a kind repeated in a section needs a title on each block;
+//    in a category with written questions, every section ends with exactly one quick check { check: "question id" },
+//    pointing at a multiple-choice or answer + reason question of that category, each used once in the lesson;
 //    a lesson's optional widget (and any extra ones in `widgets`) must be defined in site/js/widgets.js, with starting values only for its own inputs
 //  - the glossary (site/js/glossary.js, loaded by index.html): every entry has a unique term, a full name, a definition
 //    and a real category; and every acronym used in a lesson has an entry (plurals like "LPs" count via "LP",
@@ -297,7 +299,8 @@ for (const [cat, l] of Object.entries(Lessons)) {
   const BLOCKS = ctx.Lessons?.BLOCKS || {};
   const ORDER = ctx.Lessons?.ORDER || [];
   const isSection = p => p && typeof p === "object" && Object.keys(p).length === 1 && text(p.section);
-  const okItem = p => text(p) || isSection(p) || (p && typeof p === "object" && Object.hasOwn(BLOCKS, p.kind) && text(p.text) && (p.note == null || text(p.note)) && (p.title == null || text(p.title)) && Object.keys(p).every(k => ["kind", "title", "text", "note"].includes(k)));
+  const isCheck = p => p && typeof p === "object" && Object.keys(p).length === 1 && text(p.check);
+  const okItem = p => text(p) || isSection(p) || isCheck(p) || (p && typeof p === "object" && Object.hasOwn(BLOCKS, p.kind) && text(p.text) && (p.note == null || text(p.note)) && (p.title == null || text(p.title)) && Object.keys(p).every(k => ["kind", "title", "text", "note"].includes(k)));
   if (l.method != null && (!Array.isArray(l.method) || l.method.some(p => !okItem(p)))) fail(`${where}: method must list paragraphs, { section: "Title" } headings or blocks { kind: ${Object.keys(BLOCKS).join(" | ")}, title?, text, note? }`);
   else if (Array.isArray(l.method)) {
     // Split into sections (one implicit section if there are none). Within a section, blocks follow Lessons.ORDER,
@@ -305,7 +308,28 @@ for (const [cat, l] of Object.entries(Lessons)) {
     const usesSections = l.method.some(isSection);
     if (usesSections && !isSection(l.method[0])) fail(`${where}: a method with sections must start with a { section } heading`);
     const sections = [];
-    for (const p of l.method) { if (isSection(p)) sections.push({ name: p.section, blocks: [] }); else if (p && typeof p === "object") { if (!sections.length) sections.push({ name: "(whole lesson)", blocks: [] }); sections[sections.length - 1].blocks.push(p); } }
+    for (const p of l.method) {
+      if (isSection(p)) { sections.push({ name: p.section, blocks: [], checks: [] }); continue; }
+      if (!p || typeof p !== "object") continue;
+      if (!sections.length) sections.push({ name: "(whole lesson)", blocks: [], checks: [] });
+      const sec = sections[sections.length - 1];
+      if (isCheck(p)) sec.checks.push(p.check);
+      else { if (sec.checks.length) fail(`${where}: in "${sec.name}", the quick check must be the last item of the section`); sec.blocks.push(p); }
+    }
+    // Quick checks: one per section, at its end, pointing at a multiple-choice or answer + reason question of this category.
+    const hasWritten = (Bank.written[cat] || []).length > 0, pool = [...(Bank.written[cat] || []), ...((Bank.formats || {})[cat] || [])];
+    const usedChecks = new Set();
+    for (const sec of sections) {
+      if (hasWritten && sec.checks.length !== 1) fail(`${where}: section "${sec.name}" needs exactly one quick check at its end, has ${sec.checks.length}`);
+      if (!hasWritten && sec.checks.length) fail(`${where}: this category has no written questions, so its lesson can't have quick checks`);
+      for (const id of sec.checks) {
+        const q = pool.find(x => x.id === id);
+        if (!q) fail(`${where}: quick check "${id}" isn't a question in this category`);
+        else if (q.type && q.type !== "mcq" && q.type !== "reason") fail(`${where}: quick check "${id}" is a ${q.type} question; use multiple choice or answer + reason`);
+        if (usedChecks.has(id)) fail(`${where}: quick check "${id}" is used twice`);
+        usedChecks.add(id);
+      }
+    }
     for (const sec of sections) {
       if (!sec.blocks.length) fail(`${where}: section "${sec.name}" has no blocks`);
       sec.blocks.forEach((b, n) => {

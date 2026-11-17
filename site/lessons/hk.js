@@ -7,7 +7,8 @@ Lessons.add("hk", {
     {"kind": "formula", "title": "Rooms metrics", "text": "Occupancy = {{rooms sold // rooms available}}\nADR = {{rooms revenue // rooms sold}}\nRevPAR = {{rooms revenue // rooms available}} = occupancy × ADR"},
     {"kind": "formula", "title": "Splitting growth, and flow-through to gross operating profit (GOP)", "text": "RevPAR growth = (1 + ADR growth) × (1 + occupancy growth) − 1\nFlow-through = {{change in GOP // change in revenue}}"},
     {"kind": "how", "text": "GOP = total revenue − departmental costs (rooms, F&B…) − undistributed costs (admin, sales, maintenance, utilities), before management fees and fixed charges such as rent, insurance and property tax. This follows USALI, the Uniform System of Accounts for the Lodging Industry."},
-    {"kind": "read", "text": "Growth from rate is worth more than growth from occupancy: a higher ADR mostly drops to profit, while extra occupied rooms bring cleaning, laundry and commission costs."}
+    {"kind": "read", "text": "Growth from rate is worth more than growth from occupancy: a higher ADR mostly drops to profit, while extra occupied rooms bring cleaning, laundry and commission costs."},
+    {"check": "hk-why-01"}
   ],
   "example": {
     "question": "A hotel ran at 72% occupancy and a US$160 ADR last year, and at 75% and US$168 this year. How much did RevPAR grow, and how does that split?",

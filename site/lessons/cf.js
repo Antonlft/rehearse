@@ -9,7 +9,8 @@ Lessons.add("cf", {
     {"kind": "formula", "title": "Unlevering beta (D/E = the debt-to-equity ratio)", "text": "Unlevered β = {{levered β // 1 + (1 − tax rate) × D/E}}\nRelevered β = unlevered β × (1 + (1 − tax rate) × D/E)", "note": "D/E = debt ÷ equity at market values: the peer's own D/E when unlevering, your target D/E when relevering."},
     {"kind": "read", "text": "Debt is cheaper than equity because lenders are paid first and interest is tax-deductible, so its cost is taken after tax."},
     {"kind": "watch", "text": "Beta depends on leverage: more debt makes the shares riskier. So don't use one company's raw beta: take peers' betas, strip out their debt (unlever), average them, then add back your own target debt (relever)."},
-    {"kind": "practice", "text": "WACC is the rate for unlevered free cash flow; a project creates value only if it earns more than its WACC."}
+    {"kind": "practice", "text": "WACC is the rate for unlevered free cash flow; a project creates value only if it earns more than its WACC."},
+    {"check": "cf-01"}
   ],
   "example": {
     "question": "A company is 60% equity and 40% debt at market value. Its cost of equity is 11%, its pre-tax cost of debt 6% and its tax rate 25%. What is its WACC?",

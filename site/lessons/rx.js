@@ -8,10 +8,12 @@ Lessons.add("rx", {
     {"kind": "how", "text": "The key question is how far down the capital structure the enterprise value reaches. The class where value runs out, so it's only partly repaid, is the fulcrum security. It usually swaps its claim for most of the new equity; classes below it typically get little or nothing."},
     {"kind": "read", "text": "That's why distressed investors buy the fulcrum: it's where a restructuring turns debt into ownership."},
     {"kind": "practice", "text": "In the US, Chapter 11 keeps the business running while a plan restructures its debts; Chapter 7 liquidates it."},
+    {"check": "rx-why-01"},
     {"section": "Restructuring in and out of court"},
     {"kind": "formula", "text": "Liquidation value = each asset × its expected recovery − wind-down costs", "note": "The best-interests test: anyone who votes against a plan must get at least this much."},
     {"kind": "how", "title": "Inside Chapter 11", "text": "A company can sell assets quickly through a Section 363 sale, where secured lenders may 'credit bid' their debt instead of cash. To confirm a plan, the court checks that it's feasible (unlikely to fail again) and in the best interests of creditors."},
-    {"kind": "how", "title": "Outside court", "text": "Exchange offers swap old bonds for new ones, but some holders refuse (holdouts); exit consents, which strip covenants from the old bonds, make holding out less attractive.\nRestructuring support agreements (RSAs) lock in key creditors before a filing, so a quick pre-packaged plan can follow."}
+    {"kind": "how", "title": "Outside court", "text": "Exchange offers swap old bonds for new ones, but some holders refuse (holdouts); exit consents, which strip covenants from the old bonds, make holding out less attractive.\nRestructuring support agreements (RSAs) lock in key creditors before a filing, so a quick pre-packaged plan can follow."},
+    {"check": "rx-16"}
   ],
   "example": {
     "question": "A restructured company is worth US$700m. It owes US$400m of senior secured loans, US$500m of senior unsecured notes and US$150m of subordinated notes. What does each class recover?",

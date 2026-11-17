@@ -507,6 +507,14 @@ sup { font-size: 0.72em; line-height: 0; vertical-align: super; }
 .mb-idea .mb-line:first-child { font-weight: 600; }
 .mb-formula { --mb: var(--navy); --mb-bg: var(--navy-bg); --mb-line: var(--navy); }
 .mb-watch { --mb: var(--bad); --mb-bg: var(--bad-bg); --mb-line: var(--bad); }
+/* Quick check: the last block of a section, one bank question answered on the page. */
+.mb-check { --mb: var(--navy); --mb-bg: var(--tray); --mb-line: var(--navy); padding: 12px 14px; }
+.lesson .mb-check .check-q { font-size: 14.5px; margin-bottom: 12px; }
+.mb-check .options { margin-bottom: 10px; }
+.lesson .mb-check .part-label { margin: 6px 0 6px; font-weight: 600; color: var(--ink); text-transform: uppercase; letter-spacing: .06em; font-size: 11px; }
+.mb-check .feedback { margin-top: 4px; }
+.lesson .mb-check .check-again { margin-top: 8px; font-size: 13px; }
+.lesson .mb-check .typed-hint { margin-top: 2px; }
 
 /* Question style selector (home) */
 .style-bar { margin-bottom: 14px; }

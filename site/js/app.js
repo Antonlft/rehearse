@@ -1788,7 +1788,8 @@ const MB_ICONS = {
   how: `<circle cx="12" cy="12" r="3"/><path d="M12 2.5v3M12 18.5v3M2.5 12h3M18.5 12h3M5.3 5.3l2.1 2.1M16.6 16.6l2.1 2.1M5.3 18.7l2.1-2.1M16.6 7.4l2.1-2.1"/>`,
   read: `<path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/>`,
   watch: `<path d="M12 3.5 2.5 20h19L12 3.5z"/><path d="M12 10v4.5M12 17.5v.01"/>`,
-  practice: `<rect x="3" y="7" width="18" height="13" rx="2"/><path d="M8.5 7V5.5A1.5 1.5 0 0 1 10 4h4a1.5 1.5 0 0 1 1.5 1.5V7M3 13h18"/>`
+  practice: `<rect x="3" y="7" width="18" height="13" rx="2"/><path d="M8.5 7V5.5A1.5 1.5 0 0 1 10 4h4a1.5 1.5 0 0 1 1.5 1.5V7M3 13h18"/>`,
+  check: `<circle cx="12" cy="12" r="9"/><path d="M9.6 9.4a2.5 2.5 0 1 1 3.4 2.4c-.6.3-1 .8-1 1.5v.6M12 17v.01"/>`
 };
 const mbIcon = k => MB_ICONS[k] ? `<svg class="mb-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${MB_ICONS[k]}</svg>` : "";
 function methodHtml(items) {
@@ -1801,9 +1802,56 @@ function methodHtml(items) {
   for (const b of items) {
     if (typeof b === "string") { html += `<p>${rich(b)}</p>`; continue; }
     if (b && b.section) { html += `<h3 class="mb-section">${esc(b.section)}</h3>`; continue; }
+    if (b && b.check) { html += `<div class="mblock mb-check" data-check="${esc(b.check)}"></div>`; continue; } // filled by mountCheck()
     html += block(b);
   }
   return html;
+}
+
+/* Quick check at the end of a lesson section: one question from the bank (multiple choice or answer + reason), answered
+   on the page with instant feedback. Practice only: nothing is saved, and it doesn't count towards progress, accuracy
+   or spaced repetition. "Try again" reshuffles the options. */
+function mountCheck(el, cat) {
+  const src = [...(Bank.written[cat] || []), ...(Bank.formats[cat] || [])].find(q => q.id === el.dataset.check);
+  if (!src || (src.type && src.type !== "mcq" && src.type !== "reason")) { el.remove(); return; }
+  let it, pick;
+  const fresh = () => { it = materialize(src, cat); pick = it.type === "reason" ? [null, null] : null; };
+  const done = () => it.type === "reason" ? pick[0] != null && pick[1] != null : pick != null;
+  const group = (label, list, ok, p, part, end) => `
+      ${label ? `<p class="label part-label">${label}</p>` : ""}
+      <div class="options" role="radiogroup" aria-label="${label || "Answer"}">
+        ${list.map((o, j) => `<button type="button" class="opt${!end ? "" : j === ok ? " reveal-right" : j === p ? " reveal-wrong" : ""}" role="radio" aria-checked="${p === j}" data-part="${part}" data-pick="${j}" ${end ? "disabled" : ""}><span class="radio"></span><span>${esc(o)}</span></button>`).join("")}
+      </div>`;
+  const feedback = () => {
+    const g = grade(it, pick);
+    if (it.type === "reason") {
+      const title = g.ok ? "Correct: right answer, right reason" : g.answerOk ? `Right answer, wrong reason. The reason is: ${esc(it.rsn[it.rsnOk])}`
+        : `Not quite. The answer is: ${esc(it.ans[it.ansOk])}.${g.reasonOk ? " Your reason is right." : ` The reason: ${esc(it.rsn[it.rsnOk])}.`}`;
+      return `<div class="feedback ${g.ok ? "ok" : "no"}" role="status" tabindex="-1"><p class="feedback-title">${title}</p>
+        ${!g.answerOk && it.ansX[pick[0]] ? `<p>${esc(it.ansX[pick[0]])}</p>` : ""}${!g.reasonOk && it.rsnX[pick[1]] ? `<p>${esc(it.rsnX[pick[1]])}</p>` : ""}<p>${rich(it.why)}</p></div>`;
+    }
+    return `<div class="feedback ${g.ok ? "ok" : "no"}" role="status" tabindex="-1"><p class="feedback-title">${g.ok ? "Correct" : `Not quite. The answer is: ${esc(it.o[it.a])}`}</p>
+      ${!g.ok && it.x[pick] ? `<p>${esc(it.x[pick])}</p>` : ""}<p>${rich(it.why)}</p></div>`;
+  };
+  const draw = focusFeedback => {
+    const end = done();
+    el.innerHTML = `<span class="mb-label">${mbIcon("check")}Quick check</span>
+      <p class="mb-text check-q">${esc(it.q)}</p>
+      ${it.table ? qTable(it.table) : ""}
+      ${it.type === "reason" ? group("Answer", it.ans, it.ansOk, pick[0], 0, end) + group("Because", it.rsn, it.rsnOk, pick[1], 1, end) : group("", it.o, it.a, pick, 0, end)}
+      ${end ? `${feedback()}<p class="check-again"><button class="link" type="button" data-again>Try again</button></p>`
+        : `<p class="typed-hint">${it.type === "reason" ? "Pick the answer, then the reason. " : ""}Practice only: this isn't saved.</p>`}`;
+    el.querySelectorAll("[data-pick]").forEach(b => b.onclick = () => {
+      const part = +b.dataset.part, j = +b.dataset.pick;
+      if (it.type === "reason") pick[part] = j; else pick = j;
+      draw(done());
+      if (!done()) el.querySelector(`[data-part="${part}"][data-pick="${j}"]`)?.focus();
+    });
+    const again = el.querySelector("[data-again]");
+    if (again) again.onclick = () => { fresh(); draw(false); el.querySelector("[data-pick]")?.focus(); };
+    if (focusFeedback) el.querySelector(".feedback")?.focus({ preventScroll: true });
+  };
+  fresh(); draw(false);
 }
 
 /* Lessons page: every lesson as a card, grouped like the home page. */
@@ -1906,6 +1954,7 @@ function renderLesson() {
   document.getElementById("practiseBtn").onclick = () => newRound(view.cat);
   app.querySelectorAll("[data-glossary]").forEach(b => b.onclick = () => go({ name: "glossary", back: { ...view } }));
   tries.forEach((w, i) => Widgets.mount(document.getElementById("lessonWidget" + i), w.type, w.values || {}));
+  app.querySelectorAll("[data-check]").forEach(el => mountCheck(el, view.cat));
 }
 
 /* Results */
