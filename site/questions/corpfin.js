@@ -133,3 +133,18 @@ Bank.addFormat("cf", [
       "Dividends aren't tax-deductible, so the cost of equity gets no tax adjustment."],
     why: "Interest is tax-deductible, so the after-tax cost of debt is the pre-tax rate × (1 − tax rate): 5% × 0.75 = 3.75%. WACC = 60% × 10% + 40% × 3.75% = 6.0% + 1.5% = 7.5%. Multiplying by the tax rate instead of by one minus it keeps only the tax saving and throws away the cost." }
 ]);
+
+Bank.addFormat("cf", [
+  { id: "cf-grid-01", lv: 2, type: "grid",
+    q: "Which theory of capital structure does each statement belong to?",
+    columns: ["Modigliani–Miller (no taxes)", "Trade-off theory", "Pecking order"],
+    rows: [
+      { text: "How a company is financed doesn't change its value", answer: 0, note: "With no taxes or distress costs, the size of the pie doesn't depend on how it's sliced." },
+      { text: "The cost of equity rises with debt, keeping WACC constant", answer: 0, note: "Cheaper debt is exactly offset by riskier, dearer equity." },
+      { text: "Companies weigh the tax saving on debt against the cost of financial distress", answer: 1, note: "More debt saves tax but raises the chance and cost of distress." },
+      { text: "There's an optimal level of debt for each company", answer: 1, note: "Where the extra tax saving from one more dollar of debt equals the extra distress cost." },
+      { text: "Companies use retained profits first, then debt, and equity last", answer: 2, note: "The ranking follows from managers knowing more than investors." },
+      { text: "Issuing new shares can signal that managers think they're overpriced", answer: 2, note: "That's why equity is the last resort, and why share prices often fall when new shares are announced." }
+    ],
+    why: "Modigliani–Miller is the starting point: in a world without taxes or distress costs, financing doesn't matter. The trade-off theory adds tax and distress costs, giving an optimal level of debt. The pecking order adds information: managers prefer funding that doesn't send a bad signal to investors." }
+]);
