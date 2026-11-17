@@ -31,6 +31,9 @@
 //  - answer length doesn't give the answer away in written multiple choice: in every category, no right option is
 //    both the longest and 30%+ longer than the average wrong one, and the right option is the longest in at most 40% of
 //    the category's questions. The bank-wide rate is reported.
+//  - every category with written questions has a minimum mix of new formats: at least 2 answer + reason, at least
+//    1 spot the error, and at least 6 new-format items in all (orderings, grids, walk-throughs, answer + reason,
+//    spot the error and case studies)
 // Exits with code 1 on any violation.
 import { readFileSync, readdirSync } from "node:fs";
 import { join, dirname } from "node:path";
@@ -358,6 +361,17 @@ for (const cat of BALANCED) {
   if (st && st.longest / st.n > 0.4) fail(`category ${cat}: the right option is the longest in ${st.longest} of ${st.n} questions (${Math.round(st.longest / st.n * 100)}%); keep it at 40% or less`);
 }
 
+// New-format mix: each category with written questions keeps a minimum of the formats that test understanding.
+const MIX = { reason: 2, spot: 1, total: 6 };
+const mixCats = Object.keys(Bank.written).filter(cat => Bank.written[cat].length);
+for (const cat of mixCats) {
+  const f = (Bank.formats || {})[cat] || [], cases = ((Bank.cases || {})[cat] || []).length;
+  const n = type => f.filter(q => q.type === type).length, total = f.length + cases;
+  if (n("reason") < MIX.reason) fail(`category ${cat}: has ${n("reason")} answer + reason question(s); needs at least ${MIX.reason}`);
+  if (n("spot") < MIX.spot) fail(`category ${cat}: has ${n("spot")} spot-the-error question(s); needs at least ${MIX.spot}`);
+  if (total < MIX.total) fail(`category ${cat}: has ${total} new-format items; needs at least ${MIX.total}`);
+}
+
 // Glossary: well-formed entries, and every acronym in a lesson explained there.
 const Glossary = ctx.Glossary || [];
 if (!Array.isArray(Glossary) || !Glossary.length) fail("js/glossary.js must define a non-empty window.Glossary list");
@@ -394,3 +408,4 @@ console.log(`✓ ${written - formatQuestions} written questions, ${formatQuestio
 console.log(`✓ ${Object.keys(Lessons).length} lessons for ${categoryIds.length} categories (${Object.entries(lessonCounts).map(([k, v]) => `${v} ${k}`).join(", ")}).`);
 console.log(`✓ ${Glossary.length} glossary terms; every acronym in the lessons has one.`);
 console.log(`✓ Answer length checked in ${BALANCED.size} rebalanced categor${BALANCED.size === 1 ? "y" : "ies"}; across the bank the right option is the longest in ${Math.round(longestRight / mcqs.length * 100)}% of multiple-choice questions (25% would be chance).`);
+console.log(`✓ All ${mixCats.length} categories have at least ${MIX.reason} answer + reason, ${MIX.spot} spot the error and ${MIX.total} new-format items in all.`);
