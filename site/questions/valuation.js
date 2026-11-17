@@ -195,3 +195,77 @@ Bank.addFormat("val", [
     ],
     why: "Add the claims of other capital providers and the parts of the business EBITDA includes; subtract cash and the investments whose profits EBITDA leaves out." }
 ]);
+
+// Answer + reason: pick the answer, then why it's true. Right only if both are right. In each list the right one
+// comes first (the app shuffles them); answerNotes and reasonNotes explain the wrong ones, in order.
+Bank.addFormat("val", [
+  { id: "val-why-01", lv: 1, type: "reason",
+    q: "A company borrows US$100m and keeps all of it as cash. What happens to its enterprise value?",
+    answers: ["It stays the same", "It rises by US$100m", "It falls by US$100m", "It falls a little"],
+    answerNotes: [
+      "More debt on its own doesn't add value: the US$100m of new cash offsets it.",
+      "Nothing has left the business. The US$100m is still there, as cash.",
+      "Interest is a financing cost. Enterprise value is measured before financing, so it doesn't fall."],
+    reasons: [
+      "The new debt is matched by the new cash, so net debt doesn't change",
+      "Enterprise value counts all of a company's debt, so more debt means more value",
+      "The interest on the new debt will cut the cash flows the business produces",
+      "The cash is added to equity value, which then feeds through to enterprise value"],
+    reasonNotes: [
+      "Enterprise value adds debt but subtracts cash, and here the two cancel out.",
+      "Enterprise value is based on cash flows before financing, so interest doesn't enter it.",
+      "Equity value doesn't change either: shareholders own the same business, and the new debt and cash cancel out."],
+    why: "Enterprise value = equity value + debt − cash. Borrowing US$100m and holding it as cash adds US$100m of debt and US$100m of cash, so net debt and enterprise value are unchanged. What the company later does with the cash (an acquisition, a buyback, a dividend) is what can change things." },
+
+  { id: "val-why-02", lv: 2, type: "reason",
+    q: "A company's share price falls 20% after a profit warning, while its net debt stays the same. What happens to its EV/EBITDA multiple, measured on last year's EBITDA?",
+    answers: ["It falls by less than 20%", "It falls by exactly 20%", "It falls by more than 20%", "It stays the same"],
+    answerNotes: [
+      "That would only be true with no net debt. Here the unchanged debt cushions the fall in enterprise value.",
+      "Enterprise value falls faster than the share price only when the company holds net cash. Here it has net debt.",
+      "Enterprise value has fallen while last year's EBITDA hasn't, so the multiple has to fall."],
+    reasons: [
+      "Only the equity part of enterprise value has fallen; the debt hasn't changed",
+      "Enterprise value always moves by the same percentage as the share price does",
+      "A profit warning lowers EBITDA as well, so the two effects cancel out",
+      "Lower equity makes the company more indebted, which pushes the multiple up"],
+    reasonNotes: [
+      "Only when there's no net debt. Debt is part of enterprise value, and it hasn't moved.",
+      "The multiple here uses last year's EBITDA, which has already been reported and doesn't change.",
+      "Leverage changes the mix of enterprise value, not its size. With less equity, enterprise value is lower, so the multiple falls."],
+    why: "Enterprise value = equity value + net debt. Say equity is US$800m and net debt US$200m, so enterprise value is US$1,000m. A 20% fall in the shares takes equity to US$640m and enterprise value to US$840m: a 16% fall. With last year's EBITDA unchanged, the multiple falls 16%, less than the share price did." },
+
+  { id: "val-why-03", lv: 1, type: "reason",
+    q: "In a DCF, you switch from discounting each year's cash flow at the end of the year to the mid-year convention. What happens to the enterprise value?",
+    answers: ["It rises", "It falls", "It stays the same"],
+    answerNotes: [
+      "Discounting over a shorter time raises present value, so the value can't fall.",
+      "The cash flows are the same, but they're assumed to arrive earlier, which makes them worth more today."],
+    reasons: [
+      "Each year's cash flow is discounted for half a year less",
+      "Half of each year's cash flow is pushed into the next year",
+      "Only the timing changes, and timing doesn't affect present value",
+      "The terminal value is cut in half to match the shorter period"],
+    reasonNotes: [
+      "No cash moves between years. Only the assumed timing within each year changes, and earlier means more valuable.",
+      "Timing is exactly what discounting measures: money received sooner is worth more.",
+      "Nothing is halved. At most the terminal value's discount period also shifts by half a year, which raises it."],
+    why: "The mid-year convention assumes cash comes in evenly through the year, so on average halfway through it. Year 1 is discounted for 0.5 years instead of 1, year 2 for 1.5 instead of 2, and so on. Every discount factor is a little higher, so the value rises, typically by a few per cent: roughly half a year's worth of the discount rate." },
+
+  { id: "val-why-04", lv: 2, type: "reason",
+    q: "A company issues US$200m of new shares at its current share price and keeps the cash. Assuming the share price reflects what the company is really worth, what happens to the value of each share?",
+    answers: ["No change", "It falls", "It rises"],
+    answerNotes: [
+      "Each new share brings in exactly what a share is worth, so existing shareholders lose nothing.",
+      "The cash adds US$200m of value, but it's spread over new shares that cost US$200m, so nothing is left over for existing shareholders."],
+    reasons: [
+      "The cash raised adds to equity value in proportion to the new shares",
+      "More shares always dilute existing shareholders, whatever price is paid",
+      "The extra cash lowers net debt, so enterprise value goes up",
+      "Earnings per share falls, and the share price follows earnings per share"],
+    reasonNotes: [
+      "Value is only diluted when shares are sold for less than they're worth. At the market price, the new money matches the new shares.",
+      "Cash lowers net debt, but enterprise value (the business) is unchanged. It's equity value that rises, by exactly the cash raised.",
+      "Earnings per share may dip if the cash earns little, but each share's value depends on what it owns, which hasn't changed."],
+    why: "Say equity is worth US$1,000m over 100m shares, or US$10 each. Issuing 20m shares at US$10 raises US$200m: equity becomes US$1,200m over 120m shares, still US$10 each. Issuing below what the shares are worth would move value from existing to new shareholders, which is why deeply discounted share sales matter." }
+]);

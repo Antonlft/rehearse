@@ -245,6 +245,9 @@ main { padding-block: 30px 48px; }
 .question .label { margin-bottom: 8px; }
 .prompt { font-size: 15.5px; line-height: 1.55; margin-bottom: 18px; max-width: 72ch; text-wrap: pretty; }
 .options { display: grid; gap: 8px; margin-bottom: 22px; }
+/* Answer + reason: the two parts get a small heading each ("Answer", "Because"). */
+.question .part-label { margin-bottom: 8px; font-weight: 600; color: var(--ink); text-transform: uppercase; letter-spacing: .06em; font-size: 11px; }
+.question .typed-hint + .part-label { margin-top: 4px; }
 .opt { width: 100%; display: flex; align-items: flex-start; gap: 12px; text-align: left; padding: 11px 14px; background: var(--page); border: 1px solid var(--rule); border-radius: 5px; cursor: pointer; font-size: 14px; }
 .opt:hover { border-color: var(--rule-strong); }
 .opt .radio { flex: none; width: 15px; height: 15px; margin-top: 2px; border: 1.5px solid var(--rule-strong); border-radius: 50%; display: grid; place-items: center; }
