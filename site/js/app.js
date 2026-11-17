@@ -1925,7 +1925,7 @@ function renderLessons() {
         return `<button type="button" class="lesson-card" data-lesson="${c.id}">
           <span class="lesson-card-name">${esc(c.name)}</span>
           <span class="lesson-card-desc">${esc(c.desc)}</span>
-          <span class="lesson-card-foot"><span class="pill lesson-status ${esc(l.status)}">${esc(LESSON_STATUS[l.status] || l.status)}</span>${n ? `<span>Try it × ${n}</span>` : ""}</span>
+          <span class="lesson-card-foot">${lessonStatusPill(l)}${n ? `<span>Try it × ${n}</span>` : ""}</span>
         </button>`;
       }).join("")}
     </div>`).join("")}`;
@@ -1971,6 +1971,8 @@ function renderGlossary() {
 
 /* Lessons: one page per category (content in site/lessons/<category>.js) */
 const LESSON_STATUS = { stub: "Not written yet", draft: "Draft", reviewed: "Reviewed" };
+// Only an unwritten lesson shows its status; draft and reviewed lessons show no tag (the status stays in the data).
+const lessonStatusPill = l => l.status === "stub" ? `<span class="pill lesson-status stub">${esc(LESSON_STATUS.stub)}</span>` : "";
 function renderLesson() {
   const c = catById(view.cat), l = Lessons.all[view.cat] || { status: "stub" }, back = view.back || { name: "home" };
   const missing = `<p class="muted">This lesson hasn't been written yet.</p>`;
@@ -1983,7 +1985,7 @@ function renderLesson() {
   app.innerHTML = `
     <div class="title-row">
       <div><h1>${esc(c.name)}</h1><p>Learn · ${esc(c.desc)} · <button class="link" type="button" data-glossary>Glossary</button></p></div>
-      <span class="pill lesson-status ${esc(l.status)}">${esc(LESSON_STATUS[l.status] || l.status)}</span>
+      ${lessonStatusPill(l)}
     </div>
     <section class="card lesson">
       ${Array.isArray(l.summary) && l.summary.length ? `<div class="lesson-summary">
