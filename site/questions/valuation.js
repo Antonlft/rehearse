@@ -269,3 +269,89 @@ Bank.addFormat("val", [
       "Earnings per share may dip if the cash earns little, but each share's value depends on what it owns, which hasn't changed."],
     why: "Say equity is worth US$1,000m over 100m shares, or US$10 each. Issuing 20m shares at US$10 raises US$200m: equity becomes US$1,200m over 120m shares, still US$10 each. Issuing below what the shares are worth would move value from existing to new shareholders, which is why deeply discounted share sales matter." }
 ]);
+
+// Spot the error: a short worked answer with one mistake. Tap the line, then pick the fix. Right only if both are right.
+// `wrong` is the line with the mistake (counting from 0); lineNotes has one note per line (null on the wrong one);
+// the right fix comes first in `fixes` (the app shuffles them) and fixNotes explain the wrong ones, in order.
+// Later lines carry the mistake forward, as a candidate's working would.
+Bank.addFormat("val", [
+  { id: "val-spot-01", lv: 1, type: "spot",
+    q: "A candidate works out the value per share, starting from an enterprise value of US$1,000m. Which line contains the mistake?",
+    lines: [
+      "Enterprise value: US$1,000m",
+      "Less debt of US$300m: US$700m",
+      "Plus cash of US$50m: US$750m",
+      "Plus non-controlling interest of US$40m: equity value of US$790m",
+      "Diluted shares: 100m",
+      "Value per share: US$790m ÷ 100m = US$7.90"],
+    wrong: 3,
+    lineNotes: [
+      "The starting enterprise value is given, so there's nothing to correct here.",
+      "Going from enterprise value to equity value, debt is subtracted. That's right.",
+      "Cash belongs to shareholders, so it's added back. That's right.",
+      null,
+      "Diluted shares are the right count for a value per share.",
+      "The division is right. The problem is the equity value it divides, which carries the mistake from line 4."],
+    fixes: [
+      "Subtract the non-controlling interest: equity value is US$710m, or US$7.10 a share",
+      "Subtract the cash as well: equity value is US$690m, or US$6.90 a share",
+      "Use basic shares instead of diluted ones, so the value per share comes out higher",
+      "Add the debt back instead: equity value is US$1,390m, or US$13.90 a share"],
+    fixNotes: [
+      "Cash is added going from enterprise value to equity value. Subtracting it would take it out twice.",
+      "Diluted shares are right: options and convertibles will share in the value.",
+      "Debt is a claim that ranks ahead of shareholders, so it comes off enterprise value, not on."],
+    why: "From enterprise value to equity value, subtract debt and the other claims of non-shareholders (such as non-controlling interests and preferred shares), and add cash. A non-controlling interest is the part of a subsidiary owned by outside shareholders. Enterprise value includes all of that subsidiary, so the outsiders' share has to come off before you reach what belongs to the parent's shareholders: US$1,000m − 300 + 50 − 40 = US$710m." },
+
+  { id: "val-spot-02", lv: 2, type: "spot",
+    q: "A candidate works out a terminal value with the Gordon growth formula. Final-year (year 5) free cash flow is US$100m, the discount rate (WACC) is 9% and long-term growth is 3%. Which line contains the mistake?",
+    lines: [
+      "Final-year free cash flow: US$100m",
+      "Cash flow used in the formula: US$100m",
+      "Spread between WACC and growth: 9% − 3% = 6%",
+      "Terminal value at the end of year 5: US$100m ÷ 6% = US$1,667m",
+      "Value today: US$1,667m ÷ 1.09⁵ = US$1,083m"],
+    wrong: 1,
+    lineNotes: [
+      "The final-year cash flow is given in the question.",
+      null,
+      "The spread is right: the formula divides by WACC minus growth.",
+      "The division is right. The problem is the cash flow it divides, from line 2.",
+      "Discounting the terminal value back 5 years, to today, is right. It carries the mistake from line 2 forward."],
+    fixes: [
+      "Grow it one year first: US$103m, so the terminal value is about US$1,717m",
+      "Divide by the 9% WACC instead: the terminal value is then about US$1,111m",
+      "Discount the terminal value back 6 years, not 5, as it comes after year 5",
+      "Grow it by the 9% WACC first: US$109m, so the terminal value is about US$1,817m"],
+    fixNotes: [
+      "Dividing by WACC alone ignores growth. The Gordon formula divides by WACC minus growth.",
+      "The terminal value is a value at the end of year 5, so it's discounted back 5 years.",
+      "Cash flows grow at the growth rate, not at the discount rate."],
+    why: "The Gordon growth formula values the cash flows from the year after the forecast onwards: terminal value = final-year cash flow × (1 + g) ÷ (WACC − g). Here that's US$100m × 1.03 ÷ 6% = US$1,717m at the end of year 5, or about US$1,116m today. Forgetting the extra year of growth understates the terminal value by the growth rate, 3%." },
+
+  { id: "val-spot-03", lv: 2, type: "spot",
+    q: "A company has 100m shares trading at US$20 and 10m options with an exercise price of US$15. A candidate works out the diluted share count with the treasury stock method. Which line contains the mistake?",
+    lines: [
+      "The options are in the money: the US$15 exercise price is below the US$20 share price",
+      "Cash from exercising the options: 10m × US$15 = US$150m",
+      "Shares bought back with that cash: US$150m ÷ US$15 = 10m",
+      "Net new shares: 10m − 10m = 0",
+      "Diluted shares: 100m + 0 = 100m"],
+    wrong: 2,
+    lineNotes: [
+      "Right: in-the-money options are counted, so the method applies.",
+      "Right: each option holder pays the exercise price for one share.",
+      null,
+      "The subtraction is right, but it uses the wrong buyback figure from line 3.",
+      "The addition is right, but it carries the mistake from line 3 forward."],
+    fixes: [
+      "Buy back at the US$20 share price: 7.5m shares, so diluted shares are 102.5m",
+      "Buy back at the average of US$15 and US$20: 8.6m shares, so 101.4m",
+      "Skip the buyback: all 10m options add new shares, so diluted shares are 110m",
+      "Divide by the 100m shares already in issue: 1.5m bought back, so 108.5m"],
+    fixNotes: [
+      "The company buys its shares back in the market, at the current share price, not at an average.",
+      "The treasury stock method assumes the exercise cash buys shares back, which offsets part of the dilution.",
+      "Cash divided by the share price gives the number of shares bought back, not the shares in issue."],
+    why: "Under the treasury stock method, in-the-money options are assumed to be exercised, and the cash they bring in buys shares back at the current share price: US$150m ÷ US$20 = 7.5m shares. Net new shares are 10m − 7.5m = 2.5m, so diluted shares are 102.5m. Buying back at the exercise price always cancels out exactly, which would make options look free." }
+]);

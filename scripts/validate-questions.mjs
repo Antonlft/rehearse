@@ -13,7 +13,10 @@
 //    answer far enough away to be graded as a concept gap; case generators are sampled like the others) or "reason"
 //    (answer + reason: 2–4 unique `answers` and exactly 4 unique `reasons`, the right one first in each, with one note
 //    per wrong one in `answerNotes` and `reasonNotes`; in each list of 3 or more, the right one mustn't stand out as
-//    the longest, i.e. be both the longest and 30%+ longer than the average wrong one).
+//    the longest, i.e. be both the longest and 30%+ longer than the average wrong one) or "spot" (spot the error: 4–6
+//    unique worked `lines`, `wrong` = the number of the line with the mistake from 0, `lineNotes` with one note per
+//    line and null on the wrong one, and exactly 4 unique `fixes`, the right one first, with 3 `fixNotes`; the fixes
+//    follow the same length rule).
 //    Fields belonging to one type (`tolerance`, `unit`, `o`, `rows`, ...) are rejected on the others.
 //    Multiple-choice and typed questions may carry a `table` { caption?, corner?, cols: 2–6, rows: 2–8 of { head, cells } }
 //    with one cell per column and an optional `base` [row, column] inside it.
@@ -90,8 +93,9 @@ const checkShape = (where, q) => {
   if (type === "walk") return checkWalk(where, q);
   if (type === "case") return checkCase(where, q);
   if (type === "reason") return checkReason(where, q);
-  if (type !== "mcq") return fail(`${where}: unknown type "${type}" (expected mcq, numeric, order, grid, walk, case or reason)`);
-  notAllowed(where, q, "a multiple-choice", ["answer", "tolerance", "unit", "wrongs", "dp", "columns", "rows", "points", "answers", "reasons", "answerNotes", "reasonNotes"]);
+  if (type === "spot") return checkSpot(where, q);
+  if (type !== "mcq") return fail(`${where}: unknown type "${type}" (expected mcq, numeric, order, grid, walk, case, reason or spot)`);
+  notAllowed(where, q, "a multiple-choice", ["answer", "tolerance", "unit", "wrongs", "dp", "columns", "rows", "points", "answers", "reasons", "answerNotes", "reasonNotes", "lines", "wrong", "lineNotes", "fixes", "fixNotes"]);
   if (!Array.isArray(q.o) || q.o.length !== 4) fail(`${where}: needs exactly 4 options, has ${q.o?.length}`);
   else {
     if (new Set(q.o).size !== 4) fail(`${where}: options aren't unique: ${JSON.stringify(q.o)}`);
@@ -106,7 +110,7 @@ const checkShape = (where, q) => {
 };
 
 function checkNumeric(where, q) {
-  notAllowed(where, q, "a typed-answer", ["o", "x", "trap", "columns", "rows", "points", "answers", "reasons", "answerNotes", "reasonNotes"]);
+  notAllowed(where, q, "a typed-answer", ["o", "x", "trap", "columns", "rows", "points", "answers", "reasons", "answerNotes", "reasonNotes", "lines", "wrong", "lineNotes", "fixes", "fixNotes"]);
   if (!isNum(q.answer)) fail(`${where}: answer must be a number, got ${JSON.stringify(q.answer)}`);
   if (!isNum(q.tolerance) || q.tolerance < 0) fail(`${where}: tolerance must be a number ≥ 0, got ${JSON.stringify(q.tolerance)}`);
   if (q.dp !== undefined && !(Number.isInteger(q.dp) && q.dp >= 0 && q.dp <= 6)) fail(`${where}: dp must be a whole number from 0 to 6, got ${JSON.stringify(q.dp)}`);
@@ -123,7 +127,7 @@ function checkNumeric(where, q) {
   }
 }
 function checkCase(where, q) {
-  notAllowed(where, q, "a case study", ["o", "x", "trap", "answer", "tolerance", "unit", "wrongs", "dp", "columns", "rows", "points", "answers", "reasons", "answerNotes", "reasonNotes"]);
+  notAllowed(where, q, "a case study", ["o", "x", "trap", "answer", "tolerance", "unit", "wrongs", "dp", "columns", "rows", "points", "answers", "reasons", "answerNotes", "reasonNotes", "lines", "wrong", "lineNotes", "fixes", "fixNotes"]);
   if (!Array.isArray(q.steps) || q.steps.length < 3 || q.steps.length > 8) return fail(`${where}: steps must list 3–8 steps, has ${q.steps?.length}`);
   q.steps.forEach((s, k) => {
     const at = `${where} step ${k + 1}`;
@@ -138,7 +142,7 @@ function checkCase(where, q) {
   });
 }
 function checkReason(where, q) {
-  notAllowed(where, q, "an answer + reason", ["o", "x", "trap", "answer", "tolerance", "unit", "wrongs", "dp", "columns", "rows", "points", "steps", "table"]);
+  notAllowed(where, q, "an answer + reason", ["o", "x", "trap", "answer", "tolerance", "unit", "wrongs", "dp", "columns", "rows", "points", "steps", "table", "lines", "wrong", "lineNotes", "fixes", "fixNotes"]);
   const part = (name, notesName, min, max) => {
     const list = q[name], notes = q[notesName];
     if (!Array.isArray(list) || list.length < min || list.length > max) return fail(`${where}: ${name} must list ${min === max ? min : `${min}–${max}`} options, has ${Array.isArray(list) ? list.length : JSON.stringify(list)}`);
@@ -155,22 +159,43 @@ function checkReason(where, q) {
   part("answers", "answerNotes", 2, 4);
   part("reasons", "reasonNotes", 4, 4);
 }
+function checkSpot(where, q) {
+  notAllowed(where, q, "a spot-the-error", ["o", "x", "trap", "answer", "tolerance", "unit", "wrongs", "dp", "columns", "rows", "points", "steps", "table", "answers", "reasons", "answerNotes", "reasonNotes"]);
+  const lines = q.lines;
+  if (!Array.isArray(lines) || lines.length < 4 || lines.length > 6) return fail(`${where}: lines must list 4–6 worked lines, has ${Array.isArray(lines) ? lines.length : JSON.stringify(lines)}`);
+  if (lines.some(s => typeof s !== "string" || !s.trim() || BAD_TEXT.test(s))) fail(`${where}: every line must be non-empty text`);
+  if (new Set(lines).size !== lines.length) fail(`${where}: lines must be unique`);
+  if (!Number.isInteger(q.wrong) || q.wrong < 0 || q.wrong >= lines.length) return fail(`${where}: wrong must be a line number from 0 to ${lines.length - 1}, got ${JSON.stringify(q.wrong)}`);
+  if (!Array.isArray(q.lineNotes) || q.lineNotes.length !== lines.length) fail(`${where}: lineNotes needs one entry per line (${lines.length}), has ${q.lineNotes?.length}`);
+  else q.lineNotes.forEach((n, k) => {
+    if (k === q.wrong) { if (n !== null) fail(`${where}: lineNotes for the wrong line (${k}) must be null; the fix and the explanation cover it`); }
+    else if (typeof n !== "string" || !n.trim()) fail(`${where}: line ${k + 1} needs a note saying why it's right`);
+  });
+  const fixes = q.fixes;
+  if (!Array.isArray(fixes) || fixes.length !== 4) return fail(`${where}: fixes must list exactly 4 options, has ${Array.isArray(fixes) ? fixes.length : JSON.stringify(fixes)}`);
+  if (fixes.some(s => typeof s !== "string" || !s.trim() || BAD_TEXT.test(s))) fail(`${where}: every fix must be non-empty text`);
+  if (new Set(fixes).size !== 4) fail(`${where}: fixes must be unique`);
+  if (!Array.isArray(q.fixNotes) || q.fixNotes.length !== 3) fail(`${where}: fixNotes needs one note per wrong fix (3), has ${q.fixNotes?.length}`);
+  else if (q.fixNotes.some(s => typeof s !== "string" || !s.trim())) fail(`${where}: a note in fixNotes is empty`);
+  const L = fixes.map(s => String(s).length), mean = (L[1] + L[2] + L[3]) / 3;
+  if (L.slice(1).every(w => L[0] > w) && L[0] >= 1.3 * mean) fail(`${where}: the right fix (${L[0]} characters) stands out as the longest (wrong ones average ${Math.round(mean)}); balance the lengths`);
+}
 function checkOrder(where, q) {
-  notAllowed(where, q, "an ordering", ["o", "x", "trap", "tolerance", "unit", "wrongs", "dp", "columns", "rows", "points", "answers", "reasons", "answerNotes", "reasonNotes"]);
+  notAllowed(where, q, "an ordering", ["o", "x", "trap", "tolerance", "unit", "wrongs", "dp", "columns", "rows", "points", "answers", "reasons", "answerNotes", "reasonNotes", "lines", "wrong", "lineNotes", "fixes", "fixNotes"]);
   if (!Array.isArray(q.answer) || q.answer.length < 3 || q.answer.length > 8) return fail(`${where}: answer must list 3–8 steps in the right order, has ${Array.isArray(q.answer) ? q.answer.length : JSON.stringify(q.answer)}`);
   if (q.answer.some(s => typeof s !== "string" || !s.trim())) fail(`${where}: every step must be non-empty text`);
   if (new Set(q.answer).size !== q.answer.length) fail(`${where}: steps must be unique`);
 }
 
 function checkWalk(where, q) {
-  notAllowed(where, q, "a walk-through", ["o", "x", "trap", "tolerance", "unit", "wrongs", "dp", "answer", "columns", "rows", "answers", "reasons", "answerNotes", "reasonNotes"]);
+  notAllowed(where, q, "a walk-through", ["o", "x", "trap", "tolerance", "unit", "wrongs", "dp", "answer", "columns", "rows", "answers", "reasons", "answerNotes", "reasonNotes", "lines", "wrong", "lineNotes", "fixes", "fixNotes"]);
   if (!Array.isArray(q.points) || q.points.length < 3 || q.points.length > 8) return fail(`${where}: points must list 3–8 parts of a model answer, has ${Array.isArray(q.points) ? q.points.length : JSON.stringify(q.points)}`);
   if (q.points.some(p => typeof p !== "string" || !p.trim())) fail(`${where}: every point must be non-empty text`);
   if (new Set(q.points).size !== q.points.length) fail(`${where}: points must be unique`);
 }
 
 function checkGrid(where, q) {
-  notAllowed(where, q, "a grid", ["o", "x", "trap", "tolerance", "unit", "wrongs", "dp", "answer", "points", "answers", "reasons", "answerNotes", "reasonNotes"]);
+  notAllowed(where, q, "a grid", ["o", "x", "trap", "tolerance", "unit", "wrongs", "dp", "answer", "points", "answers", "reasons", "answerNotes", "reasonNotes", "lines", "wrong", "lineNotes", "fixes", "fixNotes"]);
   const cols = q.columns;
   if (!Array.isArray(cols) || cols.length < 2 || cols.length > 4) return fail(`${where}: columns must list 2–4 choices, has ${Array.isArray(cols) ? cols.length : JSON.stringify(cols)}`);
   if (cols.some(c => typeof c !== "string" || !c.trim())) fail(`${where}: every column label must be non-empty text`);

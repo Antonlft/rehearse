@@ -248,6 +248,13 @@ main { padding-block: 30px 48px; }
 /* Answer + reason: the two parts get a small heading each ("Answer", "Because"). */
 .question .part-label { margin-bottom: 8px; font-weight: 600; color: var(--ink); text-transform: uppercase; letter-spacing: .06em; font-size: 11px; }
 .question .typed-hint + .part-label { margin-top: 4px; }
+/* Spot the error: numbered worked lines, read top to bottom, tapped to pick the one with the mistake. */
+.spot-lines { gap: 6px; }
+.spot-line { align-items: center; font-variant-numeric: tabular-nums; }
+.spot-num { flex: none; width: 22px; height: 22px; border-radius: 50%; border: 1.5px solid var(--rule-strong); display: grid; place-items: center; font-size: 11.5px; font-weight: 600; color: var(--muted); }
+.spot-line[aria-checked="true"] .spot-num { background: var(--navy); border-color: var(--navy); color: var(--page); }
+.spot-line.reveal-right .spot-num { background: var(--good); border-color: var(--good); color: var(--page); }
+.spot-line.reveal-wrong .spot-num { background: var(--bad); border-color: var(--bad); color: var(--page); }
 .opt { width: 100%; display: flex; align-items: flex-start; gap: 12px; text-align: left; padding: 11px 14px; background: var(--page); border: 1px solid var(--rule); border-radius: 5px; cursor: pointer; font-size: 14px; }
 .opt:hover { border-color: var(--rule-strong); }
 .opt .radio { flex: none; width: 15px; height: 15px; margin-top: 2px; border: 1.5px solid var(--rule-strong); border-radius: 50%; display: grid; place-items: center; }

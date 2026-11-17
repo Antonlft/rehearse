@@ -128,7 +128,11 @@ db.askConfidence ??= true;
 //      position as shown, or null), and their answer log entries have type: "reason", given (those two picks) and, when
 //      the answer was right but the reason wrong, cause: "wrong-reason". Only both right counts; they're rated for
 //      confidence like multiple choice. No new top-level fields.
-const SCHEMA_VERSION = 16;
+//  17: spot-the-error questions (new formats only): a round's answers[] can hold [line picked, fix picked] (the line by
+//      its number from 0, the fix by its position as shown, or null), and their answer log entries have type: "spot",
+//      given (those two picks) and, when the line was right but the fix wrong, cause: "wrong-fix". Only both right
+//      counts; rated for confidence like answer + reason. No new top-level fields.
+const SCHEMA_VERSION = 17;
 db.schemaVersion = Math.max(db.schemaVersion || 1, SCHEMA_VERSION);
 let saveWarned = false;
 const persist = () => {
@@ -225,6 +229,7 @@ function materialize(src, cat) {
   if (src.type === "walk") // walk-through card: answered out loud, then self-graded against the model answer
     return { cat, id: src.id, gen: false, lv: src.lv || null, type: "walk", q: src.q, why: src.why, points: src.points };
   if (src.type === "reason") return reasonItem(src, cat);
+  if (src.type === "spot") return spotItem(src, cat);
   const perm = shuffle([0, 1, 2, 3]);
   const item = { cat, id: src.id || null, gen: !!src.gen, lv: src.lv || null, q: src.q, why: src.why,
     o: perm.map(i => src.o[i]), a: perm.indexOf(0), x: perm.map(i => i === 0 ? null : src.x[i - 1]), ...(src.table ? { table: src.table } : {}) };
@@ -248,6 +253,22 @@ function reasonSource(it) {
     answers: firstOk(it.ans, it.ansOk), answerNotes: firstOk(it.ansX, it.ansOk).slice(1),
     reasons: firstOk(it.rsn, it.rsnOk), reasonNotes: firstOk(it.rsnX, it.rsnOk).slice(1) };
 }
+// Spot the error: the worked lines keep their order (wrong = the number of the line with the mistake, from 0, and
+// lineNotes has one note per line, null on the wrong one); the fixes are shuffled, the right one first in the source.
+function spotItem(src, cat) {
+  const pf = shuffle([...src.fixes.keys()]);
+  return { cat, id: src.id, gen: false, lv: src.lv || null, type: "spot", q: src.q, why: src.why,
+    lines: src.lines, wrong: src.wrong, lineNotes: src.lineNotes,
+    fix: pf.map(k => src.fixes[k]), fixOk: pf.indexOf(0), fixX: pf.map(k => k === 0 ? null : src.fixNotes[k - 1]) };
+}
+function spotSource(it) {
+  const firstOk = (list, ok) => [list[ok], ...list.filter((_, j) => j !== ok)];
+  return { id: it.id, lv: it.lv, type: "spot", q: it.q, why: it.why, lines: it.lines, wrong: it.wrong, lineNotes: it.lineNotes,
+    fixes: firstOk(it.fix, it.fixOk), fixNotes: firstOk(it.fixX, it.fixOk).slice(1) };
+}
+// Two-part questions (answer + reason, spot the error): what each part offers, in the order shown.
+const isTwoPart = it => it.type === "reason" || it.type === "spot";
+const partLists = it => it.type === "reason" ? [it.ans, it.rsn] : [it.lines, it.fix];
 
 // A typed-answer calculation question, ready for a round.
 function typedItem(fn, cat) {
@@ -286,6 +307,10 @@ function grade(it, ans) {
     const p = Array.isArray(ans) ? ans : [], answerOk = p[0] === it.ansOk, reasonOk = p[1] === it.rsnOk;
     return { ok: answerOk && reasonOk, answerOk, reasonOk };
   }
+  if (it.type === "spot") { // right only if both the line and the fix are right
+    const p = Array.isArray(ans) ? ans : [], lineOk = p[0] === it.wrong, fixOk = p[1] === it.fixOk;
+    return { ok: lineOk && fixOk, lineOk, fixOk };
+  }
   return { ok: ans === it.a };
 }
 // Learning mode reveals an answer once it's final: multiple choice on click, typed answers on "Check".
@@ -293,9 +318,9 @@ const needsCheck = it => it.type === "numeric" || it.type === "order" || it.type
 // Confidence ratings: rated formats, and whether this round asks (decided when it started, so old rounds are unchanged).
 const CONF = [["sure", "Sure"], ["think", "Think so"], ["guess", "Guess"]];
 const confLabel = k => (CONF.find(c => c[0] === k) || [, ""])[1];
-const isRated = it => !it.type || it.type === "mcq" || it.type === "numeric" || it.type === "order" || it.type === "grid" || it.type === "reason";
-// An answer + reason question is final once both parts are picked.
-const reasonDone = (it, ans) => it.type !== "reason" || (Array.isArray(ans) && ans[0] != null && ans[1] != null);
+const isRated = it => !it.type || it.type === "mcq" || it.type === "numeric" || it.type === "order" || it.type === "grid" || it.type === "reason" || it.type === "spot";
+// A two-part question (answer + reason, spot the error) is final once both parts are picked.
+const reasonDone = (it, ans) => !isTwoPart(it) || (Array.isArray(ans) && ans[0] != null && ans[1] != null);
 const confNeeded = (at, i) => !!at.askConf && isRated(at.items[i]);
 const confOf = (at, i) => (at.conf && at.conf[i]) || null;
 // Learning mode shows the answer once it's final: chosen (and checked, for typed, ordering and grids) and, when the
@@ -432,7 +457,7 @@ function buildRound(mode, cats) {
 
 function beginAttempt(mode, items, sub, learning = false, calc = false) {
   db.attempts[mode] = { mode, sub, items, answers: Array(items.length).fill(null), marked: Array(items.length).fill(false),
-    cur: 0, start: Date.now(), deadline: Date.now() + (learning ? LEARNING_MS : (items.length + items.filter(it => it.type === "walk").length + items.reduce((s, it) => s + (it.type === "case" ? it.steps.length - 1 : 0), 0)) * 60000), ...(learning ? { learning: true } : {}), ...(calc ? { calc: true } : {}), ...(db.askConfidence ? { askConf: true } : {}) };
+    cur: 0, start: Date.now(), deadline: Date.now() + (learning ? LEARNING_MS : (items.length + items.filter(it => it.type === "walk" || it.type === "spot").length + items.reduce((s, it) => s + (it.type === "case" ? it.steps.length - 1 : 0), 0)) * 60000), ...(learning ? { learning: true } : {}), ...(calc ? { calc: true } : {}), ...(db.askConfidence ? { askConf: true } : {}) };
   persist();
   reviewFilter = "all";
   go({ name: "quiz", mode });
@@ -461,6 +486,7 @@ function startRetry(items) {
     if (it.type === "walk") return { ...it }; // walk-through cards are asked again as they are
     if (it.type === "case") return { ...it }; // case studies too, with the same numbers
     if (it.type === "reason") return reasonItem(reasonSource(it), it.cat); // answers and reasons in a new order
+    if (it.type === "spot") return spotItem(spotSource(it), it.cat); // the same lines, the fixes in a new order
     const wrong = [0, 1, 2, 3].filter(j => j !== it.a);
     return materialize({ id: it.id, gen: it.gen, lv: it.lv, q: it.q, why: it.why,
       o: [it.o[it.a], ...wrong.map(j => it.o[j])], x: wrong.map(j => it.x[j]),
@@ -910,7 +936,7 @@ function renderQuiz() {
       <p class="label">${esc(catById(it.cat).name)} · Question ${at.cur + 1} of ${n}${it.lv ? ` · ${LEVELS[it.lv]}` : ""}${it.type === "case" ? ` · Case study, ${it.steps.length} steps` : ""}</p>
       <p class="prompt" id="qtext">${esc(it.q)}</p>
       ${it.table ? qTable(it.table) : ""}
-      ${it.type === "numeric" ? typedArea(at, it, ans, revealed) : it.type === "order" ? orderArea(at, it, ans, revealed) : it.type === "grid" ? gridArea(at, it, ans, revealed) : it.type === "walk" ? walkArea(at, it, ans, revealed) : it.type === "case" ? caseArea(at, it, ans) : it.type === "reason" ? reasonArea(at, it, ans, revealed) : `
+      ${it.type === "numeric" ? typedArea(at, it, ans, revealed) : it.type === "order" ? orderArea(at, it, ans, revealed) : it.type === "grid" ? gridArea(at, it, ans, revealed) : it.type === "walk" ? walkArea(at, it, ans, revealed) : it.type === "case" ? caseArea(at, it, ans) : it.type === "reason" ? reasonArea(at, it, ans, revealed) : it.type === "spot" ? spotArea(at, it, ans, revealed) : `
       <div class="options" role="radiogroup" aria-labelledby="qtext">
         ${it.o.map((o, i) => `<button type="button" class="opt${optClass(i)}" role="radio" aria-checked="${ans === i}" data-opt="${i}" ${revealed ? "disabled" : ""}><span class="radio"></span><span>${esc(o)}</span></button>`).join("")}
       </div>
@@ -929,7 +955,7 @@ function renderQuiz() {
         <span class="spacer"></span>
         <button class="btn" id="submitBtn" type="button">Submit test</button>
       </div>
-      <p class="shortcuts">Keyboard: ${it.type === "reason" ? `<kbd>1</kbd>–<kbd>${it.ans.length}</kbd> answer · <kbd>A</kbd>–<kbd>${"ABCD"[it.rsn.length - 1]}</kbd> reason` : `<kbd>1</kbd>–<kbd>4</kbd> answer`}${confNeeded(at, at.cur) ? ` · <kbd>S</kbd> <kbd>T</kbd> <kbd>G</kbd> how sure` : ""} · <kbd>←</kbd> <kbd>→</kbd> previous / next · <kbd>M</kbd> mark for review</p>
+      <p class="shortcuts">Keyboard: ${isTwoPart(it) ? `<kbd>1</kbd>–<kbd>${partLists(it)[0].length}</kbd> ${it.type === "spot" ? "line" : "answer"} · <kbd>A</kbd>–<kbd>${"ABCD"[partLists(it)[1].length - 1]}</kbd> ${it.type === "spot" ? "fix" : "reason"}` :`<kbd>1</kbd>–<kbd>4</kbd> answer`}${confNeeded(at, at.cur) ? ` · <kbd>S</kbd> <kbd>T</kbd> <kbd>G</kbd> how sure` : ""} · <kbd>←</kbd> <kbd>→</kbd> previous / next · <kbd>M</kbd> mark for review</p>
     </section>
     <section class="tray" aria-label="Question navigator">
       <p>Go to a question · filled = answered · amber ring = marked for review · outline = current</p>
@@ -952,7 +978,7 @@ function renderQuiz() {
   if (it.type === "grid" && !revealed) wireGrid(at, it);
   if (it.type === "walk" && !revealed) wireWalk(at, it);
   if (it.type === "case") wireCase(at, it);
-  if (it.type === "reason" && !revealed) app.querySelectorAll("[data-part]").forEach(b => b.onclick = () => reasonPick(+b.dataset.part, +b.dataset.pick));
+  if (isTwoPart(it) && !revealed) app.querySelectorAll("[data-part]").forEach(b => b.onclick = () => reasonPick(+b.dataset.part, +b.dataset.pick));
   // Calculator: only in rounds that allow it (decided when the round started).
   const calcBtn = document.getElementById("calcBtn");
   if (calcBtn) calcBtn.onclick = () => { CalcUI.toggle(); calcBtn.setAttribute("aria-expanded", CalcUI.isOpen()); };
@@ -1190,9 +1216,34 @@ function reasonArea(at, it, ans, revealed) {
         <p>${rich(it.why)}</p>
       </div>` : ""}`;
 }
+/* Spot the error on the quiz screen: tap the line with the mistake (part 0), then pick the fix (part 1). The lines are
+   shown in their worked order, numbered; right only if both the line and the fix are right. */
+function spotArea(at, it, ans, revealed) {
+  const p = Array.isArray(ans) ? ans : [null, null], g = revealed ? grade(it, ans) : null;
+  const cls = (j, ok, pick) => !revealed ? "" : j === ok ? " reveal-right" : j === pick ? " reveal-wrong" : "";
+  const title = !revealed ? "" : g.ok ? `Correct: the mistake is in line ${it.wrong + 1}, and that's the fix`
+    : g.lineOk ? `Right line, wrong fix. The fix is: ${esc(it.fix[it.fixOk])}`
+    : `Not quite. The mistake is in line ${it.wrong + 1}.${g.fixOk ? " Your fix is right." : ` The fix: ${esc(it.fix[it.fixOk])}.`}`;
+  return `${revealed ? "" : `<p class="typed-hint">Tap the line with the mistake, then pick the fix. It only counts if both are right.</p>`}
+      <p class="label part-label" id="part0">Which line is wrong?</p>
+      <div class="options spot-lines" role="radiogroup" aria-labelledby="part0">
+        ${it.lines.map((l, j) => `<button type="button" class="opt spot-line${cls(j, it.wrong, p[0])}" role="radio" aria-checked="${p[0] === j}" data-part="0" data-pick="${j}" ${revealed ? "disabled" : ""}><span class="spot-num" aria-label="Line ${j + 1}">${j + 1}</span><span>${esc(l)}</span></button>`).join("")}
+      </div>
+      <p class="label part-label" id="part1">The fix</p>
+      <div class="options" role="radiogroup" aria-labelledby="part1">
+        ${it.fix.map((o, j) => `<button type="button" class="opt${cls(j, it.fixOk, p[1])}" role="radio" aria-checked="${p[1] === j}" data-part="1" data-pick="${j}" ${revealed ? "disabled" : ""}><span class="radio"></span><span>${esc(o)}</span></button>`).join("")}
+      </div>
+      ${revealed ? `<div class="feedback ${g.ok ? "ok" : "no"}" id="feedback" role="status" tabindex="-1">
+        <p class="feedback-title">${title}</p>
+        ${!g.lineOk && it.lineNotes[p[0]] ? `<p>Line ${p[0] + 1}: ${esc(it.lineNotes[p[0]])}</p>` : ""}
+        ${!g.fixOk && it.fixX[p[1]] ? `<p>${esc(it.fixX[p[1]])}</p>` : ""}
+        <p>${rich(it.why)}</p>
+      </div>` : ""}`;
+}
+// Picks one part of a two-part question (answer + reason, or spot the error).
 function reasonPick(part, j) {
   const at = db.attempts[view.mode], i = at.cur, it = at.items[i];
-  if (it.type !== "reason" || isRevealed(at, i) || j < 0 || j >= (part ? it.rsn : it.ans).length) return;
+  if (!isTwoPart(it) || isRevealed(at, i) || j < 0 || j >= partLists(it)[part].length) return;
   const p = Array.isArray(at.answers[i]) ? at.answers[i].slice() : [null, null];
   p[part] = j;
   ensureTiming(at); at.answers[i] = p; at.answeredAt[i] = Date.now(); persist(); renderQuiz();
@@ -1295,8 +1346,9 @@ function choose(i) {
     if (i > 2 || !(at.walkShown && at.walkShown[at.cur]) || (at.learning && at.answers[at.cur] !== null)) return;
     return walkPick(at, WALK_GRADES[i][0]);
   }
-  if (cur.type === "reason") return reasonPick(0, i); // 1–4 pick the answer; A–D pick the reason
+  if (isTwoPart(cur)) return reasonPick(0, i); // numbers pick the answer or line; A–D pick the reason or fix
   if (cur.type) return; // typed and ordering questions aren't answered with 1–4
+  if (i > 3) return; // multiple choice has 4 options
   if (at.learning && isRevealed(at, at.cur)) return; // Learning mode: the answer locks once it's revealed
   ensureTiming(at); at.answers[at.cur] = i; at.answeredAt[at.cur] = Date.now(); persist(); renderQuiz();
   if (at.learning) document.getElementById("feedback")?.focus({ preventScroll: true });
@@ -1335,6 +1387,7 @@ function submit(timedOut) {
       if (it.type === "grid") { entry.type = "grid"; entry.given = at.answers[i].slice(); entry.rowsRight = g.right; }
       if (it.type === "walk") { entry.type = "walk"; entry.given = at.answers[i]; }
       if (it.type === "reason") { entry.type = "reason"; entry.given = at.answers[i].slice(); if (g.answerOk && !g.reasonOk) entry.cause = "wrong-reason"; }
+      if (it.type === "spot") { entry.type = "spot"; entry.given = at.answers[i].slice(); if (g.lineOk && !g.fixOk) entry.cause = "wrong-fix"; }
       if (it.type === "case") { entry.type = "case"; entry.given = g.steps.map(s => s.value ?? null); entry.stepsRight = g.right; if (firstWrong && firstWrong.cause) entry.cause = firstWrong.cause; }
       if (trap) entry.trap = trap;
       if (confOf(at, i) && isRated(it)) entry.confidence = confOf(at, i);
@@ -1936,13 +1989,13 @@ function renderResults() {
 function reviewItem(it, i, ans, marked, misread, conf = null) {
   const learnLink = () => `<p class="review-learn"><button class="link" type="button" data-learn="${it.cat}" data-from="${i}">Review the method: ${esc(catById(it.cat).name)}</button></p>`;
   const g = grade(it, ans);
-  const st = isBlank(ans) ? ["skip", "Unanswered"] : it.type === "walk" ? [g.ok ? "ok" : "no", walkLabel(ans)] : g.ok ? ["ok", "Correct"] : it.type === "reason" && g.answerOk ? ["no", "Wrong reason"] : ["no", "Incorrect"];
+  const st = isBlank(ans) ? ["skip", "Unanswered"] : it.type === "walk" ? [g.ok ? "ok" : "no", walkLabel(ans)] : g.ok ? ["ok", "Correct"] : it.type === "reason" && g.answerOk ? ["no", "Wrong reason"] : it.type === "spot" && g.lineOk ? ["no", "Wrong fix"] : ["no", "Incorrect"];
   const misreadBtn = st[0] === "no" && misread !== null && it.type !== "walk"
     ? `<button type="button" class="misread" data-misread="${i}" aria-pressed="${misread}">${misread ? "Marked as misread · undo" : "I read the question wrong"}</button>` : "";
   return `
     <article class="card item" id="r-${i}">
       <div class="item-top">
-        <p class="label">${esc(catById(it.cat).name)} · Question ${i + 1}${it.lv ? ` · ${LEVELS[it.lv]}` : ""}${it.gen ? " · Calculation" : ""}${it.type === "numeric" ? " · Typed answer" : it.type === "order" ? " · Ordering" : it.type === "grid" ? " · Classification" : it.type === "walk" ? " · Walk-through (self-graded)" : it.type === "case" ? " · Case study" : it.type === "reason" ? " · Answer + reason" : ""}</p>
+        <p class="label">${esc(catById(it.cat).name)} · Question ${i + 1}${it.lv ? ` · ${LEVELS[it.lv]}` : ""}${it.gen ? " · Calculation" : ""}${it.type === "numeric" ? " · Typed answer" : it.type === "order" ? " · Ordering" : it.type === "grid" ? " · Classification" : it.type === "walk" ? " · Walk-through (self-graded)" : it.type === "case" ? " · Case study" : it.type === "reason" ? " · Answer + reason" : it.type === "spot" ? " · Spot the error" : ""}</p>
         <span class="pills">${misreadBtn}<span class="pill ${st[0]}">${st[1]}</span>${conf && st[0] === "no" && conf === "sure" ? `<span class="pill sure-wrong">Sure but wrong</span>` : conf ? `<span class="pill conf-pill">You said: ${esc(confLabel(conf))}</span>` : ""}${marked ? `<span class="pill flagged">Marked</span>` : ""}</span>
       </div>
       <p class="prompt">${esc(it.q)}</p>
@@ -1955,8 +2008,9 @@ function reviewItem(it, i, ans, marked, misread, conf = null) {
           <span>Answer: <b>${esc(Typed.show(s.answer, s.unit, s.dp))}</b>${isBlank(given) ? " <em>(not answered)</em>" : ` <em>(your answer: ${esc(given)})</em>`}</span>
           ${!gs.ok && !isBlank(given) ? `<span class="note">${esc(causeText(gs))}</span>` : ""}<span class="note">${rich(s.why)}</span></div></li>`;
       }).join("")}</ul>
-      <p class="note-block">${rich(it.why)}</p>` : it.type === "reason" ? `
-      ${[["Answer", it.ans, it.ansOk, it.ansX, 0], ["Because", it.rsn, it.rsnOk, it.rsnX, 1]].map(([label, list, ok, notes, part]) => {
+      <p class="note-block">${rich(it.why)}</p>` : isTwoPart(it) ? `
+      ${(it.type === "reason" ? [["Answer", it.ans, it.ansOk, it.ansX, 0], ["Because", it.rsn, it.rsnOk, it.rsnX, 1]]
+        : [["Which line is wrong? (✓ marks the line with the mistake)", it.lines.map((l, k) => `Line ${k + 1}. ${l}`), it.wrong, it.lineNotes, 0], ["The fix", it.fix, it.fixOk, it.fixX, 1]]).map(([label, list, ok, notes, part]) => {
         const pick = Array.isArray(ans) ? ans[part] ?? null : null;
         return `<p class="label">${label}</p>
       <ul class="ans">${list.map((o, j) => `<li class="${j === ok ? "right" : j === pick ? "wrong" : "plain"}"><span class="mark" aria-hidden="true">${j === ok ? "✓" : j === pick ? "✗" : ""}</span><div><span>${esc(o)}${j === pick ? " <em>(your answer)</em>" : ""}</span>${notes[j] ? `<span class="note">${rich(notes[j])}</span>` : ""}</div></li>`).join("")}</ul>`;
@@ -2022,11 +2076,11 @@ document.addEventListener("keydown", e => {
   if (view.name !== "quiz" || modalRoot.innerHTML || e.metaKey || e.ctrlKey || e.altKey) return;
   const at = db.attempts[view.mode];
   if (!at || !view.live) return;
-  if (/^[1-4]$/.test(e.key)) choose(+e.key - 1);
+  if (/^[1-6]$/.test(e.key)) choose(+e.key - 1); // 5–6 only for spot-the-error lines
   else if (e.key === "ArrowRight") move(at.cur + 1);
   else if (e.key === "ArrowLeft") move(at.cur - 1);
   else if (e.key.toLowerCase() === "m") toggleMark();
-  else if (/^[a-d]$/i.test(e.key) && at.items[at.cur].type === "reason") reasonPick(1, "abcd".indexOf(e.key.toLowerCase()));
+  else if (/^[a-d]$/i.test(e.key) && isTwoPart(at.items[at.cur])) reasonPick(1, "abcd".indexOf(e.key.toLowerCase()));
   else { const k = { s: "sure", t: "think", g: "guess" }[e.key.toLowerCase()]; if (k) setConf(k); }
 });
 
