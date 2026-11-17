@@ -114,3 +114,64 @@ Bank.addFormat("fig", [
     ],
     why: "Give both sides: a better margin in the short run, against funding pressure, bond losses and credit risk. Which wins depends on the balance sheet." }
 ]);
+
+// More new formats: answer + reason and spot the error.
+Bank.addFormat("fig", [
+  { id: "fig-why-01", lv: 2, type: "reason",
+    q: "A bank earns a return on tangible equity (ROTE) of 8%, while investors require 12% (its cost of equity). Where should its shares trade compared with tangible book value?",
+    answers: ["Below tangible book", "Above tangible book", "At tangible book"],
+    answerNotes: [
+      "Trading above book needs returns above the cost of equity. Here returns are 4 points short.",
+      "At book, returns would equal the cost of equity. 8% is well below 12%."],
+    reasons: [
+      "It earns less on its equity than investors require, so each dollar is worth less",
+      "Banks always trade above book value, because their customer franchises are valuable",
+      "Tangible book is an audited figure, so the share price settles right at book",
+      "Banks trade below book value whenever interest rates are falling sharply"],
+    reasonNotes: [
+      "Only banks earning more than their cost of equity trade above book. A franchise's value shows up in those returns.",
+      "The market prices what the equity will earn, not the accounting figure. Weak returns mean a discount.",
+      "Rates matter through returns, but the key test is ROTE against the cost of equity, whatever rates are doing."],
+    why: "A simple rule: price-to-tangible-book ≈ (ROTE − growth) ÷ (cost of equity − growth). Ignoring growth, 8% ÷ 12% ≈ 0.67x. A bank that earns less than investors require destroys value with each dollar it keeps, so its shares trade below tangible book." },
+
+  { id: "fig-why-02", lv: 2, type: "reason",
+    q: "A non-life insurer has a combined ratio of 102%. Can it still report a profit?",
+    answers: ["Yes, often", "No, never", "Only for life insurers"],
+    answerNotes: [
+      "Underwriting loses 2% of premiums, but income on the money held until claims are paid can more than cover that.",
+      "Non-life insurers also hold premiums for months or years before paying claims, and earn income on them."],
+    reasons: [
+      "It invests the premiums until claims are paid, and the income covers the small loss",
+      "A combined ratio above 100% means claims and costs exceed premiums, so there's a loss",
+      "Only life insurers earn investment income; non-life insurers pay claims too quickly",
+      "The combined ratio leaves out claims, so a figure over 100% can still be profitable"],
+    reasonNotes: [
+      "That's only the underwriting result. Profit also includes investment income.",
+      "Non-life claims, especially liability claims, can take years to settle, so the money held is large.",
+      "The combined ratio includes claims: it's (claims + expenses) ÷ premiums."],
+    why: "The combined ratio = (claims + expenses) ÷ earned premiums. At 102%, underwriting loses 2% of premiums. But insurers collect premiums before paying claims and invest that money (the float) in the meantime. If the float earns, say, 4% of premiums a year, the insurer makes a profit overall. That's why low interest rates squeeze insurers that underwrite at a loss." },
+
+  { id: "fig-spot-01", lv: 2, type: "spot",
+    q: "A bank has CET1 capital of US$12bn, total assets of US$300bn and risk-weighted assets of US$100bn. Its minimum CET1 requirement is 10%. A candidate checks its capital position. Which line contains the mistake?",
+    lines: [
+      "CET1 ratio: US$12bn ÷ US$300bn = 4.0%",
+      "The requirement is 10%, so the bank is 6 points short",
+      "Capital needed: 10% × US$300bn = US$30bn",
+      "Shortfall: US$30bn − US$12bn = US$18bn of new capital needed"],
+    wrong: 0,
+    lineNotes: [
+      null,
+      "Comparing the ratio with the 10% requirement is the right test, but it uses the wrong ratio from line 1.",
+      "This repeats the mistake: the requirement applies to risk-weighted assets, not total assets.",
+      "The subtraction is right, but it carries the mistake forward. The bank actually has US$2bn more capital than it needs."],
+    fixes: [
+      "Divide by risk-weighted assets: 12 ÷ 100 = 12%, comfortably above 10%",
+      "Divide by total equity instead of assets: the ratio is then close to 100%",
+      "Keep total assets, but compare with the 3% leverage ratio minimum instead",
+      "Add risk-weighted assets to total assets: 12 ÷ 400 = 3.0%, so it's short"],
+    fixNotes: [
+      "CET1 is part of equity, so that ratio tells you nothing. Regulators compare capital with risk-weighted assets.",
+      "That's a different test, the leverage ratio, which uses Tier 1 capital. The CET1 requirement is measured against risk-weighted assets.",
+      "Risk-weighted assets are a risk-adjusted version of the assets, not something extra to add."],
+    why: "The CET1 ratio = CET1 capital ÷ risk-weighted assets (RWAs). RWAs weight each asset by its risk, so safe assets such as government bonds count for little. Here 12 ÷ 100 = 12%, so the bank holds 2 points (US$2bn) more than its 10% requirement. Dividing by total assets gives a much lower-looking 4%, which is closer to a leverage ratio." }
+]);

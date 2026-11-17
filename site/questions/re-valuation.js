@@ -181,3 +181,64 @@ Bank.addFormat("rev", [
     ],
     why: "Income drives the value of let property, so lead with NOI and the cap rate, then show you understand the lease detail behind them." }
 ]);
+
+// More new formats: answer + reason and spot the error.
+Bank.addFormat("rev", [
+  { id: "rev-why-01", lv: 1, type: "reason",
+    q: "Two offices produce the same rent. One is let for 15 years to a government tenant; the other for 2 years to a start-up. Which should be valued at the lower yield?",
+    answers: ["The 15-year lease", "The 2-year lease", "Both the same yield"],
+    answerNotes: [
+      "A short lease can bring upside, but the bigger effect here is risk: the start-up may leave or fail within two years.",
+      "The same rent from a riskier source is worth less, so it's valued at a higher yield."],
+    reasons: [
+      "Its income is secure for longer and from a stronger tenant, so it's less risky",
+      "A short lease lets the landlord raise the rent sooner, which investors pay up for",
+      "A yield depends only on the rent paid, and the two rents are exactly the same",
+      "Long leases always include fixed rent rises every year, which lift the value"],
+    reasonNotes: [
+      "That can add value when rents are rising, but a short lease to a weak tenant mainly adds the risk of an empty building.",
+      "The yield reflects how secure the rent is, not just how big it is.",
+      "Many long leases only have rent reviews every few years. The lower yield comes from how secure the income is."],
+    why: "A yield is the price of risk. Rent from a government tenant for 15 years is close to a bond, so investors accept a low yield, which means a high price. A 2-year lease to a start-up could leave the building empty soon, with letting costs and a rent-free period for the next tenant, so investors want a higher yield. Same rent, different value." },
+
+  { id: "rev-why-02", lv: 2, type: "reason",
+    q: "In a 10-year property DCF, a valuer raises the exit yield from 5.0% to 5.5% and changes nothing else. What happens to today's value?",
+    answers: ["It falls", "It rises", "It doesn't change"],
+    answerNotes: [
+      "A higher yield on the same income means a lower price. Value and yield move in opposite directions.",
+      "Even discounted over 10 years, the sale price is often around half of today's value, so it matters a lot."],
+    reasons: [
+      "A higher exit yield cuts the sale price, a big part of today's value",
+      "A higher yield means a higher return, which makes the property worth more",
+      "The exit is 10 years away, so it's too far off to affect today's value",
+      "A higher yield means higher interest rates, which cut the NOI of every year"],
+    reasonNotes: [
+      "For a buyer at a given price, a higher yield is a better return. But here the yield sets the price: the same income at a higher yield is worth less.",
+      "Discounting shrinks the exit value, but it's still a large part of the total.",
+      "The NOI in the DCF doesn't change. Only the yield used to price the property at exit does."],
+    why: "Exit value = year-11 NOI ÷ exit yield. Going from 5.0% to 5.5% cuts the exit value by about 9% (5.0 ÷ 5.5 = 0.91). Because the exit value is often around half of today's value even after discounting, today's value falls by a few per cent. That's why valuers usually have to justify their exit yield." },
+
+  { id: "rev-spot-01", lv: 1, type: "spot",
+    q: "An office of 100,000 sq ft earns rent of US$4.0m a year, and the landlord pays US$0.5m of costs it can't recover from the tenant. Similar offices sell at a 6% net initial yield. A candidate values it. Which line contains the mistake?",
+    lines: [
+      "Net operating income: US$4.0m − US$0.5m = US$3.5m",
+      "Value: US$4.0m ÷ 6% = US$66.7m",
+      "Value per square foot: US$66.7m ÷ 100,000 sq ft = US$667",
+      "So the office is worth about US$67m"],
+    wrong: 1,
+    lineNotes: [
+      "Rent less the landlord's own costs gives NOI. That's right.",
+      null,
+      "Dividing by the floor area is right, but it uses the wrong value from line 2.",
+      "This carries the mistake from line 2 forward."],
+    fixes: [
+      "Divide NOI, not rent, by the yield: US$3.5m ÷ 6% = US$58.3m",
+      "Multiply NOI by the yield instead: US$3.5m × 6% = US$0.21m",
+      "Add the costs on top of the rent: US$4.5m ÷ 6% = US$75.0m",
+      "Discount one year instead: US$3.5m ÷ 1.06 = US$3.3m is the value"],
+    fixNotes: [
+      "Value = income ÷ yield. Multiplying gives a tiny, meaningless number.",
+      "The landlord's costs reduce its income. They're never added to it.",
+      "A yield values the income for ever. Dividing by 1.06 values only one year of it."],
+    why: "A net initial yield compares net income with value, so value = NOI ÷ yield: US$3.5m ÷ 6% = US$58.3m. Using the gross rent overstates the value by US$8.3m, which is the landlord's US$0.5m of yearly costs capitalised at 6%." }
+]);

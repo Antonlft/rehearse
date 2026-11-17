@@ -203,3 +203,67 @@ Bank.addFormat("mna", [
     ],
     why: "Financial checks the numbers (normal earnings, net debt, working capital); tax checks past exposures and the deal's tax effects; legal checks contracts, disputes and compliance; commercial checks the market and the plan." }
 ]);
+
+// More new formats: answer + reason and spot the error.
+Bank.addFormat("mna", [
+  { id: "mna-why-01", lv: 2, type: "reason",
+    q: "A buyer trading on a P/E of 20x buys a target on a P/E of 12x, paying entirely in new shares. Ignoring synergies and fees, is the deal accretive or dilutive to the buyer's EPS?",
+    answers: ["Accretive", "Dilutive", "Neither"],
+    answerNotes: [
+      "It would be dilutive if the target's P/E were above the buyer's. Here it's below.",
+      "EPS changes whenever the earnings bought don't match, share for share, what the buyer's own shares earn."],
+    reasons: [
+      "It issues shares priced at 20x earnings to buy earnings priced at 12x",
+      "Issuing new shares always dilutes the existing shareholders' earnings per share",
+      "Without synergies there's no extra profit, so earnings per share can't change",
+      "The target is cheaper, so the buyer gets a bargain and its share price rises"],
+    reasonNotes: [
+      "New shares dilute EPS only if the earnings they buy are too small. Here each new share brings in more earnings than an existing one earns.",
+      "The target's profit is added. Whether EPS rises depends on that profit compared with the number of shares issued.",
+      "Accretion is about earnings per share, not the share price, and a cheap purchase doesn't guarantee a higher price."],
+    why: "In an all-share deal, compare P/Es. The buyer's shares are priced at 20x earnings, so each new share costs it 1/20 = 5% of its price in earnings. The target earns 1/12 ≈ 8.3% of its price. Buying 8.3% earnings with 5% earnings makes EPS rise, so the deal is accretive. On its own, accretion says nothing about whether the deal creates value." },
+
+  { id: "mna-why-02", lv: 2, type: "reason",
+    q: "A buyer and a seller disagree on a company's value: the seller expects strong growth, and the buyer doubts it. Which deal term best bridges the gap?",
+    answers: ["An earn-out", "A larger escrow", "A break fee", "A locked box"],
+    answerNotes: [
+      "An escrow covers claims under the warranties, not whether the forecasts come true.",
+      "A break fee applies if the deal fails. It doesn't settle a disagreement about value.",
+      "A locked box fixes the price on past figures. It doesn't help when the disagreement is about future growth."],
+    reasons: [
+      "Part of the price is paid only if the growth actually happens",
+      "Holding back more of the price protects the buyer if the forecasts are too high",
+      "A break fee compensates the seller if the buyer walks away over the price",
+      "Fixing the price on past accounts removes any argument about the future"],
+    reasonNotes: [
+      "Escrow protects against breaches of warranties, such as undisclosed liabilities, not against missed forecasts.",
+      "That compensates for a failed deal. It doesn't help the two sides agree a price.",
+      "Past accounts can't settle a disagreement about the future, which is what this is."],
+    why: "An earn-out splits the price into a fixed part paid now and a part paid later only if the business hits agreed targets, such as revenue or EBITDA. The seller is paid for the growth it believes in, and the buyer only pays if it happens. The catch: disputes over how the targets are measured, and over how the buyer runs the business in the meantime." },
+
+  { id: "mna-spot-01", lv: 2, type: "spot",
+    q: "A buyer offers US$30 a share for a target whose undisturbed share price was US$24. The target has 50m diluted shares, US$300m of debt, US$100m of cash and EBITDA of US$170m. A candidate works out the premium and the implied multiple. Which line contains the mistake?",
+    lines: [
+      "Premium: (US$30 − US$24) ÷ US$24 = 25%",
+      "Equity value at the offer: 50m × US$30 = US$1,500m",
+      "Net debt: US$300m − US$100m = US$200m",
+      "Enterprise value: US$1,500m − US$200m = US$1,300m",
+      "EV/EBITDA: US$1,300m ÷ US$170m = about 7.6x"],
+    wrong: 3,
+    lineNotes: [
+      "The premium is measured against the undisturbed price, so 25% is right.",
+      "Offer price times diluted shares is right.",
+      "Debt less cash gives net debt. That's right.",
+      null,
+      "Dividing by EBITDA is right, but it uses the wrong enterprise value from line 4."],
+    fixes: [
+      "Add net debt to the equity value: EV is US$1,700m, or 10.0x EBITDA",
+      "Use the undisturbed US$24 price: EV is US$1,400m, or about 8.2x",
+      "Add gross debt but ignore the cash: EV is US$1,800m, or about 10.6x",
+      "Use basic shares instead of diluted ones, which lowers the equity value"],
+    fixNotes: [
+      "The buyer pays US$30, so the deal is valued at the offer price. The undisturbed price is only used to measure the premium.",
+      "Cash is netted off: the buyer gets it along with the company.",
+      "Diluted shares are right: option and convertible holders will be paid at the offer price too."],
+    why: "Enterprise value = equity value + net debt: US$1,500m + US$200m = US$1,700m, or 10.0x EBITDA of US$170m. A buyer of the whole company takes on its debt and gets its cash, so net debt is added. Subtracting it makes the deal look cheaper than it is." }
+]);

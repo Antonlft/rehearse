@@ -215,3 +215,64 @@ Bank.addFormat("acc", [
     ],
     why: "Control means adding everything line by line, then showing outsiders' share as a non-controlling interest. Significant influence or joint control means one line for the stake and one line for the share of profit." }
 ]);
+
+// More new formats: answer + reason and spot the error.
+Bank.addFormat("acc", [
+  { id: "acc-why-01", lv: 1, type: "reason",
+    q: "A company buys US$50m of inventory on credit, paying the supplier next quarter. None of it has been sold yet. What happens to its cash flow from operations this quarter?",
+    answers: ["No change", "It falls by US$50m", "It rises by US$50m"],
+    answerNotes: [
+      "The cash goes out next quarter, when the supplier is paid. For now, the rise in inventory is offset by the rise in payables.",
+      "The rise in payables adds US$50m, but the rise in inventory takes US$50m away."],
+    reasons: [
+      "Inventory and payables both rise by US$50m, so the working capital effects cancel",
+      "Buying inventory is a cash outflow in operating activities as soon as it's bought",
+      "Payables are a source of cash, so a US$50m rise adds US$50m to cash flow",
+      "Nothing is recorded until the goods are sold, so the accounts don't change"],
+    reasonNotes: [
+      "No cash has left yet: the supplier is paid next quarter.",
+      "It does add US$50m, but the matching rise in inventory uses US$50m.",
+      "The purchase is recorded now: inventory and payables both go up by US$50m on the balance sheet."],
+    why: "In the cash flow statement, a rise in inventory uses cash and a rise in payables provides it. Buying US$50m of stock on credit raises both by US$50m, so operating cash flow is unchanged this quarter. Next quarter, paying the supplier cuts payables and cash by US$50m." },
+
+  { id: "acc-why-02", lv: 2, type: "reason",
+    q: "A company capitalises US$20m of software development costs instead of expensing them. In the first year, how does its EBITDA compare with expensing them?",
+    answers: ["US$20m higher", "US$20m lower", "No difference"],
+    answerNotes: [
+      "Amortisation is charged below EBITDA, so EBITDA can only be higher when costs are capitalised.",
+      "The cash spent is the same, but EBITDA is an accounting measure, and the capitalised cost isn't in it."],
+    reasons: [
+      "The cost goes on the balance sheet, and its amortisation sits below EBITDA",
+      "Capitalised costs are still paid in cash, so profit measures don't change",
+      "Capitalising adds an asset that has to be amortised, which lowers EBITDA",
+      "Capitalised costs are never charged to profit at all, so EBITDA ignores them"],
+    reasonNotes: [
+      "The cash is the same, but profit measures do change: the cost moves out of operating expenses.",
+      "Amortisation of capitalised costs is charged below EBITDA, so it can't lower it.",
+      "They are charged to profit, as amortisation over the asset's life, just below EBITDA."],
+    why: "Expensing puts the US$20m in operating costs, reducing EBITDA. Capitalising puts it on the balance sheet as an intangible asset and spreads it as amortisation over its life, below EBITDA. So EBITDA is US$20m higher, while cash is the same (the spending moves to investing cash flow). That's why analysts check capitalised costs when comparing companies' EBITDA." },
+
+  { id: "acc-spot-01", lv: 2, type: "spot",
+    q: "A company pays US$10m of interest, and its tax rate is 25%. A candidate walks the effect through the three statements. Which line contains the mistake?",
+    lines: [
+      "Income statement: interest of US$10m lowers pre-tax profit by US$10m",
+      "Tax falls by 25% × US$10m = US$2.5m, so net income falls by US$7.5m",
+      "Cash flow: net income is down US$7.5m, but interest isn't cash, so it's added back and cash is unchanged",
+      "Balance sheet: cash is unchanged, and retained earnings fall by US$7.5m"],
+    wrong: 2,
+    lineNotes: [
+      "Interest is an expense, so pre-tax profit falls by US$10m. That's right.",
+      "The tax saving is 25% of US$10m, so net income falls by US$7.5m. That's right.",
+      null,
+      "Retained earnings do fall by US$7.5m, but cash should fall by US$7.5m too, so this line carries the mistake from line 3."],
+    fixes: [
+      "Interest is paid in cash, so nothing is added back and cash falls by US$7.5m",
+      "Add back the tax saving instead, so operating cash flow rises by US$2.5m",
+      "Cash falls by the full US$10m, because a lower tax bill doesn't count as cash",
+      "Cut debt by US$10m on the balance sheet, so that it still balances"],
+    fixNotes: [
+      "The tax saving is already in net income. The interest itself is cash going out, so cash falls.",
+      "Paying less tax is real cash saved, so cash falls by US$7.5m, not US$10m.",
+      "Paying interest doesn't repay any debt. Only repaying the principal reduces debt."],
+    why: "Interest is a real cash cost, unlike depreciation. Pre-tax profit falls by US$10m and tax by US$2.5m, so net income falls by US$7.5m. Nothing is added back, so cash falls by US$7.5m. On the balance sheet, cash (an asset) and retained earnings (equity) both fall by US$7.5m, so it balances. Under IFRS a company may show interest paid under financing rather than operating, but either way total cash falls by US$7.5m." }
+]);

@@ -193,3 +193,66 @@ Bank.addFormat("lbo", [
     ],
     why: "Operations drive EBITDA growth, the market (and the buyer) drives the multiple, and cash flow drives the fall in net debt." }
 ]);
+
+// More new formats: answer + reason and spot the error.
+Bank.addFormat("lbo", [
+  { id: "lbo-why-01", lv: 2, type: "reason",
+    q: "Two buyouts each return 2.0x the sponsor's money. Deal A takes 5 years; Deal B takes 3 years. Which has the higher IRR?",
+    answers: ["Deal B", "Deal A", "They're the same"],
+    answerNotes: [
+      "Over 5 years, 2.0x is about 15% a year; over 3 years it's about 26%.",
+      "The money multiple is the same, but IRR is a yearly rate, so time matters."],
+    reasons: [
+      "The same multiple comes in fewer years, and IRR rewards getting it sooner",
+      "A longer hold compounds the gain for more years, which lifts the IRR",
+      "IRR depends only on the money multiple, which is 2.0x in both deals",
+      "Shorter deals carry less risk, so investors require a higher return on them"],
+    reasonNotes: [
+      "Compounding works against you here: the same total gain spread over more years is a lower yearly rate.",
+      "That's the money multiple (MOIC). IRR also depends on how long it takes.",
+      "Required returns aren't the point. IRR is the yearly rate the deal actually earned, and B earned its gain faster."],
+    why: "IRR is a yearly rate. Doubling in 5 years is 2^(1/5) − 1 ≈ 15% a year; doubling in 3 years is 2^(1/3) − 1 ≈ 26%. Same money multiple, very different IRR. That's why sponsors look at both: IRR rewards speed, while the multiple shows how much money was actually made." },
+
+  { id: "lbo-why-02", lv: 2, type: "reason",
+    q: "A sponsor can fund a buyout with 70% debt or with 50% debt. If the company's value falls 20% by exit, which leaves the sponsor's equity worse off, in percentage terms?",
+    answers: ["70% debt", "50% debt", "Same either way"],
+    answerNotes: [
+      "The equity loses the same US$20m in dollars either way, but that's 40% of US$50m against 67% of US$30m.",
+      "The business falls 20%, but the equity falls more, because the debt doesn't shrink."],
+    reasons: [
+      "With more debt ahead of it, the same fall wipes out a bigger share of the equity",
+      "With 50% debt, more of the sponsor's money is in the deal, so it loses more",
+      "The company's value falls 20% either way, so the equity falls 20% too",
+      "Higher debt means more interest, and interest is what eats the equity"],
+    reasonNotes: [
+      "In dollars both lose the same US$20m, but as a share of what was invested, the 70% debt deal loses far more.",
+      "The debt stays the same, so the whole fall lands on the equity, which magnifies it.",
+      "Interest does reduce returns, but even ignoring it, a 20% fall in value cuts the equity by two-thirds with 70% debt, against two-fifths with 50%."],
+    why: "Take a US$100m company. With 70% debt, equity is US$30m; a 20% fall in value to US$80m leaves US$10m of equity, a 67% loss. With 50% debt, equity is US$50m and falls to US$30m, a 40% loss. Leverage magnifies returns both ways: it boosts gains when value rises and deepens losses when it falls." },
+
+  { id: "lbo-spot-01", lv: 2, type: "spot",
+    q: "A sponsor buys a company with EBITDA of US$100m at 10x, using US$600m of debt. After 5 years, EBITDA is US$150m, it sells at 10x again, and net debt has been paid down to US$400m. A candidate works out the returns. Which line contains the mistake?",
+    lines: [
+      "Entry: 10 × US$100m = US$1,000m, so equity is US$1,000m − US$600m = US$400m",
+      "Exit value: 10 × US$150m = US$1,500m",
+      "Exit equity: US$1,500m − US$600m = US$900m",
+      "Money multiple: US$900m ÷ US$400m = 2.25x",
+      "IRR over 5 years: about 18% a year"],
+    wrong: 2,
+    lineNotes: [
+      "Entry value and entry equity are right.",
+      "Selling at the same 10x on US$150m gives US$1,500m. That's right.",
+      null,
+      "Dividing exit equity by entry equity is right, but it uses the wrong exit equity from line 3.",
+      "2.25x over 5 years is about 18% a year, so the maths is right, but it carries the mistake forward."],
+    fixes: [
+      "Use the US$400m of debt at exit: equity is US$1,100m, so 2.75x and about 22%",
+      "Apply the 10x multiple to the equity instead: exit equity is US$4,000m, or 10.0x",
+      "Count the US$200m repaid as a cost: exit equity falls to US$700m, or 1.75x",
+      "Measure against the US$1,000m entry value: the multiple is only 0.9x"],
+    fixNotes: [
+      "Multiples of EBITDA give enterprise value. Debt is then taken off to reach the equity.",
+      "Paying down debt isn't a cost to the equity: it's cash from the business that leaves less debt ahead of the sponsor at exit.",
+      "The sponsor invested US$400m of equity, so its return is measured on that, not on the whole price."],
+    why: "Exit equity = exit enterprise value − net debt at exit: US$1,500m − US$400m = US$1,100m. That's 2.75x the US$400m invested, about 22% a year over 5 years. Using the entry debt ignores the US$200m paid down, one of the three main sources of buyout returns, alongside EBITDA growth and any change in the multiple." }
+]);
