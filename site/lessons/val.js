@@ -2,6 +2,12 @@
 // Fields: method (sections { section } and labelled blocks { kind, title?, text, note? }, in the order of Lessons.ORDER), example (question, working steps, answer), source (text, optional url), widget (interactive "Try it"), widgets (optional extra ones).
 Lessons.add("val", {
   "status": "draft",
+  "summary": [
+    "Enterprise value (EV) is the whole business's value to all investors; equity value is what's left for shareholders after debt and other claims.",
+    "Match each multiple to the right value: EV with figures before interest, such as operating profit; equity value with figures after interest, such as net income.",
+    "Value per share uses diluted shares: in-the-money options add only the shares their exercise cash can't buy back.",
+    "Cross-check a discounted cash flow (DCF): its terminal value should imply a multiple close to similar companies' multiples."
+  ],
   "method": [
     {"section": "From enterprise value to equity value"},
     {"kind": "idea", "text": "Enterprise value (EV) is the value of the operating business to all capital providers; equity value is the part that belongs to shareholders.\nTo go from one to the other, deduct the claims of others, such as debt and non-controlling interests (NCI), and add back cash and non-operating assets."},

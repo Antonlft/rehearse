@@ -2,6 +2,12 @@
 // Fields: method (sections { section } and labelled blocks { kind, title?, text, note? }, in the order of Lessons.ORDER), example (question, working steps, answer), source (text, optional url), widget (interactive "Try it").
 Lessons.add("acc", {
   "status": "draft",
+  "summary": [
+    "The three statements link up: net income starts the cash flow statement, and closing cash and retained earnings carry into the balance sheet.",
+    "When depreciation rises, profit falls but cash rises by depreciation × the tax rate, because the extra charge saves tax.",
+    "Deferred tax appears when the accounts and the tax rules disagree on timing. It moves tax between years; it doesn't remove it.",
+    "How a stake is accounted for depends on control: control means full consolidation, significant influence means the equity method."
+  ],
   "method": [
     {"section": "How the statements link"},
     {"kind": "idea", "text": "The three statements are linked: net income from the income statement starts the cash flow statement, and closing cash and retained earnings carry into the balance sheet."},

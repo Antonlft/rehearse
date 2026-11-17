@@ -2,6 +2,12 @@
 // Fields: method (sections { section } and labelled blocks { kind, title?, text, note? }, in the order of Lessons.ORDER), example (question, working steps, answer), source (text, optional url), widget (interactive "Try it").
 Lessons.add("rx", {
   "status": "draft",
+  "summary": [
+    "When a company can't pay, value is shared by priority: secured lenders first, then unsecured creditors, then subordinated debt, shareholders last.",
+    "The class of debt where the value runs out (the fulcrum) usually ends up owning the company.",
+    "Restructuring beats liquidation when the business is worth more running than sold off in pieces.",
+    "Deals done by agreement are quicker but bind only those who agree; court processes such as Chapter 11 can bind the holdouts."
+  ],
   "method": [
     {"section": "Who gets paid first"},
     {"kind": "idea", "text": "When a company can't pay its debts, its value is shared out by priority: secured lenders first (up to the value of their collateral), then unsecured creditors, then subordinated debt, and shareholders last. This is the absolute priority rule."},

@@ -2,6 +2,12 @@
 // Fields: method (sections { section } and labelled blocks { kind, title?, text, note? }, in the order of Lessons.ORDER), example (question, working steps, answer), source (text, optional url), widget (interactive "Try it").
 Lessons.add("pf", {
   "status": "draft",
+  "summary": [
+    "Lenders size a loan with several tests (LTV, interest cover, debt service cover, debt yield) and lend the lowest result.",
+    "The income tests use net operating income (NOI): rent less the owner's own costs, before financing.",
+    "Leverage helps only while the property yields more than the debt costs.",
+    "Higher rates hit twice: they shrink the loan the interest cover test allows, and they push yields up and values down."
+  ],
   "method": [
     {"kind": "idea", "text": "Property lenders size a loan using several tests and lend the lowest result: loan-to-value (LTV), interest cover ratio (ICR), debt service cover ratio (DSCR) and debt yield.\nThe income tests use net operating income (NOI): rent less the owner's operating costs."},
     {"kind": "formula", "text": "LTV = {{loan // property value}}\nICR = {{NOI // annual interest}}\nDSCR = {{NOI // annual interest + principal repayments}}\nDebt yield = {{NOI // loan}}"},

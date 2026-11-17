@@ -2,6 +2,12 @@
 // Fields: method (paragraphs or labelled blocks { kind, text, note? }), example (question, working steps, answer), source (text, optional url), widget (interactive "Try it"), widgets (optional extra ones).
 Lessons.add("lbo", {
   "status": "draft",
+  "summary": [
+    "A private equity sponsor buys a company mostly with debt, repays the debt from the company's own cash and sells after three to seven years.",
+    "Returns come from earnings before interest, tax, depreciation and amortisation (EBITDA) growth, debt paydown and any change in the multiple.",
+    "Track both the money multiple and the internal rate of return (IRR): the multiple shows how much was made, the IRR how fast.",
+    "The money comes from a fund: investors commit capital, and the manager earns a yearly fee plus a share of profits above a hurdle."
+  ],
   "method": [
     {"section": "The deal"},
     {"kind": "idea", "text": "In a leveraged buyout (LBO), a private equity sponsor buys a company mostly with debt, repays that debt from the company's own cash flow, and sells after three to seven years."},

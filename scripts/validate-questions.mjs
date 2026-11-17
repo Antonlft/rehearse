@@ -24,6 +24,8 @@
 //    "draft" or "reviewed" lesson needs a method, a worked example (question, working, answer) and a source;
 //    method items are paragraphs, { section } headings or blocks { kind, title?, text, note? } (kinds: Lessons.BLOCKS);
 //    within each section blocks follow Lessons.ORDER, and a kind repeated in a section needs a title on each block;
+//    a draft or reviewed lesson has an "In 30 seconds" summary of 3–4 short takeaways, and any acronym in it is spelled
+//    out the first time it's used, as "full term (ACR)", unless the category's description above it already does;
 //    in a category with written questions, every section ends with exactly one quick check { check: "question id" },
 //    pointing at a multiple-choice or answer + reason question of that category, each used once in the lesson;
 //    a lesson's optional widget (and any extra ones in `widgets`) must be defined in site/js/widgets.js, with starting values only for its own inputs
@@ -360,7 +362,10 @@ for (const [cat, l] of Object.entries(Lessons)) {
       else if (Math.abs((val - inp.min) / inp.step - Math.round((val - inp.min) / inp.step)) > 1e-6) fail(`${where}: widget value ${k} = ${val} isn't on the slider's ${inp.step} steps, so the slider would show a different number`);
     }
   }
+  if (l.summary != null && (!Array.isArray(l.summary) || l.summary.length < 3 || l.summary.length > 4 || l.summary.some(s => !text(s) || s.length > 180)))
+    fail(`${where}: summary must list 3–4 takeaways, each under 180 characters`);
   if (l.status !== "stub") {
+    if (l.summary == null) fail(`${where}: a ${l.status} lesson needs an "In 30 seconds" summary`);
     if (!Array.isArray(l.method) || !l.method.length) fail(`${where}: a ${l.status} lesson needs a method`);
     if (!l.example) fail(`${where}: a ${l.status} lesson needs a worked example`);
     if (!l.source) fail(`${where}: a ${l.status} lesson needs a source`);
@@ -419,6 +424,22 @@ for (const [cat, l] of Object.entries(Lessons)) {
     if (!known(t) && !(t.includes("/") && t.split("/").every(p => p && known(p)))) missing.add(t);
   }
   if (missing.size) fail(`lesson ${cat}: no glossary entry for ${[...missing].join(", ")} (add them to js/glossary.js)`);
+  // The summary is the first thing read on the page, so an acronym in it must be spelled out on first use, "full term
+  // (ACR)", unless the category description shown just above it already does ("... (ADR), ..." or "(ECM, DCM)").
+  if (Array.isArray(l.summary)) {
+    const desc = new RegExp(`id: "${cat}"[^}]*desc: "([^"]*)"`).exec(appSrc)?.[1] || "";
+    const intro = new Set([...desc.matchAll(/\(([^)]+)\)/g)].flatMap(m => m[1].split(/,\s*/)));
+    const isIntro = t => NOT_ACRONYMS.has(t) || intro.has(t) || (t.endsWith("s") && intro.has(t.slice(0, -1))) || intro.has(t + "s");
+    const s = l.summary.join(" ¶ ");
+    for (const m of s.matchAll(ACRONYM)) {
+      const t = m[0];
+      if (isIntro(t) || (t.includes("/") && t.split("/").every(p => p && isIntro(p)))) continue;
+      const before = s.slice(0, m.index), open = before.lastIndexOf("(");
+      if (open > before.lastIndexOf(")")) { intro.add(t); continue; } // spelled out here: "full term (ACR)"
+      fail(`lesson ${cat}: the summary uses "${t}" before spelling it out; write "full term (${t})" the first time`);
+      intro.add(t); // report each acronym once
+    }
+  }
 }
 
 const lessonCounts = Object.values(Lessons).reduce((m, l) => (m[l.status] = (m[l.status] || 0) + 1, m), {});

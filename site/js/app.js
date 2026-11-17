@@ -1789,7 +1789,8 @@ const MB_ICONS = {
   read: `<path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/>`,
   watch: `<path d="M12 3.5 2.5 20h19L12 3.5z"/><path d="M12 10v4.5M12 17.5v.01"/>`,
   practice: `<rect x="3" y="7" width="18" height="13" rx="2"/><path d="M8.5 7V5.5A1.5 1.5 0 0 1 10 4h4a1.5 1.5 0 0 1 1.5 1.5V7M3 13h18"/>`,
-  check: `<circle cx="12" cy="12" r="9"/><path d="M9.6 9.4a2.5 2.5 0 1 1 3.4 2.4c-.6.3-1 .8-1 1.5v.6M12 17v.01"/>`
+  check: `<circle cx="12" cy="12" r="9"/><path d="M9.6 9.4a2.5 2.5 0 1 1 3.4 2.4c-.6.3-1 .8-1 1.5v.6M12 17v.01"/>`,
+  summary: `<circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5"/><circle cx="12" cy="12" r="1.2"/>`
 };
 const mbIcon = k => MB_ICONS[k] ? `<svg class="mb-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${MB_ICONS[k]}</svg>` : "";
 function methodHtml(items) {
@@ -1932,6 +1933,10 @@ function renderLesson() {
       <span class="pill lesson-status ${esc(l.status)}">${esc(LESSON_STATUS[l.status] || l.status)}</span>
     </div>
     <section class="card lesson">
+      ${Array.isArray(l.summary) && l.summary.length ? `<div class="lesson-summary">
+        <span class="mb-label">${mbIcon("summary")}In 30 seconds</span>
+        <ul>${l.summary.map(s => `<li>${rich(s)}</li>`).join("")}</ul>
+      </div>` : ""}
       <h2>Method</h2>
       ${l.method && l.method.length ? methodHtml(l.method) : missing}
       <h2>Worked example</h2>

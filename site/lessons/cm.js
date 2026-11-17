@@ -2,6 +2,12 @@
 // Fields: method (sections { section } and labelled blocks { kind, title?, text, note? }, in the order of Lessons.ORDER), example (question, working steps, answer), source (text, optional url), widget (interactive "Try it").
 Lessons.add("cm", {
   "status": "draft",
+  "summary": [
+    "Companies raise equity through IPOs, follow-on offerings, block trades and rights issues, and raise debt by issuing bonds.",
+    "In a rights issue, new shares are offered to existing holders at a discount, so the share price falls and the rights carry that value.",
+    "In a venture round, post-money = pre-money + new money, and the investor's stake = new money ÷ post-money.",
+    "Preferred shares protect investors: a liquidation preference pays them back first, and anti-dilution lowers their price in a down round."
+  ],
   "method": [
     {"section": "Rights issues"},
     {"kind": "idea", "text": "Equity capital markets (ECM) raise money through initial public offerings (IPOs), follow-on offerings, block trades and rights issues; debt capital markets (DCM) do it through bonds. In a rights issue, existing shareholders can buy new shares in proportion to what they hold, usually at a discount, so they can avoid being diluted."},

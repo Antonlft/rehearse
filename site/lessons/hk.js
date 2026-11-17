@@ -2,6 +2,12 @@
 // Fields: method (sections { section } and labelled blocks { kind, title?, text, note? }, in the order of Lessons.ORDER), example (question, working steps, answer), source (text, optional url), widget (interactive "Try it").
 Lessons.add("hk", {
   "status": "draft",
+  "summary": [
+    "Three rooms metrics come first: occupancy (rooms sold ÷ rooms available), ADR (revenue per room sold) and RevPAR (revenue per room available).",
+    "RevPAR = occupancy × ADR, so RevPAR growth splits into rate growth and occupancy growth, which compound.",
+    "Growth from a higher rate is worth more than growth from occupancy, because each extra occupied room brings extra costs.",
+    "Flow-through (change in GOP ÷ change in revenue) shows how much of each extra dollar of revenue reaches profit."
+  ],
   "method": [
     {"kind": "idea", "text": "Hotel performance starts with three rooms metrics: occupancy, average daily rate (ADR) and revenue per available room (RevPAR). Total revenue per available room (TRevPAR) adds food and beverage (F&B) and other revenue."},
     {"kind": "formula", "title": "Rooms metrics", "text": "Occupancy = {{rooms sold // rooms available}}\nADR = {{rooms revenue // rooms sold}}\nRevPAR = {{rooms revenue // rooms available}} = occupancy × ADR"},

@@ -2,6 +2,12 @@
 // Fields: method (sections { section } and labelled blocks { kind, title?, text, note? }, in the order of Lessons.ORDER), example (question, working steps, answer), source (text, optional url), widget (interactive "Try it").
 Lessons.add("hds", {
   "status": "draft",
+  "summary": [
+    "A sale process widens interest, then narrows it: teaser, confidentiality agreement, information memorandum, first bids, data room, final bids.",
+    "An asset deal buys the property itself; a share deal buys the company that owns it, with less tax to pay but its liabilities included.",
+    "A sale-and-leaseback raises cash at a price of rent ÷ yield, but the rent must stay affordable for the operator.",
+    "The capital stack runs from cheap senior debt to mezzanine to expensive equity; the blended cost weights each by its share."
+  ],
   "method": [
     {"section": "The sale process"},
     {"kind": "idea", "text": "A sell-side process widens interest, then narrows the field."},

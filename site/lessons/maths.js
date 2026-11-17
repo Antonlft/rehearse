@@ -2,6 +2,12 @@
 // Fields: method (sections { section } and labelled blocks { kind, title?, text, note? }, in the order of Lessons.ORDER), example (question, working steps, answer), source (text, optional url), widget (interactive "Try it").
 Lessons.add("maths", {
   "status": "draft",
+  "summary": [
+    "Most interview maths is compounding: growing at a rate r for n years multiplies a value by (1 + r)^n.",
+    "Discounting is compounding in reverse: present value = future value ÷ (1 + r)^n.",
+    "CAGR = (end value ÷ start value)^(1/n) − 1, where n is the number of years of growth: end year minus start year.",
+    "A basis point is 0.01%, so 50 basis points is half a percentage point."
+  ],
   "method": [
     {"kind": "idea", "text": "Most interview maths is compounding: growing at a rate r for n years multiplies a value by (1 + r)^n. For example, 100 growing at 10% a year for 2 years becomes 100 × 1.1^2 = 121."},
     {"kind": "formula", "title": "Compound annual growth rate (CAGR)", "text": "CAGR = ({{end value // start value}})^(1/n) − 1", "note": "n = number of years of growth."},

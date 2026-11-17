@@ -2,6 +2,12 @@
 // Fields: method (sections { section } and labelled blocks { kind, title?, text, note? }, in the order of Lessons.ORDER), example (question, working steps, answer), source (text, optional url), widget (interactive "Try it").
 Lessons.add("bt", {
   "status": "draft",
+  "summary": [
+    "Interviewers grade how you think more than how fast you get there or how precise the final number is.",
+    "For 'at least one' probabilities, work out the chance of none and subtract it from 1.",
+    "Check whether events are independent: a coin has no memory, but drawing a card changes the deck.",
+    "Size a market as units × frequency × price, with round numbers, and keep the units (weeks or years, people or households) consistent."
+  ],
   "method": [
     {"section": "1. Puzzles and probability"},
     {"kind": "idea", "text": "Brain teasers test structured thinking, not trivia. Interviewers care more about how you get there than about speed."},

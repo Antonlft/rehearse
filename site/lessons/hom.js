@@ -2,6 +2,12 @@
 // Fields: method (sections { section } and labelled blocks { kind, title?, text, note? }, in the order of Lessons.ORDER), example (question, working steps, answer), source (text, optional url), widget (interactive "Try it").
 Lessons.add("hom", {
   "status": "draft",
+  "summary": [
+    "Who owns a hotel and who runs it are often different, and the structure decides who keeps the profit and who bears the risk.",
+    "Under a lease, the owner gets a rent, and the operator keeps the trading profit and the risk.",
+    "Under a management contract, the owner keeps the profit after the operator's fees: a base fee on revenue and an incentive fee on profit.",
+    "Under a franchise, the owner runs the hotel (or hires a manager) and pays the brand for its name, standards and bookings."
+  ],
   "method": [
     {"kind": "idea", "text": "Who owns a hotel and who runs it are often different. The structure decides who keeps the profit and who bears the risk."},
     {"kind": "how", "title": "Lease", "text": "The operator pays the owner rent and keeps the trading profit and the risk."},

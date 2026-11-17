@@ -2,6 +2,12 @@
 // Fields: method (sections { section } and labelled blocks { kind, title?, text, note? }, in the order of Lessons.ORDER), example (question, working steps, answer), source (text, optional url), widget (interactive "Try it").
 Lessons.add("fig", {
   "status": "draft",
+  "summary": [
+    "Banks are valued on their equity (price-to-book, price-to-earnings), because interest is part of how a bank operates, not just how it's financed.",
+    "A bank deserves to trade above tangible book only if its return on tangible equity (ROTE) beats its cost of equity.",
+    "Capital absorbs losses before depositors are hurt; regulators set a minimum ratio of common equity tier 1 (CET1) capital to risk-weighted assets.",
+    "Insurers are judged on the combined ratio (claims and expenses ÷ premiums; below 100% is an underwriting profit), asset managers on assets × fee margin."
+  ],
   "method": [
     {"section": "1. Valuing a bank"},
     {"kind": "idea", "text": "Banks are valued on their equity, not on enterprise value (EV). Interest is a bank's raw material: it pays interest to depositors and earns it on loans, so EBITDA (earnings before interest, tax, depreciation and amortisation) and EV say little."},

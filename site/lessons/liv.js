@@ -2,6 +2,12 @@
 // Fields: method (sections { section } and labelled blocks { kind, title?, text, note? }, in the order of Lessons.ORDER), example (question, working steps, answer), source (text, optional url), widget (interactive "Try it").
 Lessons.add("liv", {
   "status": "draft",
+  "summary": [
+    "The living sectors are rented homes run as businesses: student housing (PBSA), build-to-rent (BTR) and co-living.",
+    "Income = beds × weekly rent × weeks × occupancy, less costs, which take a bigger share in co-living because its rent includes services.",
+    "Student housing is let once a year, in advance, so the booking position before September sets most of the year's income.",
+    "Value = net operating income ÷ yield, and more secure income, such as a university nomination agreement, earns a lower yield."
+  ],
   "method": [
     {"kind": "idea", "text": "The living sectors are operational real estate let to individuals."},
     {"kind": "formula", "text": "Gross income = beds × weekly rent × weeks × occupancy", "note": "NOI (net operating income) = gross income − operating costs; value = NOI ÷ yield, compared per bed or per unit."},

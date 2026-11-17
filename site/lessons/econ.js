@@ -2,6 +2,12 @@
 // Fields: method (sections { section } and labelled blocks { kind, title?, text, note? }, in the order of Lessons.ORDER), example (question, working steps, answer), source (text, optional url), widget (interactive "Try it").
 Lessons.add("econ", {
   "status": "draft",
+  "summary": [
+    "Central banks raise interest rates to cool demand and inflation, and cut them to support growth.",
+    "Long-term yields reflect where markets expect short rates to go, so an inverted curve often signals expected cuts and a slowdown.",
+    "The real rate is the nominal rate after inflation: roughly nominal minus inflation, exactly (1 + nominal) ÷ (1 + inflation) − 1.",
+    "With rates near zero, cuts can stop working, so central banks turn to quantitative easing: buying bonds to push long-term yields down."
+  ],
   "method": [
     {"section": "Interest rates"},
     {"kind": "idea", "text": "Central banks set short-term interest rates (in the US, the Federal Reserve's federal funds rate) to keep inflation near target: they raise rates to cool demand and cut them to support it."},

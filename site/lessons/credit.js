@@ -2,6 +2,12 @@
 // Fields: method (sections { section } and labelled blocks { kind, title?, text, note? }, in the order of Lessons.ORDER), example (question, working steps, answer), source (text, optional url), widget (interactive "Try it"), widgets (optional extra ones).
 Lessons.add("credit", {
   "status": "draft",
+  "summary": [
+    "A bond's price is the present value of its coupons and principal, so when yields rise, prices fall.",
+    "Duration measures that sensitivity: price change ≈ − modified duration × change in yield. It's higher for long, low-coupon bonds.",
+    "Current yield is coupon ÷ price; yield to maturity also counts the gain or loss as the price moves back to par.",
+    "Lenders protect themselves with security, seniority and covenants, and the riskier the claim, the higher the yield they demand."
+  ],
   "method": [
     {"section": "Bond prices"},
     {"kind": "idea", "text": "A bond's price is the present value of its coupons and principal, discounted at the market yield. When yields rise, prices fall, and vice versa."},

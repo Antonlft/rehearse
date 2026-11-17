@@ -2,6 +2,12 @@
 // Fields: method (sections { section } and labelled blocks { kind, title?, text, note? }, in the order of Lessons.ORDER), example (question, working steps, answer), source (text, optional url), widget (interactive "Try it"), widgets (optional extra ones).
 Lessons.add("rev", {
   "status": "draft",
+  "summary": [
+    "Property is valued on its net operating income: value = NOI ÷ yield, so values fall when yields rise.",
+    "Price per key or per bed is a cross-check, not a valuation.",
+    "Real estate investment trusts (REITs) are valued on net asset value and on funds from operations (FFO), which adds back property depreciation.",
+    "A hotel is valued on earnings after fees and a furniture, fixtures and equipment (FF&E) reserve, at a higher yield than a let building."
+  ],
   "method": [
     {"section": "Valuing a property"},
     {"kind": "idea", "text": "Income-producing property is valued on its net operating income (NOI): rent less the owner's non-recoverable operating costs, before financing."},

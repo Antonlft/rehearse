@@ -2,6 +2,12 @@
 // Fields: method (sections { section } and labelled blocks { kind, title?, text, note? }, in the order of Lessons.ORDER), example (question, working steps, answer), source (text, optional url), widget (interactive "Try it").
 Lessons.add("cf", {
   "status": "draft",
+  "summary": [
+    "The weighted average cost of capital (WACC) is the return a company must earn for all its investors, lenders and shareholders together.",
+    "Debt is cheaper than equity because lenders are paid first and interest is tax-deductible, but more debt makes the shares riskier.",
+    "Cost of equity = risk-free rate + beta × the market's extra return over the risk-free rate.",
+    "Don't use one company's raw beta: strip the debt out of peers' betas, average them, then add back your own target debt."
+  ],
   "method": [
     {"kind": "idea", "text": "The weighted average cost of capital (WACC) is the return a company must earn for all its investors."},
     {"kind": "formula", "title": "WACC", "text": "WACC = {{E // V}} × cost of equity + {{D // V}} × cost of debt × (1 − tax rate)", "note": "E = market value of equity (share price × shares); D = market value of debt; V = E + D. The cost of debt is the yield the company would pay on new debt today."},
