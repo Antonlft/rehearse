@@ -133,3 +133,77 @@ Bank.addFormat("cm", [
     ],
     why: "The standard, more founder-friendly package is a 1x non-participating preference with broad-based weighted-average anti-dilution. Multiples, participation, full ratchets and large pre-money option pools shift value towards investors." }
 ]);
+
+// More new formats: answer + reason, spot the error and an ordering.
+Bank.addFormat("cm", [
+  { id: "cm-why-01", lv: 2, type: "reason",
+    q: "A company announces a rights issue: one new share for every share held, at a 30% discount to the share price. You own shares but have no cash to take up your rights. What should you usually do?",
+    answers: ["Sell your rights", "Do nothing and keep your shares", "Wait for the price to recover first"],
+    answerNotes: [
+      "Your shares lose value when the cheap new shares are issued. Doing nothing leaves that loss uncovered, unless the rights are sold for you.",
+      "The fall comes from new shares being sold cheaply, so it doesn't reverse on its own. The value has moved into the rights."],
+    reasons: [
+      "The rights carry the value of the discount, which comes off the share price",
+      "A rights issue doesn't change the value of the shares you already hold",
+      "The share price usually recovers its fall once the new money is put to work",
+      "Each right sells for the full share price, which locks in a profit"],
+    reasonNotes: [
+      "It does: issuing shares below the market price pulls the share price down for everyone.",
+      "The new money adds value, but it's matched by the new shares. The discount itself is a transfer to whoever holds the rights.",
+      "A right sells for roughly the share price after the issue minus the issue price, not the full share price. Selling it only makes up for the fall in your shares."],
+    why: "Say the shares trade at US$10 and one new share is offered for every share held at US$7. Afterwards the price settles near US$8.50 (the average of US$10 and US$7), so each existing share loses about US$1.50. Each right is worth about the same, US$8.50 − US$7 = US$1.50. Selling the rights, or using them, makes up for the fall; doing nothing leaves you with the loss." },
+
+  { id: "cm-why-02", lv: 2, type: "reason",
+    q: "A company's share price has risen far above the conversion price of its convertible bond. How does the convertible's price now behave?",
+    answers: ["It tracks the share price", "It stays close to par", "It moves like a straight bond"],
+    answerNotes: [
+      "Par acts as a floor only when the shares are well below the conversion price. Here, converting is worth far more.",
+      "That's how a convertible behaves when the shares are far below the conversion price and the option is nearly worthless."],
+    reasons: [
+      "Conversion is almost certain, so the bond behaves like the shares it converts into",
+      "The bond is repaid at par at maturity, so its price stays anchored there",
+      "The coupon and maturity don't change, so the bond is priced on its interest rate",
+      "Investors are paid in shares every year, so the bond follows the share price"],
+    reasonNotes: [
+      "Holders won't take par when converting is worth much more, so par stops mattering.",
+      "The coupon matters little now: most of the bond's value comes from the shares it can be swapped for.",
+      "Convertibles pay cash coupons; shares only come on conversion. The bond follows the shares because conversion has become very likely."],
+    why: "A convertible is a bond plus an option to swap it for shares. When the share price is far above the conversion price, the option is deep in the money: the bond is worth roughly what you'd get by converting, so it rises and falls with the shares. When the shares are far below, the option is nearly worthless and the bond trades like ordinary debt." },
+
+  { id: "cm-spot-01", lv: 1, type: "spot",
+    q: "A company has 100m shares trading at US$10. It raises money through a 1-for-4 rights issue at US$8. A candidate works out the theoretical ex-rights price (TERP). Which line contains the mistake?",
+    lines: [
+      "New shares: 100m ÷ 4 = 25m",
+      "Cash raised: 25m × US$8 = US$200m",
+      "Value before the issue: 100m × US$10 = US$1,000m",
+      "Value after the issue: US$1,000m + US$200m = US$1,200m",
+      "TERP: US$1,200m ÷ 100m shares = US$12.00"],
+    wrong: 4,
+    lineNotes: [
+      "One new share for every four held gives 25m. That's right.",
+      "The cash raised at the US$8 issue price is right.",
+      "The market value before the issue is right.",
+      "Adding the new cash to the old value is right.",
+      null],
+    fixes: [
+      "Divide by all 125m shares now in issue: TERP is US$9.60",
+      "Average the two prices: (US$10 + US$8) ÷ 2 = US$9.00",
+      "Leave out the new cash: US$1,000m ÷ 125m shares = US$8.00",
+      "Subtract the cash instead of adding it: US$800m ÷ 125m = US$6.40"],
+    fixNotes: [
+      "A simple average only works for a 1-for-1 issue. Weight the prices by the number of shares: four at US$10 and one at US$8.",
+      "The new shares bring US$200m of cash into the company, so it has to be counted.",
+      "The company receives the cash, so its value goes up, not down."],
+    why: "After a rights issue, the company is worth its old value plus the cash raised, spread over the old and new shares: TERP = (US$1,000m + US$200m) ÷ 125m = US$9.60. Another way: (4 × US$10 + 1 × US$8) ÷ 5 = US$9.60. The share price falls from US$10 to about US$9.60, and each right is worth about US$1.60 (US$9.60 − US$8)." },
+
+  { id: "cm-ord-01", lv: 1, type: "order",
+    q: "Put the steps of a typical syndicated bond issue in order.",
+    answer: [
+      "The issuer mandates its banks and prepares the documents",
+      "The deal is announced with initial price guidance",
+      "The banks build an order book with investors",
+      "Strong demand lets the banks tighten the spread and set the final terms",
+      "The bonds are allocated to investors",
+      "The deal settles and the bonds start trading"],
+    why: "Bond deals move fast: guidance goes out in the morning, the book builds over a few hours, strong demand lets the banks tighten the spread, and the bonds are priced, allocated and settled a few days later." }
+]);

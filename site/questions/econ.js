@@ -98,3 +98,74 @@ Bank.addFormat("econ", [
     ],
     why: "Hawkish means tighter policy to fight inflation; dovish means looser policy to support growth and jobs." }
 ]);
+
+// More new formats: answer + reason, spot the error and an ordering.
+Bank.addFormat("econ", [
+  { id: "econ-why-01", lv: 1, type: "reason",
+    q: "A central bank raises interest rates unexpectedly. What usually happens to the country's currency straight away?",
+    answers: ["It strengthens", "It weakens", "It doesn't move"],
+    answerNotes: [
+      "Slower growth can weigh on a currency later, but the first effect of a surprise rise is usually a stronger currency.",
+      "Exchange rates react within minutes to surprise rate moves, because they change the return on holding the currency."],
+    reasons: [
+      "Higher rates attract foreign money looking for a better return",
+      "Higher rates slow the economy, which makes investors sell the currency",
+      "Interest rates affect borrowing costs at home, not the exchange rate",
+      "Higher rates push up inflation, which makes the currency more valuable"],
+    reasonNotes: [
+      "That can happen later, but the immediate pull of higher returns usually wins.",
+      "Rates and exchange rates are closely linked: a higher rate makes the currency more rewarding to hold.",
+      "Higher rates aim to bring inflation down, and higher inflation tends to weaken a currency, not strengthen it."],
+    why: "A surprise rate rise makes deposits and bonds in that currency pay more, so investors buy the currency to earn that return, and it strengthens. A stronger currency also makes imports cheaper, which helps bring inflation down. The effect is strongest when the move is a surprise: expected rises are already in the price." },
+
+  { id: "econ-why-02", lv: 2, type: "reason",
+    q: "Interest rates rise by 1 percentage point across all maturities. Which falls more in price: a 2-year government bond or a 30-year government bond?",
+    answers: ["The 30-year bond", "The 2-year bond", "They fall by the same amount"],
+    answerNotes: [
+      "A 2-year bond is repaid soon, so a higher discount rate barely changes its value.",
+      "The same rise in yield moves long bonds far more: price sensitivity (duration) grows with maturity."],
+    reasons: [
+      "Its payments stretch much further out, so a higher discount rate hits them harder",
+      "Short-dated bonds are repaid soon, so investors sell them first when rates rise",
+      "Both bonds see the same 1-point rise, so their prices fall by the same amount",
+      "Long bonds are riskier because the government is more likely to default over 30 years"],
+    reasonNotes: [
+      "Being repaid soon makes a bond less sensitive to rates, not more.",
+      "The same change in yield has a much bigger effect on distant payments than on near ones.",
+      "Default risk isn't the reason: both are government bonds. The longer bond falls more because more of its value sits in distant payments."],
+    why: "A bond's price is the present value of its payments. Raising the discount rate cuts the value of distant payments much more than near ones. A 2-year bond falls by roughly 2% for a 1-point rise in yields; a 30-year bond can fall by around 15–20%. That sensitivity is called duration." },
+
+  { id: "econ-spot-01", lv: 1, type: "spot",
+    q: "You invest US$1,000 for a year at 6% while inflation is 4%. A candidate works out your real return. Which line contains the mistake?",
+    lines: [
+      "Money at the end of the year: US$1,000 × 1.06 = US$1,060",
+      "Prices rise by 4%, so goods that cost US$1,000 now cost US$1,040",
+      "Real return: 6% + 4% = 10%",
+      "So you can buy 10% more than you could at the start"],
+    wrong: 2,
+    lineNotes: [
+      "Growing US$1,000 at 6% for a year is right.",
+      "Prices rising by 4% is worked out correctly.",
+      null,
+      "This follows from line 3, so it carries the mistake forward. You can actually buy about 2% more."],
+    fixes: [
+      "Subtract inflation: about 6% − 4% = 2% (exactly 1.06 ÷ 1.04 − 1 = 1.9%)",
+      "Divide the two rates: 6% ÷ 4% = 1.5%, so the real return is 1.5%",
+      "Use inflation alone: the real return is 4%, which is what prices rose by",
+      "Ignore inflation: the real return is the full 6% you were paid"],
+    fixNotes: [
+      "Dividing the two rates means nothing here. The real return compares how much your money grew with how much prices grew.",
+      "Inflation is what eats into your return. On its own, it isn't the return.",
+      "The 6% is the nominal return. Inflation takes part of it away, so the real return is lower."],
+    why: "The real return is what your money gains in buying power. Your money grew 6% but prices grew 4%, so you can buy about 2% more: roughly 6% − 4%, or exactly 1.06 ÷ 1.04 − 1 = 1.9%. Adding inflation instead of subtracting it is a common slip under pressure." },
+
+  { id: "econ-ord-01", lv: 1, type: "order",
+    q: "Put the steps by which an interest rate cut feeds through to the economy in order.",
+    answer: [
+      "The central bank cuts its policy rate",
+      "Banks cut the rates they charge on loans and pay on deposits",
+      "Borrowing becomes cheaper and saving less rewarding",
+      "Households and companies spend and invest more",
+      "Demand rises, supporting growth and, later, inflation"],
+    why: "This chain is called the transmission mechanism. It takes time: the full effect of a rate change on growth and inflation usually shows up over one to two years." }
+]);

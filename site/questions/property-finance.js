@@ -97,3 +97,77 @@ Bank.addFormat("pf", [
     ],
     why: "Show that the tests bind at different times: when rates are high, the cover test usually binds; when values are low, LTV does." }
 ]);
+
+// More new formats: answer + reason, spot the error and an ordering.
+Bank.addFormat("pf", [
+  { id: "pf-why-01", lv: 1, type: "reason",
+    q: "A property loan is at 60% loan-to-value (LTV). The property's value then falls by 20%. What is the new LTV?",
+    answers: ["75%", "80%", "72%", "48%"],
+    answerNotes: [
+      "LTV doesn't rise point for point: 60 ÷ 80 = 75%.",
+      "The value fell 20%, so divide by 0.8, not multiply by 1.2: 60% ÷ 0.8 = 75%.",
+      "The loan doesn't shrink when the property does; only the value falls."],
+    reasons: [
+      "The loan stays the same while the value it's measured against shrinks",
+      "LTV rises by 20 points, the same amount that the property's value fell",
+      "The LTV goes up by 20% of its old level, like the fall in value",
+      "Both the loan and the value fall by 20%, so the LTV ends up at 48%"],
+    reasonNotes: [
+      "LTV is a ratio: the loan stays at 60 while the value goes from 100 to 80, giving 75%.",
+      "Dividing by 0.8 isn't the same as multiplying by 1.2: 60% ÷ 0.8 = 75%.",
+      "The loan is a fixed amount owed. It doesn't shrink with the property's value."],
+    why: "LTV = loan ÷ value. Take a US$100m property with a US$60m loan. A 20% fall takes the value to US$80m, so LTV = 60 ÷ 80 = 75%. That's why a modest fall in value can breach an LTV covenant: a 70% covenant would already be broken here." },
+
+  { id: "pf-why-02", lv: 2, type: "reason",
+    q: "A property earns net operating income (NOI) of US$4m and has a US$50m floating-rate loan. The all-in interest rate rises from 4% to 6%. What happens to its interest cover ratio (ICR)?",
+    answers: ["1.33x", "1.50x", "2.00x", "3.00x"],
+    answerNotes: [
+      "Interest rises from US$2m to US$3m, so cover is 4 ÷ 3 = 1.33x, not 1.5x.",
+      "Cover is NOI ÷ interest, and interest has gone up by half.",
+      "That turns the ratio upside down: cover is NOI ÷ interest, so more interest lowers it."],
+    reasons: [
+      "Interest goes up by half, from US$2m to US$3m, while NOI stays the same",
+      "Each point added to the interest rate takes about 0.25x off the cover",
+      "NOI is unchanged, and cover depends only on the property's income",
+      "Interest cover is interest ÷ NOI, so higher interest makes it go up"],
+    reasonNotes: [
+      "Cover doesn't fall in fixed steps. Divide NOI by the new interest: 4 ÷ 3 = 1.33x.",
+      "Cover is NOI divided by interest, so it depends on both.",
+      "It's the other way round: cover is NOI ÷ interest."],
+    why: "Interest cover = NOI ÷ interest. At 4%, interest on US$50m is US$2m, so cover is 4 ÷ 2 = 2.0x. At 6% it's US$3m, so cover falls to 4 ÷ 3 = 1.33x, below a typical 1.5x covenant. That's why lenders often ask floating-rate borrowers to buy an interest rate cap." },
+
+  { id: "pf-spot-01", lv: 1, type: "spot",
+    q: "An investor buys a property for US$100m at a 6% yield (NOI of US$6m), with a US$60m interest-only loan at 5%. A candidate works out the cash return on the investor's equity. Which line contains the mistake?",
+    lines: [
+      "Equity invested: US$100m − US$60m = US$40m",
+      "Interest: 5% × US$60m = US$3m",
+      "Cash left for the investor: US$6m − US$3m = US$3m",
+      "Cash return on equity: US$3m ÷ US$100m = 3%",
+      "So borrowing has cut the return, from 6% to 3%"],
+    wrong: 3,
+    lineNotes: [
+      "The equity is the price less the loan. That's right.",
+      "Interest-only at 5% on US$60m is US$3m. That's right.",
+      "The cash left after interest belongs to the investor. That's right.",
+      null,
+      "This conclusion follows from line 4's mistake. Borrowing at 5% against a 6% yield actually raises the return."],
+    fixes: [
+      "Divide by the US$40m of equity: the cash return is 7.5%",
+      "Divide by the US$60m loan instead: the cash return is 5%",
+      "Leave interest out: US$6m ÷ US$40m gives a cash return of 15%",
+      "Add the interest back: US$9m ÷ US$100m gives a return of 9%"],
+    fixNotes: [
+      "The return on equity is measured on the equity invested, not on the loan.",
+      "Interest is paid before the investor gets anything, so it has to come off.",
+      "Interest is a cost to the investor. Adding it back makes no sense."],
+    why: "Cash-on-cash return = cash left after debt payments ÷ equity invested. Here US$3m ÷ US$40m = 7.5%, above the 6% unlevered yield, because the loan costs 5%, less than the property yields. That's positive leverage. If the loan cost more than 6%, borrowing would cut the return instead." },
+
+  { id: "pf-ord-01", lv: 2, type: "order",
+    q: "Rank these ways of financing the same property from safest to riskiest for the provider of the money.",
+    answer: [
+      "A senior loan up to 50% loan-to-value",
+      "A senior loan up to 65% loan-to-value",
+      "A mezzanine loan from 65% to 80% loan-to-value",
+      "Preferred equity from 80% to 90% of the value"],
+    why: "Risk depends on where your money sits in the capital stack. Senior debt is repaid first, so the less of the value it lends against, the further the property can fall before it loses anything. Mezzanine and preferred equity sit above it and take losses first, which is why they charge more." }
+]);

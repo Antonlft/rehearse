@@ -98,3 +98,79 @@ Bank.addFormat("hom", [
     ],
     why: "Frame it as who bears the operating risk: the owner in owned, managed and franchised hotels, the operator in a lease." }
 ]);
+
+// More new formats: answer + reason, spot the error and a grid.
+Bank.addFormat("hom", [
+  { id: "hom-why-01", lv: 2, type: "reason",
+    q: "A hotel owner could put its hotel under a management contract or a fixed-rent lease with the same operator. In a year when trading is far above expectations, which earns the owner more?",
+    answers: ["Management contract", "The fixed-rent lease", "Both earn the same"],
+    answerNotes: [
+      "A fixed rent doesn't rise when trading is strong: the extra profit goes to the tenant-operator.",
+      "Under a lease the rent is fixed; under a management contract the owner keeps the profit, so a strong year favours the contract."],
+    reasons: [
+      "The owner keeps the hotel's profit after fees, so it gains from the upside",
+      "A lease gives the owner a secure rent that doesn't fall in a downturn",
+      "The operator's incentive fee takes all the extra profit, so the owner gains nothing",
+      "Management fees fall in strong years, so more of the profit is left for the owner"],
+    reasonNotes: [
+      "True, but that protects the owner in a weak year. In a strong year a fixed rent misses the upside.",
+      "Incentive fees take a share of the extra profit, typically around 10–20%, not all of it.",
+      "Fees usually rise in strong years: the base fee follows revenue and the incentive fee follows profit. The owner gains anyway because it keeps everything after fees."],
+    why: "Under a management contract, the owner keeps the hotel's profit after paying the operator's fees, so it takes both the upside and the downside. Under a fixed lease, the owner gets the same rent whatever happens, and the operator keeps any extra profit. In a strong year the management contract wins; in a weak year the lease does." },
+
+  { id: "hom-why-02", lv: 2, type: "reason",
+    q: "A management contract pays the operator an incentive fee of 10% of profit above an owner's priority of US$8m. This year the hotel's profit is US$7m. What incentive fee is paid?",
+    answers: ["Nothing", "US$0.7m", "US$0.1m", "US$0.8m"],
+    answerNotes: [
+      "10% of all the profit ignores the owner's priority, which comes first.",
+      "A shortfall against the priority means no incentive fee. The operator isn't paid on the gap.",
+      "That's 10% of the priority itself, which is the owner's return, not the operator's."],
+    reasons: [
+      "Profit is below the owner's priority, so there's nothing above it to share",
+      "The incentive fee is 10% of all of the profit, before the owner's priority",
+      "The fee is 10% of the shortfall against the owner's priority",
+      "Incentive fees are only paid when the hotel is sold, not each year"],
+    reasonNotes: [
+      "The owner's priority comes first. The 10% applies only to profit above it.",
+      "There's no fee on a shortfall. Missing the priority simply means no incentive fee.",
+      "Incentive fees are usually worked out and paid every year, out of that year's profit."],
+    why: "An owner's priority protects the owner: the operator earns its incentive fee only on profit above a set return to the owner. Here profit is US$7m against a US$8m priority, so there's nothing above it and no incentive fee. If profit were US$10m, the fee would be 10% × (US$10m − US$8m) = US$0.2m. The base fee, a share of revenue, is paid either way." },
+
+  { id: "hom-spot-01", lv: 2, type: "spot",
+    q: "A managed hotel has revenue of US$40m and GOP of US$14m. The operator charges a base fee of 3% of revenue and an incentive fee of 10% of GOP after the base fee. Fixed charges (insurance and property taxes) are US$2m, and the FF&E reserve is 4% of revenue. A candidate works out the owner's income. Which line contains the mistake?",
+    lines: [
+      "Base fee: 3% × US$40m = US$1.2m",
+      "Incentive fee: 10% × (US$14m − US$1.2m) = US$1.28m",
+      "FF&E reserve: 4% × US$14m = US$0.56m",
+      "Owner's income: US$14m − 1.2 − 1.28 − 2 − 0.56 = US$8.96m"],
+    wrong: 2,
+    lineNotes: [
+      "The base fee is a share of revenue, so 3% of US$40m is right.",
+      "10% of GOP after the base fee is worked out correctly.",
+      null,
+      "Taking each cost off GOP is right, but it uses the wrong reserve from line 3."],
+    fixes: [
+      "The reserve is 4% of revenue, US$1.6m, so the owner's income is US$7.92m",
+      "Leave the reserve out: it's the operator's cost, so the owner gets US$9.52m",
+      "Base the reserve on room revenue only, since most of the furniture is in rooms",
+      "Take the reserve off before the fees, so both fees fall and the owner gains"],
+    fixNotes: [
+      "The owner funds the FF&E reserve: it's the owner's money, set aside to replace furniture and equipment.",
+      "The reserve is normally a share of total revenue, because restaurants, bars and meeting rooms need replacing too.",
+      "The fees are worked out on revenue and GOP. The reserve comes after them and doesn't change them."],
+    why: "The owner's income starts from GOP and takes off the operator's fees, the fixed charges and the FF&E reserve. The reserve is usually a share of total revenue (here 4% × US$40m = US$1.6m), not of GOP. So: US$14m − 1.2 − 1.28 − 2 − 1.6 = US$7.92m, which is the figure a valuer would capitalise." },
+
+  { id: "hom-grid-02", lv: 1, type: "grid",
+    q: "For a hotel owner, is each item usually money it pays out or money it receives?",
+    columns: ["Owner pays", "Owner receives"],
+    rows: [
+      { text: "Base management fee", answer: 0, note: "The owner pays the operator a share of revenue for running the hotel." },
+      { text: "Incentive management fee", answer: 0, note: "The owner pays it out of profit, usually above an owner's priority." },
+      { text: "Franchise royalty on room revenue", answer: 0, note: "The owner pays the brand for its name, standards and booking system." },
+      { text: "Key money when the contract is signed", answer: 1, note: "The operator or brand pays the owner upfront to win the contract." },
+      { text: "Rent under a hotel lease", answer: 1, note: "The tenant-operator pays rent to the owner." },
+      { text: "Reservation and loyalty programme fees", answer: 0, note: "The owner pays these to the brand on top of the royalty." },
+      { text: "A top-up under an operator's performance guarantee", answer: 1, note: "The operator pays the owner if profit falls short of the guaranteed level." }
+    ],
+    why: "Money flows from owner to brand and operator for their name and expertise (fees and royalties), and from operator to owner when the operator wants the contract (key money), guarantees a level of profit (top-ups) or leases the building (rent)." }
+]);
