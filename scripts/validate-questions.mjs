@@ -292,20 +292,27 @@ for (const [cat, list] of Object.entries(Bank.cases || {})) {
 }
 
 // The mistake detective (Typed.diagnose) mustn't cry wolf: ordinary wrong answers, 10% to 100% away from the right one,
-// should rarely be read as a units, sign, upside-down or swapped-digit slip. Fails above 5% of them.
-let alarmTried = 0, alarmHits = 0;
-const alarmItems = [...Object.values(Bank.numeric || {}).flat().map(fn => [fn()]), ...Object.values(Bank.cases || {}).flat().map(fn => fn().steps)].flat();
-for (let run = 0; run < 10; run++) for (const it of alarmItems.length ? alarmItems : []) {
-  if (!isNum(it.answer) || !it.answer) continue;
-  for (let m = 0.5; m <= 2.001; m += 0.05) {
-    if (Math.abs(m - 1) <= 0.1) continue;
-    const v = +(it.answer * m).toFixed(it.dp ?? 2), g = ctx.Typed.grade(it, String(v));
-    if (g.ok || g.note) continue; // right, or a known mistake: not the detective's call
-    alarmTried++;
-    if (g.hint && !["rounding", "year"].includes(g.hint.kind)) alarmHits++;
+// should rarely be read as a slip (rounding and one-year-out guesses aside). Fails above 5% of them.
+// Case-study steps are graded with their case's figures, as in the app. The wrong answers come from a fixed-seed
+// random sequence, so the result is the same on every run with the same questions.
+let alarmTried = 0, alarmHits = 0, alarmSeed = 7;
+const alarmRandom = () => (alarmSeed = (alarmSeed * 16807) % 2147483647) / 2147483647;
+for (let run = 0; run < 10; run++) {
+  const alarmItems = [...Object.values(Bank.numeric || {}).flat().map(fn => [fn(), null]),
+    ...Object.values(Bank.cases || {}).flat().flatMap(fn => { const c = fn(); return c.steps.map((s, k) => [s, ctx.Typed.caseContext(c, k)]); })];
+  for (const [it, cx] of alarmItems) {
+    if (!isNum(it.answer) || !it.answer) continue;
+    for (let j = 0; j < 30; j++) {
+      const m = 0.5 + 1.5 * alarmRandom();
+      if (Math.abs(m - 1) <= 0.1) continue;
+      const v = +(it.answer * m).toFixed(it.dp ?? 2), g = ctx.Typed.grade(it, String(v), cx);
+      if (g.ok || g.note) continue; // right, or a known mistake: not the detective's call
+      alarmTried++;
+      if (g.hint && !["rounding", "year"].includes(g.hint.kind)) alarmHits++;
+    }
   }
 }
-if (alarmTried && alarmHits / alarmTried > 0.05) fail(`the mistake detective flags ${(alarmHits / alarmTried * 100).toFixed(1)}% of ordinary wrong answers as a units, sign, upside-down or swapped-digit slip (5% at most)`);
+if (alarmTried && alarmHits / alarmTried > 0.05) fail(`the mistake detective flags ${(alarmHits / alarmTried * 100).toFixed(1)}% of ordinary wrong answers as a slip (5% at most)`);
 
 // Lessons: one per category; complete once marked draft or reviewed.
 const Lessons = ctx.Lessons?.all || {};

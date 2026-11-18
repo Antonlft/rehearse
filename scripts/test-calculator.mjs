@@ -128,12 +128,35 @@ for (const [q, raw, kind, trap] of kinds) {
 // Slips that point to arithmetic count as calculation slips; a units slip uses the reading that explains it.
 if (Typed.grade(pctQ, "12.6").cause !== "calculation-slip") fails.push("a rounding slip should count as a calculation slip");
 if (Typed.grade({ ...moneyQ, answer: 18, tolerance: 0.1 }, "18,000").value !== 18000) fails.push("18,000 on a US$18m question should be read as typed (US$18,000m, 1,000 times too big)");
+// Case-study checks: the detective compares with earlier steps' answers and the case's own figures.
+ctx.Bank.case("_plant", { make: () => ({}),
+  intro: () => "A plant costs US$95m. Revenue is US$113m a year and cash operating costs US$62m, for 5 years. The tax rate is 25%.",
+  steps: [
+    { unit: "US$m", dp: 1, tolerance: 0.1, ask: () => "What is EBIT?", why: () => "", solve: () => 32 },
+    { unit: "US$m", dp: 2, tolerance: 0.02, ask: () => "EBIT is US$32.0m. What is free cash flow?", why: () => "", solve: () => 43 },
+    { unit: "US$m", dp: 1, tolerance: 0.1, ask: () => "What is the present value?", why: () => "", solve: () => 167.3 },
+    { unit: "US$m", dp: 1, tolerance: 0.1, ask: () => "What is the NPV?", why: () => "", solve: () => 72.3 },
+    { unit: "years", dp: 0, tolerance: 0, ask: () => "Annuity factors: 1 year 0.92 · 2 years 1.76 · 3 years 2.53. In which year?", why: () => "", solve: () => 3 }] });
+const plant = ctx.Bank.cases._plant.pop()(), step = (k, raw) => Typed.grade(plant.steps[k], raw, Typed.caseContext(plant, k));
+const caseKinds = [
+  [1, "32", "earlier", "step 1"], [0, "113", "given", "US$113m"], [3, "134.3", "plus", "US$62m"], [3, "-22.7", "minus", "US$95m"],
+  [1, "32.25", "rate", "25%"], [2, "836.5", "factor", "5 years"], [2, "200", null, null],
+  [4, "2", "year", null], [4, "5", null, null], // year steps skip the case checks (their questions list every year)
+];
+for (const [k, raw, kind, says] of caseKinds) {
+  const g = step(k, raw), got = g.hint ? g.hint.kind : null;
+  if (got !== kind || (says && !g.hint.text.includes(says))) fails.push(`case step ${k + 1}, typed ${raw}: detective found ${got} ("${g.hint?.text}"), expected ${kind}${says ? ` mentioning ${says}` : ""}`);
+}
+// Outside a case study there are no figures to compare with.
+if (Typed.grade(plant.steps[0], "113").hint) fails.push("typed 113 without the case's figures shouldn't be read as a figure from the question");
+// Percentages: only a number below 1 is also read as a decimal ("0.125" = 12.5%); "12.4" is 12.4%, never 1,240%.
+if (Typed.readings("12.4", "%").length !== 1) fails.push(`"12.4" on a % question should have one reading, got ${Typed.readings("12.4", "%")}`);
 const shows = [[12.5, "%", undefined, "12.5%"], [1.2, "US$m", undefined, "US$1.2m"], [2.5, "x", undefined, "2.5x"], [-3, "%", undefined, "−3%"],
   [6.993811140994688, "%", 1, "7.0%"], [8.4249, "%", 2, "8.42%"],
   [350000, "US$", 0, "US$350,000"], [1.8512, "US$", 2, "US$1.85"], [6, "years", 0, "6 years"], [1, "years", 0, "1 year"]];
 for (const [v, u, dp, want] of shows) if (Typed.show(v, u, dp) !== want) fails.push(`Typed.show(${v}, ${u}, ${dp}) = ${Typed.show(v, u, dp)}, expected ${want}`);
 
-const total = values.length + errors.length + formats.length + fractions.length + typedRight.length + typedCauses.length + 4 + kinds.length + 2 + shows.length;
+const total = values.length + errors.length + formats.length + fractions.length + typedRight.length + typedCauses.length + 4 + kinds.length + 2 + caseKinds.length + 2 + shows.length;
 if (fails.length) {
   console.error(`✗ ${fails.length} of ${total} calculator and typed-answer checks failed:`);
   for (const f of fails) console.error("  - " + f);

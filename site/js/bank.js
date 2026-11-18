@@ -59,7 +59,7 @@ window.Bank = {
    Accepts spaces, thousands commas, a minus sign (− or -), fractions ("3/4"), "%", a trailing "x", for money
    "US$", "$", "m", "bn", "k", and for years a trailing "years" / "yrs" / "y". Units: "%", "x", "US$m" (millions),
    "US$" (plain amounts such as a price per share or per room) and "years". Ambiguous bare numbers are read both ways and the closer reading counts:
-   on a % question "0.125" and "12.5" both mean 12.5%; on a US$m question "1,200,000" and "1.2" both mean US$1.2m.
+   on a % question "0.125" and "12.5" both mean 12.5% (only a number below 1 is read both ways); on a US$m question "1,200,000" and "1.2" both mean US$1.2m.
    A bare US$m number is only also read as plain dollars when it's 10,000 or more: "38" always means US$38m. */
 window.Typed = {
   // All sensible readings of the input, in the question's units. [] if it isn't a number at all.
@@ -84,14 +84,15 @@ window.Typed = {
     let v = parseFloat(n[2]) / (n[3] ? parseFloat(n[3]) : 1);
     if (n[1]) v = -v;
     if (!Number.isFinite(v)) return [];
-    if (unit === "%") return pct ? [v] : [v, v * 100];
+    if (unit === "%") return pct || Math.abs(v) >= 1 ? [v] : [v, v * 100]; // "0.125" can mean 12.5%; "12.4" is always 12.4%
     if (unit === "US$m") return scale !== null ? [v * scale] : Math.abs(v) >= 10000 ? [v, v / 1e6] : [v];
     if (unit === "US$") return scale !== null ? [v * scale] : [v];
     return [v];
   },
-  /* { ok, value (the reading used), cause, trap, note, rel } for a numeric question item. rel is how far off the
-     answer is, as a signed share of the right answer (0.11 = 11% above), or null when the right answer is 0. */
-  grade(item, raw) {
+  /* { ok, value (the reading used), cause, trap, note, rel, hint? } for a numeric question item. rel is how far off the
+     answer is, as a signed share of the right answer (0.11 = 11% above), or null when the right answer is 0.
+     ctx (case studies only, from caseContext) lets the mistake detective compare with earlier steps and the case's figures. */
+  grade(item, raw, ctx) {
     const rs = this.readings(raw, item.unit);
     if (!rs.length) return { ok: false, value: null, cause: null, trap: null, note: null, rel: null, unreadable: true };
     const tol = item.tolerance + 1e-9, closest = rs.reduce((a, b) => Math.abs(b - item.answer) < Math.abs(a - item.answer) ? b : a);
@@ -100,7 +101,7 @@ window.Typed = {
     let known = null, value = closest, hint = null;
     for (const r of rs) { const w = (item.wrongs || []).find(w => Math.abs(r - w.value) <= tol); if (w) { known = w; value = r; break; } }
     // No known mistake: try the common slips, on each reading in turn (as typed first), and keep the first that fits.
-    if (!known) for (const r of rs) { const h = this.diagnose(item, r); if (h) { hint = h; value = r; break; } }
+    if (!known) for (const r of rs) { const h = this.diagnose(item, r, ctx); if (h) { hint = h; value = r; break; } }
     const off = Math.abs(value - item.answer), rel = item.answer ? (value - item.answer) / Math.abs(item.answer) : null;
     // A known mistake is a method mistake however close it lands. A detected slip says which it is. Otherwise:
     // within 10% = a calculation slip; further off = a concept gap.
@@ -111,7 +112,7 @@ window.Typed = {
      slip that explains it. Returns { kind, trap, cause?, lead, text } or null. lead = the text already says how far off
      the answer is (so "X% above" isn't added in front). trap uses the TRAPS keys, so detected slips count on the
      Progress page like tagged ones. Checks run from the most to the least distinctive, and the first that fits wins. */
-  diagnose(item, v) {
+  diagnose(item, v, ctx) {
     const a = item.answer, tol = item.tolerance + 1e-9;
     if (!Number.isFinite(v) || !a || Math.abs(v - a) <= tol) return null;
     // Within 1% of c, or within the tolerance scaled to c's size (s), so a tiny or huge target isn't matched too loosely.
@@ -144,10 +145,82 @@ window.Typed = {
     // 5. A whole year out on a question counted in years.
     if (item.unit === "years" && Math.abs(Math.abs(v - a) - 1) < 1e-9) return { kind: "year", trap: null, lead: true,
       text: `Your answer is one year ${v > a ? "too late" : "too early"}. Check which year you counted from, and whether the year the target is reached counts.` };
-    // 6. Very close (within 2%): most likely rounded too early.
+    // Case studies: many figures to compare with, so match tightly: within the tolerance, and no further than 0.5% of the
+    // target or half the last decimal place shown (so a generous tolerance, such as "within 1 point", doesn't match loosely).
+    const hit = c => Math.abs(v - c) <= Math.min(tol, Math.max(0.005 * Math.abs(c), item.dp != null ? 0.5 * 10 ** -item.dp + 1e-9 : 0));
+    // Steps counted in whole years are left out: their questions list every year, so any whole number would match.
+    if (ctx && item.unit === "years") ctx = null;
+    const amounts = ctx ? this.amounts(ctx, item.unit) : [];
+    // 6. The right answer to an earlier step, carried over unchanged.
+    const prev = ctx && ctx.earlier.find(e => e.unit === item.unit && hit(e.value));
+    if (prev) return { kind: "earlier", trap: "missed-step", lead: true,
+      text: `That's the right answer to step ${prev.step}. This step builds on it: check what it asks you to do next.` };
+    // 7. A figure copied straight from the question.
+    const given = amounts.find(f => !f.step && hit(f.value));
+    if (given) return { kind: "given", trap: "missed-step", lead: true,
+      text: `That's a figure from the question (${given.shown}). This step needs a calculation from it.` };
+    // 8. Very close (within 2%): most likely rounded too early.
     if (Math.abs(v - a) <= 0.02 * Math.abs(a)) return { kind: "rounding", trap: null, cause: "calculation-slip", lead: false,
       text: "That's very close, so it's probably rounding: keep full figures until the last step, then round." };
+    if (!ctx) return null;
+    // 9. One figure away: the right answer plus or minus an amount from the case, or with one rate or count applied too many.
+    const src = f => f.step ? `step ${f.step}'s answer` : f.kind === "%" ? "a rate from the question" : "a figure from the question";
+    for (const f of amounts) {
+      if (hit(a + f.value)) return { kind: "plus", trap: "missed-step", lead: true,
+        text: `Your answer is the right one plus ${f.shown} (${src(f)}). Check whether that amount should be taken off, or left out.` };
+      if (hit(a - f.value)) return { kind: "minus", trap: "missed-step", lead: true,
+        text: `Your answer is the right one minus ${f.shown} (${src(f)}). Check whether that amount should be added, or left in.` };
+    }
+    for (const f of this.factors(ctx)) {
+      if (f.kind === "%") {
+        if (hit(a * (1 - f.value))) return { kind: "rate", trap: "missed-step", lead: true,
+          text: `Your answer is the right one less ${f.shown} (${src(f)}). Check whether that rate belongs at this step.` };
+        if (hit(a / (1 - f.value))) return { kind: "rate", trap: "missed-step", lead: true,
+          text: `Your answer is the right one divided by (1 − ${f.shown}), using ${src(f)}. Check whether that rate belongs at this step.` };
+      }
+      if (hit(a * f.value) || hit(a / f.value)) return { kind: "factor", trap: "wrong-measure", lead: true,
+        text: `Your answer is the right one ${hit(a * f.value) ? "multiplied" : "divided"} by ${f.shown} (${src(f)}). Check whether that figure belongs in this calculation.` };
+    }
     return null;
+  },
+  /* What the mistake detective knows about a case-study step: the right answers to the earlier steps, and the figures
+     written in the scenario and in this step's question (not in the "Type your answer…" instructions). */
+  caseContext(it, k) {
+    const s = it.steps[k], text = `${it.q} ${s.q.split(" Type your answer")[0]}`;
+    return { earlier: it.steps.slice(0, k).map((e, j) => ({ value: e.answer, unit: e.unit, dp: e.dp, step: j + 1 })), figures: this.figures(text) };
+  },
+  /* The figures in a piece of text: { kind, value, shown }. kind: "US$m" (amounts in millions or billions, value in
+     millions), "US$" (plain dollar amounts), "%" (value as a share: 25% → 0.25), "x" (multiples), "years", "plain". */
+  figures(text) {
+    const out = [], seen = new Set();
+    const re = /(US\$|\$)?(\d{1,3}(?:,\d{3})+|\d+)(\.\d+)?(\s?(?:bn|m)\b|%|x\b|(?:-|\s)years?\b)?/g;
+    for (const m of String(text).matchAll(re)) {
+      if (m.index > 0 && /[\w.]/.test(text[m.index - 1]) && !m[1]) continue; // part of a word or a longer number
+      const n = parseFloat((m[2] + (m[3] || "")).replace(/,/g, "")), suf = (m[4] || "").trim().replace(/^-/, "");
+      const kind = m[1] ? (suf === "m" || suf === "bn" ? "US$m" : "US$") : suf === "%" ? "%" : suf === "x" ? "x" : /^years?$/.test(suf) ? "years" : "plain";
+      const value = kind === "US$m" && suf === "bn" ? n * 1000 : kind === "%" ? n / 100 : n;
+      const shown = kind === "years" ? `${m[2]}${m[3] || ""} year${n === 1 ? "" : "s"}` : m[0].trim();
+      if (!Number.isFinite(value) || seen.has(kind + value)) continue;
+      seen.add(kind + value); out.push({ kind, value, shown });
+    }
+    return out;
+  },
+  // Amounts a step's answer can be compared with, in the step's own unit: earlier steps' answers, then the case's figures.
+  amounts(ctx, unit) {
+    const fromFig = f => unit === "US$m" ? (f.kind === "US$m" ? f.value : null)
+      : unit === "US$" ? (f.kind === "US$" ? f.value : f.kind === "US$m" ? f.value * 1e6 : null)
+      : unit === "%" ? (f.kind === "%" ? f.value * 100 : null)
+      : unit === "x" ? (f.kind === "x" ? f.value : null)
+      : unit === "years" ? (f.kind === "years" || (f.kind === "plain" && Number.isInteger(f.value)) ? f.value : null) : null;
+    return [
+      ...ctx.earlier.filter(e => e.unit === unit).map(e => ({ value: e.value, step: e.step, kind: unit, shown: this.show(e.value, e.unit, e.dp) })),
+      ...ctx.figures.map(f => ({ ...f, value: fromFig(f) })).filter(f => f.value != null && f.value !== 0)
+    ];
+  },
+  // Rates and counts that could have been applied once too often or left out: percentages, multiples, and whole numbers 2–100.
+  factors(ctx) {
+    return ctx.figures.filter(f => (f.kind === "%" && f.value > 0 && f.value < 1) || (f.kind === "x" && f.value > 0 && f.value !== 1)
+      || ((f.kind === "years" || f.kind === "plain") && Number.isInteger(f.value) && f.value >= 2 && f.value <= 100));
   },
   // How a typed-units value is shown, e.g. 8.42 with unit "%" → "8.42%". dp rounds to that many decimal places.
   show(v, unit, dp) {

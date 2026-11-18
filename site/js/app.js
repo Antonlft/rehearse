@@ -288,7 +288,7 @@ function caseItem(fn, cat) {
 const isBlank = a => a === null || a === undefined || a === "";
 function grade(it, ans) {
   if (it.type === "case") { // right only if every step is right; right = steps right, steps = each step's grade
-    const steps = it.steps.map((s, k) => { const raw = Array.isArray(ans) ? ans[k] : null; return isBlank(raw) ? { ok: false, blank: true, value: null } : Typed.grade(s, raw); });
+    const steps = it.steps.map((s, k) => { const raw = Array.isArray(ans) ? ans[k] : null; return isBlank(raw) ? { ok: false, blank: true, value: null } : Typed.grade(s, raw, Typed.caseContext(it, k)); });
     const right = steps.filter(s => s.ok).length;
     return { ok: right === steps.length, right, steps, ...(isBlank(ans) ? { blank: true } : {}) };
   }
@@ -1069,7 +1069,7 @@ function caseArea(at, it, ans) {
   const done = caseDoneOf(at, at.cur), n = it.steps.length, vals = Array.isArray(ans) ? ans : [];
   const step = (s, k) => {
     if (k > done || k >= n) return "";
-    const checked = k < done, g = checked ? Typed.grade(s, vals[k] ?? "") : null, right = Typed.show(s.answer, s.unit, s.dp);
+    const checked = k < done, g = checked ? Typed.grade(s, vals[k] ?? "", Typed.caseContext(it, k)) : null, right = Typed.show(s.answer, s.unit, s.dp);
     return `<li class="case-step${checked ? (g.ok ? " ok" : " no") : " open"}">
         <p class="case-q" id="caseQ${k}"><span class="case-num">Step ${k + 1} of ${n}</span>${esc(s.q)}</p>
         <div class="typed-row">
