@@ -291,6 +291,22 @@ for (const [cat, list] of Object.entries(Bank.cases || {})) {
   });
 }
 
+// The mistake detective (Typed.diagnose) mustn't cry wolf: ordinary wrong answers, 10% to 100% away from the right one,
+// should rarely be read as a units, sign, upside-down or swapped-digit slip. Fails above 5% of them.
+let alarmTried = 0, alarmHits = 0;
+const alarmItems = [...Object.values(Bank.numeric || {}).flat().map(fn => [fn()]), ...Object.values(Bank.cases || {}).flat().map(fn => fn().steps)].flat();
+for (let run = 0; run < 10; run++) for (const it of alarmItems.length ? alarmItems : []) {
+  if (!isNum(it.answer) || !it.answer) continue;
+  for (let m = 0.5; m <= 2.001; m += 0.05) {
+    if (Math.abs(m - 1) <= 0.1) continue;
+    const v = +(it.answer * m).toFixed(it.dp ?? 2), g = ctx.Typed.grade(it, String(v));
+    if (g.ok || g.note) continue; // right, or a known mistake: not the detective's call
+    alarmTried++;
+    if (g.hint && !["rounding", "year"].includes(g.hint.kind)) alarmHits++;
+  }
+}
+if (alarmTried && alarmHits / alarmTried > 0.05) fail(`the mistake detective flags ${(alarmHits / alarmTried * 100).toFixed(1)}% of ordinary wrong answers as a units, sign, upside-down or swapped-digit slip (5% at most)`);
+
 // Lessons: one per category; complete once marked draft or reviewed.
 const Lessons = ctx.Lessons?.all || {};
 const text = v => typeof v === "string" && v.trim().length > 0;
@@ -452,6 +468,7 @@ if (errors.length) {
   process.exit(1);
 }
 console.log(`✓ ${written - formatQuestions} written questions, ${formatQuestions} new-format questions, ${gens} generators, ${typed} typed-answer generators and ${cases} case stud${cases === 1 ? "y" : "ies"} (${RUNS} samples each) passed.`);
+console.log(`✓ The mistake detective flagged ${(alarmHits / Math.max(1, alarmTried) * 100).toFixed(1)}% of ${alarmTried} ordinary wrong typed answers as a slip (5% at most).`);
 console.log(`✓ ${Object.keys(Lessons).length} lessons for ${categoryIds.length} categories (${Object.entries(lessonCounts).map(([k, v]) => `${v} ${k}`).join(", ")}).`);
 console.log(`✓ ${Glossary.length} glossary terms; every acronym in the lessons has one.`);
 console.log(`✓ Answer length checked in ${BALANCED.size} rebalanced categor${BALANCED.size === 1 ? "y" : "ies"}; across the bank the right option is the longest in ${Math.round(longestRight / mcqs.length * 100)}% of multiple-choice questions (25% would be chance).`);

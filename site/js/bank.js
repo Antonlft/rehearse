@@ -97,12 +97,57 @@ window.Typed = {
     const tol = item.tolerance + 1e-9, closest = rs.reduce((a, b) => Math.abs(b - item.answer) < Math.abs(a - item.answer) ? b : a);
     if (Math.abs(closest - item.answer) <= tol) return { ok: true, value: closest, cause: null, trap: null, note: null, rel: null };
     // A known wrong answer (e.g. leaving out the tax shield) gives its explanation and mistake type, whichever reading matches it.
-    let known = null, value = closest;
+    let known = null, value = closest, hint = null;
     for (const r of rs) { const w = (item.wrongs || []).find(w => Math.abs(r - w.value) <= tol); if (w) { known = w; value = r; break; } }
+    // No known mistake: try the common slips, on each reading in turn (as typed first), and keep the first that fits.
+    if (!known) for (const r of rs) { const h = this.diagnose(item, r); if (h) { hint = h; value = r; break; } }
     const off = Math.abs(value - item.answer), rel = item.answer ? (value - item.answer) / Math.abs(item.answer) : null;
-    // A known mistake is a method mistake however close it lands. Otherwise: within 10% = a calculation slip; further off = a concept gap.
-    const cause = !known && off <= 0.1 * Math.abs(item.answer) ? "calculation-slip" : "concept-gap";
-    return { ok: false, value, cause, trap: known ? known.trap : null, note: known ? known.note : null, rel };
+    // A known mistake is a method mistake however close it lands. A detected slip says which it is. Otherwise:
+    // within 10% = a calculation slip; further off = a concept gap.
+    const cause = known ? "concept-gap" : hint && hint.cause ? hint.cause : off <= 0.1 * Math.abs(item.answer) ? "calculation-slip" : "concept-gap";
+    return { ok: false, value, cause, trap: known ? known.trap : hint ? hint.trap : null, note: known ? known.note : null, rel, ...(hint ? { hint } : {}) };
+  },
+  /* The mistake detective: when a wrong typed answer matches none of the question's known mistakes, look for a common
+     slip that explains it. Returns { kind, trap, cause?, lead, text } or null. lead = the text already says how far off
+     the answer is (so "X% above" isn't added in front). trap uses the TRAPS keys, so detected slips count on the
+     Progress page like tagged ones. Checks run from the most to the least distinctive, and the first that fits wins. */
+  diagnose(item, v) {
+    const a = item.answer, tol = item.tolerance + 1e-9;
+    if (!Number.isFinite(v) || !a || Math.abs(v - a) <= tol) return null;
+    // Within 1% of c, or within the tolerance scaled to c's size (s), so a tiny or huge target isn't matched too loosely.
+    const near = (x, c, s = 1) => Math.abs(x - c) <= Math.max(tol * s, 0.01 * Math.abs(c));
+    // 1. Units: 10, 100, 1,000 or 1,000,000 times too big or too small.
+    for (const k of [10, 100, 1000, 1e6]) for (const big of [true, false]) {
+      if (!near(v, big ? a * k : a / k, big ? k : 1 / k)) continue;
+      const times = k.toLocaleString("en-US");
+      const why = k === 10 ? "It looks like the decimal point is in the wrong place."
+        : item.unit === "%" ? "It looks like a units slip: check how you turned the decimal into a percentage (0.125 = 12.5%)."
+        : item.unit === "US$m" ? "It looks like a units slip: check thousands, millions and billions (US$1,200,000 = US$1.2m)."
+        : "It looks like a units slip or a misplaced decimal point.";
+      return { kind: "units", trap: "units", lead: true, text: `Your answer is ${times} times too ${big ? "big" : "small"}. ${why}` };
+    }
+    // 2. The right size with the wrong sign.
+    if (near(v, -a)) return { kind: "sign", trap: "sign", lead: true,
+      text: "Your answer has the right size but the wrong sign. Check whether this figure is a cost or a gain, or which way round you subtracted." };
+    // 3. A ratio upside down (multiples and percentages; not within 20% of 1x or 100%, where it can't be told apart from a small error).
+    const share = item.unit === "%" ? 100 : item.unit === "x" ? 1 : null;
+    if (share && Math.abs(a / share - 1) > 0.2 && Math.abs((v / share) * (a / share) - 1) <= 0.01) return { kind: "inverted", trap: "inverted", lead: true,
+      text: "Your answer is the right one turned upside down (1 ÷ the right answer). Check which figure goes on top of the ratio." };
+    // 4. Two neighbouring digits swapped, e.g. 32.42 for 34.22.
+    const dp = item.dp ?? Math.min(4, (String(v).split(".")[1] || "").length), sa = Math.abs(a).toFixed(dp), sv = Math.abs(v).toFixed(dp);
+    if (Math.sign(v) === Math.sign(a) && sa.length === sv.length && sa !== sv)
+      for (let i = 0; i < sa.length - 1; i++) {
+        if (sa[i] === "." || sa[i + 1] === "." || sa[i] === sa[i + 1]) continue;
+        if (sa.slice(0, i) + sa[i + 1] + sa[i] + sa.slice(i + 2) === sv) return { kind: "swap", trap: null, cause: "calculation-slip", lead: true,
+          text: `Your answer has the right digits, but two of them look swapped (${sv} instead of ${sa}). That's probably a typing slip.` };
+      }
+    // 5. A whole year out on a question counted in years.
+    if (item.unit === "years" && Math.abs(Math.abs(v - a) - 1) < 1e-9) return { kind: "year", trap: null, lead: true,
+      text: `Your answer is one year ${v > a ? "too late" : "too early"}. Check which year you counted from, and whether the year the target is reached counts.` };
+    // 6. Very close (within 2%): most likely rounded too early.
+    if (Math.abs(v - a) <= 0.02 * Math.abs(a)) return { kind: "rounding", trap: null, cause: "calculation-slip", lead: false,
+      text: "That's very close, so it's probably rounding: keep full figures until the last step, then round." };
+    return null;
   },
   // How a typed-units value is shown, e.g. 8.42 with unit "%" → "8.42%". dp rounds to that many decimal places.
   show(v, unit, dp) {

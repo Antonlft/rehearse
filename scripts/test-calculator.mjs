@@ -112,12 +112,28 @@ ctx.Bank.case("_test", { make: () => ({}), intro: () => "", steps: [{ unit: "US$
   wrongs: () => [{ value: 38, note: "That leaves out tax.", trap: "missed-step" }, { value: 34.23, note: "Within the tolerance.", trap: "missed-step" }] }] });
 const caseStep = ctx.Bank.cases._test.pop()().steps[0];
 if (caseStep.wrongs.length !== 1 || caseStep.wrongs[0].value !== 38) fails.push(`a case step kept ${JSON.stringify(caseStep.wrongs.map(w => w.value))} as known mistakes; expected [38] (the close one kept, the one within the tolerance dropped)`);
+// The mistake detective: a wrong answer that matches no known mistake gets the common slip that explains it.
+// [question, typed text, expected kind (null = none), expected trap]
+const kinds = [
+  [moneyQ, "1200", "units", "units"], [moneyQ, "0.0012", "units", "units"], [moneyQ, "12", "units", "units"], [pctQ, "1250%", "units", "units"],
+  [{ ...moneyQ, answer: 18, tolerance: 0.1 }, "18,000", "units", "units"],
+  [multQ, "−2.5", "sign", "sign"], [multQ, "0.4", "inverted", "inverted"], [pctQ, "800%", "inverted", "inverted"],
+  [fcfQ, "43.22", "swap", null], [yearsQ, "7", "year", null], [pctQ, "12.6", "rounding", null],
+  [pctQ, "25%", null, null], [pctQ, "14.2%", null, "missed-step"], [fcfQ, "38", null, "missed-step"], [multQ, "3.4", null, null],
+];
+for (const [q, raw, kind, trap] of kinds) {
+  const g = Typed.grade(q, raw), got = g.hint ? g.hint.kind : null;
+  if (got !== kind || g.trap !== trap) fails.push(`typed ${raw} on a ${q.unit} question (answer ${q.answer}): detective found ${got}/${g.trap}, expected ${kind}/${trap}`);
+}
+// Slips that point to arithmetic count as calculation slips; a units slip uses the reading that explains it.
+if (Typed.grade(pctQ, "12.6").cause !== "calculation-slip") fails.push("a rounding slip should count as a calculation slip");
+if (Typed.grade({ ...moneyQ, answer: 18, tolerance: 0.1 }, "18,000").value !== 18000) fails.push("18,000 on a US$18m question should be read as typed (US$18,000m, 1,000 times too big)");
 const shows = [[12.5, "%", undefined, "12.5%"], [1.2, "US$m", undefined, "US$1.2m"], [2.5, "x", undefined, "2.5x"], [-3, "%", undefined, "−3%"],
   [6.993811140994688, "%", 1, "7.0%"], [8.4249, "%", 2, "8.42%"],
   [350000, "US$", 0, "US$350,000"], [1.8512, "US$", 2, "US$1.85"], [6, "years", 0, "6 years"], [1, "years", 0, "1 year"]];
 for (const [v, u, dp, want] of shows) if (Typed.show(v, u, dp) !== want) fails.push(`Typed.show(${v}, ${u}, ${dp}) = ${Typed.show(v, u, dp)}, expected ${want}`);
 
-const total = values.length + errors.length + formats.length + fractions.length + typedRight.length + typedCauses.length + 4 + shows.length;
+const total = values.length + errors.length + formats.length + fractions.length + typedRight.length + typedCauses.length + 4 + kinds.length + 2 + shows.length;
 if (fails.length) {
   console.error(`✗ ${fails.length} of ${total} calculator and typed-answer checks failed:`);
   for (const f of fails) console.error("  - " + f);

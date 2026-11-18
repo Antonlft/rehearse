@@ -332,9 +332,11 @@ const offText = g => {
   const p = Math.abs(g.rel) * 100, shown = p < 0.1 ? "less than 0.1" : p < 10 ? String(+p.toFixed(1)) : String(Math.round(p));
   return `Your answer is ${shown}% ${g.rel > 0 ? "above" : "below"} the right one.`;
 };
-// Why a typed answer was wrong: the known mistake it matches, or else how far off it is and what that suggests.
+// Why a typed answer was wrong: the known mistake it matches, else the slip the mistake detective found (Typed.diagnose),
+// else how far off it is and what that suggests.
 const causeText = g => g.unreadable ? "Your answer couldn't be read as a number."
   : g.note ? g.note
+  : g.hint ? (g.hint.lead ? g.hint.text : [offText(g), g.hint.text].filter(Boolean).join(" "))
   : [offText(g),
      g.cause === "calculation-slip" ? "That's close, so it's most likely a calculation slip: redo the arithmetic."
      : g.rel != null && Math.abs(g.rel) <= 0.5 ? "That's a fair way off, so a step is probably missing or done differently: check the method."
