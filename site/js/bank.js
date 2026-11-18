@@ -48,8 +48,9 @@ window.Bank = {
           const toUnit = v => s.unit === "%" ? v * 100 : v, answer = toUnit(s.solve(i));
           return { q: s.ask(i) + (s.prompt ? ` Type your answer ${s.prompt}.` : ""), unit: s.unit, tolerance: s.tolerance, ...(s.dp != null ? { dp: s.dp } : {}),
             answer, why: s.why(i),
-            wrongs: (s.wrongs ? s.wrongs(i) : []).map(x => ({ value: toUnit(x.value), note: x.note, trap: x.trap || null }))
-              .filter(w => Math.abs(w.value - answer) > s.tolerance) };
+            // Rounded to 9 decimals so floating-point dust (1.5e-15 for a mistake that lands on 0) reads as a plain number.
+            wrongs: (s.wrongs ? s.wrongs(i) : []).map(x => ({ value: +toUnit(x.value).toFixed(9), note: x.note, trap: x.trap || null }))
+              .filter(w => Math.abs(w.value - answer) > s.tolerance + 1e-6) }; // a hair wider than grading's edge, so none is graded right
         }) };
     });
   }

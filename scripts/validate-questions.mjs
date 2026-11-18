@@ -59,7 +59,7 @@ const load = rel => vm.runInContext(readFileSync(join(SITE, rel), "utf8"), ctx, 
 const questionFiles = readdirSync(join(SITE, "questions")).filter(f => f.endsWith(".js")).sort().map(f => `questions/${f}`);
 const generatorFiles = readdirSync(join(SITE, "js")).filter(f => /^generators.*\.js$/.test(f)).sort().map(f => `js/${f}`);
 const lessonFiles = readdirSync(join(SITE, "lessons")).filter(f => f.endsWith(".js")).sort().map(f => `lessons/${f}`);
-for (const f of ["js/bank.js", "js/widgets.js", "js/glossary.js", ...questionFiles, ...generatorFiles, ...lessonFiles]) {
+for (const f of ["js/bank.js", "js/widgets.js", "js/glossary.js", "js/askclaude.js", ...questionFiles, ...generatorFiles, ...lessonFiles]) {
   try { load(f); } catch (e) { fail(`${f}: failed to load: ${e.message}`); }
 }
 const { Bank } = ctx;
@@ -68,7 +68,7 @@ if (!Bank) { console.error("Bank was not defined by js/bank.js"); process.exit(1
 
 // Every question/generator file must actually be loaded by the page.
 const html = readFileSync(join(SITE, "index.html"), "utf8");
-for (const f of [...questionFiles, ...generatorFiles, ...lessonFiles, "js/glossary.js"]) if (!new RegExp(`src="${f.replace(/\./g, "\\.")}(\\?[^"]*)?"`).test(html)) fail(`index.html doesn't load ${f}`);
+for (const f of [...questionFiles, ...generatorFiles, ...lessonFiles, "js/glossary.js", "js/askclaude.js"]) if (!new RegExp(`src="${f.replace(/\./g, "\\.")}(\\?[^"]*)?"`).test(html)) fail(`index.html doesn't load ${f}`);
 
 // Every category in the bank must exist in app.js.
 const appSrc = readFileSync(join(SITE, "js/app.js"), "utf8");
@@ -317,6 +317,39 @@ for (let run = 0; run < 10; run++) {
 }
 if (alarmTried && alarmHits / alarmTried > 0.05) fail(`the mistake detective flags ${(alarmHits / alarmTried * 100).toFixed(1)}% of ordinary wrong answers as a slip (5% at most)`);
 
+// "Ask Claude about this": the message built for a wrong answer must be complete for every question in the bank, in
+// every format (as shown in a round, with the right option first and the first wrong one picked). A gap would show as
+// "undefined", "NaN", "null" or "[object" in the text the user pastes into Claude.
+let askChecked = 0;
+const askBad = /undefined|NaN|\bnull\b|\[object/;
+const askCheck = (where, it, ans, opts = {}) => {
+  askChecked++;
+  let m;
+  try { m = ctx.AskClaude.message(it, ans, { cat: "Test", work: "My working", notes: ["A note."], ...opts }); }
+  catch (e) { return fail(`${where}: the Ask Claude message threw: ${e.message}`); }
+  if (askBad.test(m)) fail(`${where}: the Ask Claude message has a gap: ${m.match(new RegExp(`.{0,60}${askBad.source}.{0,20}`))?.[0]}`);
+  if (!m.includes("My working: My working") || !m.includes("What the site said about my answer: A note.")) fail(`${where}: the Ask Claude message is missing the working or the notes`);
+};
+const asShown = q => { // a question as a round shows it, right option first (only the fields the message reads)
+  if (q.type === "reason") return { ...q, ans: q.answers, ansOk: 0, ansX: [null, ...q.answerNotes], rsn: q.reasons, rsnOk: 0, rsnX: [null, ...q.reasonNotes] };
+  if (q.type === "spot") return { ...q, fix: q.fixes, fixOk: 0, fixX: [null, ...q.fixNotes] };
+  if (q.type === "grid") return { ...q, rowOrder: q.rows.map((_, k) => k) };
+  return q.type ? q : { ...q, a: 0, x: [null, ...q.x] };
+};
+const wrongPick = q => q.type === "reason" || q.type === "spot" ? [q.type === "spot" ? (q.wrong + 1) % q.lines.length : 1, 1]
+  : q.type === "order" ? q.answer.map((_, k) => k).reverse() : q.type === "grid" ? q.rows.map(r => (r.answer + 1) % q.columns.length) : 1;
+if (!ctx.AskClaude) fail("js/askclaude.js didn't define AskClaude");
+else {
+  for (const [cat, list] of writtenLists) list.forEach((q, n) => { if (q.type !== "walk") askCheck(`${cat} written #${n + 1} (${q.type || "mcq"})`, asShown(q), wrongPick(q)); });
+  for (const [cat, list] of Object.entries(Bank.gens)) list.forEach((fn, n) => askCheck(`${cat} generator #${n + 1}`, asShown(fn()), 1));
+  for (const [cat, list] of Object.entries(Bank.numeric || {})) list.forEach((fn, n) => askCheck(`${cat} typed-answer generator #${n + 1}`, fn(), "12.5"));
+  for (const [cat, list] of Object.entries(Bank.cases || {})) list.forEach((fn, n) => {
+    const c = fn(), vals = c.steps.map(() => "1");
+    askCheck(`${cat} case study #${n + 1}`, c, vals);
+    c.steps.forEach((_, k) => askCheck(`${cat} case study #${n + 1} step ${k + 1}`, c, vals, { step: k }));
+  });
+}
+
 // Lessons: one per category; complete once marked draft or reviewed.
 const Lessons = ctx.Lessons?.all || {};
 const text = v => typeof v === "string" && v.trim().length > 0;
@@ -478,6 +511,7 @@ if (errors.length) {
   process.exit(1);
 }
 console.log(`✓ ${written - formatQuestions} written questions, ${formatQuestions} new-format questions, ${gens} generators, ${typed} typed-answer generators and ${cases} case stud${cases === 1 ? "y" : "ies"} (${RUNS} samples each) passed.`);
+console.log(`✓ ${askChecked} "Ask Claude" messages built, one per question and case step, with nothing missing.`);
 console.log(`✓ The mistake detective flagged ${(alarmHits / Math.max(1, alarmTried) * 100).toFixed(1)}% of ${alarmTried} ordinary wrong typed answers as a slip (5% at most).`);
 console.log(`✓ ${Object.keys(Lessons).length} lessons for ${categoryIds.length} categories (${Object.entries(lessonCounts).map(([k, v]) => `${v} ${k}`).join(", ")}).`);
 console.log(`✓ ${Glossary.length} glossary terms; every acronym in the lessons has one.`);

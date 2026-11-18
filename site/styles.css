@@ -387,6 +387,22 @@ main { padding-block: 30px 48px; }
 .question .feedback { margin-bottom: 22px; }
 .feedback:focus { outline: none; }
 .feedback:focus-visible { outline: 2px solid var(--navy); outline-offset: 2px; }
+/* "Ask Claude about this" under a wrong answer: a quiet, collapsed section; opens to a box for the user's working
+   and the copy button. Sits inside the red feedback box (and under review items), so it uses the page colour. */
+.ask-claude { margin-top: 4px; border-top: 1px solid var(--bad-line); padding-top: 8px; }
+.item .ask-claude { border-top-color: var(--rule); margin-top: 12px; }
+.ask-claude summary { cursor: pointer; font-size: 13px; font-weight: 500; color: var(--ink); width: fit-content; text-decoration: underline; text-underline-offset: 3px; }
+.ask-claude summary:focus-visible { outline: 2px solid var(--navy); outline-offset: 2px; border-radius: 2px; }
+.ask-body { display: grid; gap: 8px; margin-top: 10px; }
+.ask-label { font-size: 12.5px; font-weight: 500; }
+.ask-label .muted { color: var(--muted); font-weight: 400; }
+.ask-work, .ask-fallback { width: 100%; box-sizing: border-box; padding: 8px 10px; border: 1px solid var(--rule-strong); border-radius: 5px; background: var(--page); color: var(--ink); font: 400 14px/1.4 var(--font); resize: vertical; }
+.ask-fallback { min-height: 9em; font-size: 12.5px; }
+.ask-work:focus, .ask-fallback:focus { outline: 2px solid var(--navy); outline-offset: 1px; border-color: var(--navy); }
+.ask-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+.ask-actions .btn { text-decoration: none; color: var(--ink); display: inline-flex; align-items: center; gap: 4px; }
+.ask-actions .btn.primary { color: var(--navy-ink); }
+.ask-hint { font-size: 12.5px; color: var(--muted); margin: 0; }
 
 /* Calculator */
 .calc { position: fixed; z-index: 15; right: max(16px, env(safe-area-inset-right, 0px)); bottom: 16px; width: 288px; background: var(--page); border: 1px solid var(--rule-strong); border-radius: var(--radius); box-shadow: 0 12px 40px var(--shadow); padding: 12px; display: grid; gap: 8px; }
