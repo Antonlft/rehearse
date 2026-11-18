@@ -80,7 +80,8 @@ const typedRight = [
   [pctQ, "12.5%", true], [pctQ, "0.125", true], [pctQ, "12.5 %", true], [pctQ, "12.5", true], [pctQ, " 12.50 ", true],
   [pctQ, "1/8", true], [pctQ, "12.54", true], [pctQ, "12.6", false], [pctQ, "125%", false], [pctQ, "abc", false], [pctQ, "", false],
   [moneyQ, "1.2", true], [moneyQ, "1.2m", true], [moneyQ, "US$1.2m", true], [moneyQ, "$1,200,000", true], [moneyQ, "1200k", true],
-  [moneyQ, "0.0012bn", true], [moneyQ, "12", false],
+  [moneyQ, "0.0012bn", true], [moneyQ, "12", false], [{ ...moneyQ, answer: 18, tolerance: 0.1 }, "0.000018", false],
+  [{ ...moneyQ, answer: 0.018, tolerance: 0.001 }, "18,000", true],
   [multQ, "2.5x", true], [multQ, "2.5", true], [multQ, "5/2", true], [multQ, "−2.5", false],
   [dollarQ, "350000", true], [dollarQ, "350,000", true], [dollarQ, "US$350,000", true], [dollarQ, "$350k", true], [dollarQ, "0.35m", true],
   [dollarQ, "350", false], [priceQ, "1.85", true], [priceQ, "$1.85", true], [priceQ, "1.9", false],
@@ -96,12 +97,27 @@ for (const [raw, cause, trap] of typedCauses) {
   const g = Typed.grade(pctQ, raw);
   if (g.cause !== cause || g.trap !== trap) fails.push(`typed ${raw}: cause ${g.cause}/${g.trap}, expected ${cause}/${trap}`);
 }
+// A small bare number on a US$m question means millions: "38" is US$38m, never US$0.000038m (it used to be read as
+// plain dollars whenever that reading was closer to the right answer, which hid the known mistake below).
+const ebitQ = { type: "numeric", unit: "US$m", answer: 18, tolerance: 0.1, wrongs: [{ value: 38, note: "That's EBITDA.", trap: "missed-step" }] };
+const r38 = Typed.grade(ebitQ, "38");
+if (r38.value !== 38 || r38.note !== "That's EBITDA.") fails.push(`typed 38 on a US$m question read as ${r38.value}, note ${r38.note}; expected 38 and the EBITDA note`);
+// A known mistake close to the right answer (11% off) still gives its note and counts as a method mistake, not a slip.
+const fcfQ = { type: "numeric", unit: "US$m", answer: 34.22, tolerance: 0.02, wrongs: [{ value: 38, note: "That leaves out tax.", trap: "missed-step" }] };
+const rTax = Typed.grade(fcfQ, "38");
+if (rTax.note !== "That leaves out tax." || rTax.cause !== "concept-gap") fails.push(`typed 38 on the free cash flow step: note ${rTax.note}, cause ${rTax.cause}; expected the tax note and concept-gap`);
+if (Math.abs(rTax.rel - 0.1105) > 0.001) fails.push(`typed 38 vs 34.22: rel ${rTax.rel}, expected about 0.11 (11% above)`);
+// Case studies keep a known mistake that lands close to the right answer (they used to drop any within 12%).
+ctx.Bank.case("_test", { make: () => ({}), intro: () => "", steps: [{ unit: "US$m", dp: 2, tolerance: 0.02, ask: () => "", why: () => "", solve: () => 34.22,
+  wrongs: () => [{ value: 38, note: "That leaves out tax.", trap: "missed-step" }, { value: 34.23, note: "Within the tolerance.", trap: "missed-step" }] }] });
+const caseStep = ctx.Bank.cases._test.pop()().steps[0];
+if (caseStep.wrongs.length !== 1 || caseStep.wrongs[0].value !== 38) fails.push(`a case step kept ${JSON.stringify(caseStep.wrongs.map(w => w.value))} as known mistakes; expected [38] (the close one kept, the one within the tolerance dropped)`);
 const shows = [[12.5, "%", undefined, "12.5%"], [1.2, "US$m", undefined, "US$1.2m"], [2.5, "x", undefined, "2.5x"], [-3, "%", undefined, "−3%"],
   [6.993811140994688, "%", 1, "7.0%"], [8.4249, "%", 2, "8.42%"],
   [350000, "US$", 0, "US$350,000"], [1.8512, "US$", 2, "US$1.85"], [6, "years", 0, "6 years"], [1, "years", 0, "1 year"]];
 for (const [v, u, dp, want] of shows) if (Typed.show(v, u, dp) !== want) fails.push(`Typed.show(${v}, ${u}, ${dp}) = ${Typed.show(v, u, dp)}, expected ${want}`);
 
-const total = values.length + errors.length + formats.length + fractions.length + typedRight.length + typedCauses.length + shows.length;
+const total = values.length + errors.length + formats.length + fractions.length + typedRight.length + typedCauses.length + 4 + shows.length;
 if (fails.length) {
   console.error(`✗ ${fails.length} of ${total} calculator and typed-answer checks failed:`);
   for (const f of fails) console.error("  - " + f);

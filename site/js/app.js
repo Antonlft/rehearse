@@ -326,10 +326,19 @@ const confOf = (at, i) => (at.conf && at.conf[i]) || null;
 // Learning mode shows the answer once it's final: chosen (and checked, for typed, ordering and grids) and, when the
 // round asks for it, rated, so the rating is always given before the answer is seen.
 const isRevealed = (at, i) => !!at.learning && !isBlank(at.answers[i]) && (!needsCheck(at.items[i]) || !!(at.checked && at.checked[i])) && reasonDone(at.items[i], at.answers[i]) && (!confNeeded(at, i) || !!confOf(at, i));
+// How far off a wrong typed answer is, in words: "Your answer is 11% above the right one." ("" when the right answer is 0)
+const offText = g => {
+  if (g.rel == null) return "";
+  const p = Math.abs(g.rel) * 100, shown = p < 0.1 ? "less than 0.1" : p < 10 ? String(+p.toFixed(1)) : String(Math.round(p));
+  return `Your answer is ${shown}% ${g.rel > 0 ? "above" : "below"} the right one.`;
+};
+// Why a typed answer was wrong: the known mistake it matches, or else how far off it is and what that suggests.
 const causeText = g => g.unreadable ? "Your answer couldn't be read as a number."
   : g.note ? g.note
-  : g.cause === "calculation-slip" ? "You were close (within 10%), so this looks like a calculation slip."
-  : "That's quite far off, so check the method.";
+  : [offText(g),
+     g.cause === "calculation-slip" ? "That's close, so it's most likely a calculation slip: redo the arithmetic."
+     : g.rel != null && Math.abs(g.rel) <= 0.5 ? "That's a fair way off, so a step is probably missing or done differently: check the method."
+     : "That's far off, so check the method from the start."].filter(Boolean).join(" ");
 
 const MISSED_WEIGHT = 3;
 const missedLast = q => db.qStats[q.id]?.last === "wrong";

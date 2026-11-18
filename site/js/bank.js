@@ -37,8 +37,9 @@ window.Bank = {
        lv, make() → inputs (all randomness here; round any figure a later step quotes, so it matches what's shown),
        intro(i) → the scenario,
        steps: [{ ask(i), solve(i), unit, dp, tolerance, prompt, why(i), wrongs?(i) → [{ value, note, trap }] }] }
-     Later steps quote the right figures from earlier ones, so one slip doesn't spoil the rest. Known wrong answers
-     closer than 12% to the right one (or within the tolerance) are dropped: they'd be read as slips or as right. */
+     Later steps quote the right figures from earlier ones, so one slip doesn't spoil the rest. A known wrong answer
+     is kept however close it is to the right one, so its explanation shows; only one within the tolerance is dropped
+     (it would be graded right). */
   case(cat, spec) {
     (this.cases[cat] ||= []).push(() => {
       const i = spec.make();
@@ -48,7 +49,7 @@ window.Bank = {
           return { q: s.ask(i) + (s.prompt ? ` Type your answer ${s.prompt}.` : ""), unit: s.unit, tolerance: s.tolerance, ...(s.dp != null ? { dp: s.dp } : {}),
             answer, why: s.why(i),
             wrongs: (s.wrongs ? s.wrongs(i) : []).map(x => ({ value: toUnit(x.value), note: x.note, trap: x.trap || null }))
-              .filter(w => Math.abs(w.value - answer) > Math.max(0.12 * Math.abs(answer), s.tolerance)) };
+              .filter(w => Math.abs(w.value - answer) > s.tolerance) };
         }) };
     });
   }
@@ -58,7 +59,8 @@ window.Bank = {
    Accepts spaces, thousands commas, a minus sign (− or -), fractions ("3/4"), "%", a trailing "x", for money
    "US$", "$", "m", "bn", "k", and for years a trailing "years" / "yrs" / "y". Units: "%", "x", "US$m" (millions),
    "US$" (plain amounts such as a price per share or per room) and "years". Ambiguous bare numbers are read both ways and the closer reading counts:
-   on a % question "0.125" and "12.5" both mean 12.5%; on a US$m question "1,200,000" and "1.2" both mean US$1.2m. */
+   on a % question "0.125" and "12.5" both mean 12.5%; on a US$m question "1,200,000" and "1.2" both mean US$1.2m.
+   A bare US$m number is only also read as plain dollars when it's 10,000 or more: "38" always means US$38m. */
 window.Typed = {
   // All sensible readings of the input, in the question's units. [] if it isn't a number at all.
   readings(raw, unit) {
@@ -83,22 +85,24 @@ window.Typed = {
     if (n[1]) v = -v;
     if (!Number.isFinite(v)) return [];
     if (unit === "%") return pct ? [v] : [v, v * 100];
-    if (unit === "US$m") return scale !== null ? [v * scale] : [v, v / 1e6];
+    if (unit === "US$m") return scale !== null ? [v * scale] : Math.abs(v) >= 10000 ? [v, v / 1e6] : [v];
     if (unit === "US$") return scale !== null ? [v * scale] : [v];
     return [v];
   },
-  // { ok, value (the reading used), cause, trap, note } for a numeric question item.
+  /* { ok, value (the reading used), cause, trap, note, rel } for a numeric question item. rel is how far off the
+     answer is, as a signed share of the right answer (0.11 = 11% above), or null when the right answer is 0. */
   grade(item, raw) {
     const rs = this.readings(raw, item.unit);
-    if (!rs.length) return { ok: false, value: null, cause: null, trap: null, note: null, unreadable: true };
-    const value = rs.reduce((a, b) => Math.abs(b - item.answer) < Math.abs(a - item.answer) ? b : a);
-    const off = Math.abs(value - item.answer), tol = item.tolerance + 1e-9;
-    if (off <= tol) return { ok: true, value, cause: null, trap: null, note: null };
-    // A known wrong answer (e.g. leaving out the tax shield) gives its explanation and mistake type.
-    const known = (item.wrongs || []).find(w => Math.abs(value - w.value) <= tol);
-    // Close but outside the tolerance = a calculation slip; further off = a concept gap.
-    const cause = off <= 0.1 * Math.abs(item.answer) ? "calculation-slip" : "concept-gap";
-    return { ok: false, value, cause, trap: known ? known.trap : null, note: known ? known.note : null };
+    if (!rs.length) return { ok: false, value: null, cause: null, trap: null, note: null, rel: null, unreadable: true };
+    const tol = item.tolerance + 1e-9, closest = rs.reduce((a, b) => Math.abs(b - item.answer) < Math.abs(a - item.answer) ? b : a);
+    if (Math.abs(closest - item.answer) <= tol) return { ok: true, value: closest, cause: null, trap: null, note: null, rel: null };
+    // A known wrong answer (e.g. leaving out the tax shield) gives its explanation and mistake type, whichever reading matches it.
+    let known = null, value = closest;
+    for (const r of rs) { const w = (item.wrongs || []).find(w => Math.abs(r - w.value) <= tol); if (w) { known = w; value = r; break; } }
+    const off = Math.abs(value - item.answer), rel = item.answer ? (value - item.answer) / Math.abs(item.answer) : null;
+    // A known mistake is a method mistake however close it lands. Otherwise: within 10% = a calculation slip; further off = a concept gap.
+    const cause = !known && off <= 0.1 * Math.abs(item.answer) ? "calculation-slip" : "concept-gap";
+    return { ok: false, value, cause, trap: known ? known.trap : null, note: known ? known.note : null, rel };
   },
   // How a typed-units value is shown, e.g. 8.42 with unit "%" → "8.42%". dp rounds to that many decimal places.
   show(v, unit, dp) {
