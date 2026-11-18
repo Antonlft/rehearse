@@ -144,6 +144,9 @@ function checkCase(where, q) {
     if (BAD_TEXT.test(`${s.q} ${s.why}`)) fail(`${at}: text contains NaN/Infinity/undefined`);
     checkNumeric(at, s);
     if (isNum(s.answer) && !(s.answer > 0)) fail(`${at}: the right answer must be positive, got ${s.answer}`);
+    // Every step names at least 2 known mistakes, so a wrong answer usually gets its exact explanation. Steps counted in
+    // whole years are exempt: their mistakes can land on the right year, and the one-year-out check covers them.
+    if (s.unit !== "years" && (s.wrongs || []).length < 2) fail(`${at}: needs at least 2 known mistakes (wrongs) that differ from the right answer, has ${(s.wrongs || []).length}`);
     // A known wrong answer must read as a concept gap (more than 10% away), or the case can't name that mistake.
     for (const w of s.wrongs || []) { const g = ctx.Typed.grade(s, String(w.value)); if (g.ok || g.cause !== "concept-gap") fail(`${at}: known wrong answer ${w.value} would be graded ${g.ok ? "right" : g.cause}`); }
     if (isNum(s.answer) && !ctx.Typed.grade(s, s.answer.toFixed(s.dp ?? 6)).ok) fail(`${at}: the right answer, typed as shown, isn't graded right`);

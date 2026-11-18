@@ -1021,9 +1021,10 @@ Bank.case("lbo", {
     { unit: "US$m", dp: 1, tolerance: 0.1, prompt: "in US$m",
       ask: () => "How much equity does the fund invest? Ignore fees.",
       solve: i => i.Eq0,
-      wrongs: ({ E0, m, D0 }) => [
+      wrongs: ({ E0, m, D0, X }) => [
         { value: E0 * m, trap: "missed-step", note: "That's the whole price (the enterprise value). Debt pays for part of it; equity pays the rest." },
-        { value: D0, trap: "inverted", note: "That's the debt. Equity is the price minus the debt." }],
+        { value: D0, trap: "inverted", note: "That's the debt. Equity is the price minus the debt." },
+        { value: E0 * m - D0 - X, trap: "double-count", note: "That also takes off the free cash flow. That cash comes in over the 5 years and repays debt; it doesn't help pay the price today." }],
       why: ({ E0, m, L, D0, Eq0 }) => `Price = ${R.x(m)} × ${R.num(E0)} = ${R.m(E0 * m, 1)}. Debt = ${R.x(L)} × ${R.num(E0)} = ${R.m(D0, 1)}. Equity = ${R.num(E0 * m, 1)} − ${R.num(D0, 1)} = ${R.m(Eq0, 1)}.` },
     { unit: "US$m", dp: 1, tolerance: 0.1, prompt: "in US$m, to 1 decimal place",
       ask: () => "What is EBITDA in year 5?",
@@ -1035,7 +1036,10 @@ Bank.case("lbo", {
     { unit: "US$m", dp: 1, tolerance: 0.1, prompt: "in US$m, to 1 decimal place",
       ask: ({ m, E5 }) => `Year-5 EBITDA is ${R.m(E5, 1)}. Selling at the entry multiple of ${R.x(m)}, what is the exit enterprise value?`,
       solve: i => i.EVx,
-      wrongs: ({ E0, m }) => [{ value: E0 * m, trap: "missed-step", note: "That's the entry enterprise value. The exit multiple applies to year-5 EBITDA." }],
+      wrongs: ({ E0, m, L, E5 }) => [
+        { value: E0 * m, trap: "missed-step", note: "That's the entry enterprise value. The exit multiple applies to year-5 EBITDA." },
+        { value: L * E5, trap: "wrong-measure", note: "That uses the debt multiple. The company sells at the valuation multiple it was bought at." },
+        { value: (m - L) * E5, trap: "wrong-measure", note: "That uses only the equity part of the multiple. Enterprise value uses the full multiple: debt and equity together." }],
       why: ({ m, E5, EVx }) => `Exit enterprise value = ${R.x(m)} × ${R.num(E5, 1)} = ${R.m(EVx, 1)}.` },
     { unit: "US$m", dp: 1, tolerance: 0.1, prompt: "in US$m, to 1 decimal place",
       ask: ({ EVx, D0, X }) => `The exit enterprise value is ${R.m(EVx, 1)}. Debt started at ${R.m(D0, 1)} and ${R.m(X)} of it has been repaid. What is the fund's equity worth at exit?`,
@@ -1097,7 +1101,10 @@ Bank.case("cf", {
     { unit: "US$m", dp: 1, tolerance: 0.1, prompt: "in US$m, to 1 decimal place",
       ask: ({ N, r, F, afs }) => `Free cash flow is ${R.m(F, 2)} a year for ${N} years. The ${N}-year annuity factor at ${R.pct(r, 0)} is ${afs[N - 1].toFixed(2)} (the present value of US$1 a year for ${N} years). What is the present value of the free cash flows?`,
       solve: i => i.PV,
-      wrongs: ({ F, N }) => [{ value: F * N, trap: "missed-step", note: "That adds the cash flows without discounting them. Money in later years is worth less today." }],
+      wrongs: ({ F, N, r }) => [
+        { value: F * N, trap: "missed-step", note: "That adds the cash flows without discounting them. Money in later years is worth less today." },
+        { value: F / r, trap: "wrong-measure", note: `That values the cash flows as if they lasted forever. The plant earns for only ${N} years, so use the annuity factor.` },
+        { value: F * N / (1 + r) ** N, trap: "wrong-measure", note: "That discounts all the cash as if it came in the last year. Each year's cash is discounted from its own year, which is what the annuity factor does." }],
       why: ({ F, afs, N, PV }) => `Present value = ${R.num(F, 2)} × ${afs[N - 1].toFixed(2)} = ${R.m(PV, 1)}.` },
     { unit: "US$m", dp: 1, tolerance: 0.1, prompt: "in US$m, to 1 decimal place",
       ask: ({ PV, C }) => `The free cash flows are worth ${R.m(PV, 1)} today, and the plant costs ${R.m(C)} upfront. What is the project's NPV (net present value)?`,
@@ -1109,7 +1116,9 @@ Bank.case("cf", {
     { unit: "years", dp: 0, tolerance: 0, prompt: "as a whole number of years",
       ask: ({ F, C, r, afs }) => `Annuity factors at ${R.pct(r, 0)}: ${afs.map((a, k) => `${k + 1} year${k ? "s" : ""} ${a.toFixed(2)}`).join(" · ")}. With ${R.m(F, 2)} of free cash flow a year and a ${R.m(C)} cost, in which year do the discounted cash flows first cover the cost (the discounted payback)?`,
       solve: i => i.pb,
-      wrongs: ({ C, F }) => [{ value: Math.ceil(C / F), trap: "missed-step", note: "That's the simple payback, on undiscounted cash flows. Discounting makes it take longer." }],
+      wrongs: ({ C, F, N }) => [
+        { value: Math.ceil(C / F), trap: "missed-step", note: "That's the simple payback, on undiscounted cash flows. Discounting makes it take longer." },
+        { value: N, trap: "concept", note: "That's the plant's whole life. Payback is the first year in which the discounted cash flows add up to the cost." }],
       why: ({ F, C, afs, pb }) => `Cumulative discounted cash flow = ${R.num(F, 2)} × the annuity factor. Year ${pb - 1}: ${R.num(F, 2)} × ${afs[pb - 2].toFixed(2)} = ${R.m(F * afs[pb - 2], 1)}, short of ${R.m(C)}. Year ${pb}: ${R.num(F, 2)} × ${afs[pb - 1].toFixed(2)} = ${R.m(F * afs[pb - 1], 1)}, which covers it. Simple payback, without discounting, would be ${R.num(C / F, 1)} years.` }
   ]
 });
@@ -1136,7 +1145,10 @@ Bank.case("mna", {
     { unit: "US$", dp: 2, tolerance: 0.01, prompt: "in US$ per share, to 2 decimal places",
       ask: () => "What is the buyer's earnings per share (EPS) before the deal?",
       solve: i => i.E0,
-      wrongs: ({ P }) => [{ value: P, trap: "wrong-measure", note: "That's the share price. EPS = net income ÷ shares." }],
+      wrongs: ({ P, A, B, S }) => [
+        { value: P, trap: "wrong-measure", note: "That's the share price. EPS = net income ÷ shares." },
+        { value: (A + B) / S, trap: "double-count", note: "That adds the target's earnings. Before the deal, the buyer has only its own net income." },
+        { value: S / A, trap: "inverted", note: "That's flipped: EPS = net income ÷ shares." }],
       why: ({ A, S, E0 }) => `EPS = ${R.num(A)} ÷ ${R.num(S)} = US$${R.num(E0, 2)}.` },
     { unit: "US$m", dp: 1, tolerance: 0.1, prompt: "in US$m, to 1 decimal place",
       ask: () => "How much after-tax interest does the new debt cost each year?",
@@ -1199,17 +1211,24 @@ Bank.case("hk", {
     { unit: "US$m", dp: 2, tolerance: 0.02, prompt: "in US$m, to 2 decimal places",
       ask: ({ RR, rs }) => `Room revenue is ${R.m(RR, 2)}, which is ${R.pct(rs, 0)} of total revenue. What is total revenue?`,
       solve: i => i.TR,
-      wrongs: ({ RR, rs }) => [{ value: RR * rs, trap: "inverted", note: "Rooms are a share of the total, so divide by that share: total revenue is bigger than room revenue." }],
+      wrongs: ({ RR, rs }) => [
+        { value: RR * rs, trap: "inverted", note: "Rooms are a share of the total, so divide by that share: total revenue is bigger than room revenue." },
+        { value: RR / (1 - rs), trap: "wrong-measure", note: "That divides by the share of the other revenue (food, drinks and services). Divide by the rooms' share." },
+        { value: RR * (2 - rs), trap: "wrong-measure", note: `That adds ${Math.round((1 - rs) * 100)}% of room revenue on top. The other revenue is ${Math.round((1 - rs) * 100)}% of the total, not of room revenue, so total = room revenue ÷ ${Math.round(rs * 100)}%.` }],
       why: ({ RR, rs, TR }) => `Total revenue = ${R.num(RR, 2)} ÷ ${R.pct(rs, 0)} = ${R.m(TR, 2)}.` },
     { unit: "US$m", dp: 2, tolerance: 0.02, prompt: "in US$m, to 2 decimal places",
       ask: ({ TR, gm }) => `Total revenue is ${R.m(TR, 2)} and the GOP margin is ${R.pct(gm, 0)}. What is GOP (gross operating profit)?`,
       solve: i => i.GOP,
-      wrongs: ({ RR, gm }) => [{ value: RR * gm, trap: "wrong-measure", note: "The GOP margin applies to total revenue, not room revenue." }],
+      wrongs: ({ RR, TR, gm }) => [
+        { value: RR * gm, trap: "wrong-measure", note: "The GOP margin applies to total revenue, not room revenue." },
+        { value: TR * (1 - gm), trap: "inverted", note: "That's the operating costs. GOP is what's left: total revenue × the GOP margin." }],
       why: ({ TR, gm, GOP }) => `GOP = ${R.num(TR, 2)} × ${R.pct(gm, 0)} = ${R.m(GOP, 2)}.` },
     { unit: "US$", dp: 2, tolerance: 0.05, prompt: "in US$, to 2 decimal places",
       ask: ({ GOP, N }) => `GOP is ${R.m(GOP, 2)} for ${N} rooms. What is GOPPAR (GOP per available room per night)?`,
       solve: i => i.GPPAR,
-      wrongs: ({ GOP, N }) => [{ value: GOP * 1e6 / N, trap: "units", note: "That's GOP per room per year. GOPPAR is per night: divide by 365 too." }],
+      wrongs: ({ GOP, N }) => [
+        { value: GOP * 1e6 / N, trap: "units", note: "That's GOP per room per year. GOPPAR is per night: divide by 365 too." },
+        { value: GOP * 1e6 / 365, trap: "missed-step", note: "That's GOP per night for the whole hotel. Divide by the number of rooms too." }],
       why: ({ GOP, N, GPPAR }) => `GOPPAR = ${R.num(GOP, 2)}m ÷ (${N} × 365) = US$${R.num(GPPAR, 2)}.` },
     { unit: "US$m", dp: 2, tolerance: 0.02, prompt: "in US$m, to 2 decimal places",
       ask: ({ GOP, TR }) => `GOP is ${R.m(GOP, 2)} and total revenue ${R.m(TR, 2)}. After the 3% base management fee and the 4% FF&E reserve, what is NOI (net operating income)?`,
@@ -1247,7 +1266,10 @@ Bank.case("rev", {
     { unit: "US$m", dp: 2, tolerance: 0.02, prompt: "in US$m, to 2 decimal places",
       ask: () => "What is the building's yearly rental income, after vacancy?",
       solve: i => i.GI,
-      wrongs: ({ SF, rent }) => [{ value: SF * rent / 1e6, trap: "missed-step", note: "That assumes the building is full. Only the occupied space pays rent." }],
+      wrongs: ({ SF, rent, o }) => [
+        { value: SF * rent / 1e6, trap: "missed-step", note: "That assumes the building is full. Only the occupied space pays rent." },
+        { value: SF * rent * (1 - o) / 1e6, trap: "inverted", note: "That's the rent lost to empty space. Multiply by the occupied share, not the empty one." },
+        { value: SF * rent * o / 12 / 1e6, trap: "units", note: "That's one month's rent. The rent is already per sq ft a year." }],
       why: ({ SF, rent, o, GI }) => `Rental income = ${R.num(SF)} × US$${rent} × ${R.pct(o, 0)} = ${R.m(GI, 2)}.` },
     { unit: "US$m", dp: 2, tolerance: 0.02, prompt: "in US$m, to 2 decimal places",
       ask: ({ GI, e }) => `Rental income is ${R.m(GI, 2)} and unrecovered costs are ${R.pct(e, 0)} of it. What is NOI (net operating income)?`,
@@ -1259,21 +1281,26 @@ Bank.case("rev", {
     { unit: "US$m", dp: 1, tolerance: 0.15, prompt: "in US$m, to 1 decimal place",
       ask: ({ NOI, c }) => `NOI is ${R.m(NOI, 2)} and the market cap rate is ${R.pct(c, 2)}. What is the building worth?`,
       solve: i => i.V,
-      wrongs: ({ GI, c }) => [{ value: GI / c, trap: "wrong-measure", note: "That capitalises gross income. The cap rate applies to NOI, after costs." }],
+      wrongs: ({ GI, NOI, c }) => [
+        { value: GI / c, trap: "wrong-measure", note: "That capitalises gross income. The cap rate applies to NOI, after costs." },
+        { value: NOI * c, trap: "inverted", note: "Divide by the cap rate, don't multiply: value = NOI ÷ cap rate, many times the NOI." }],
       why: ({ NOI, c, V }) => `Value = NOI ÷ cap rate = ${R.num(NOI, 2)} ÷ ${R.pct(c, 2)} = ${R.m(V, 1)}.` },
     { unit: "US$m", dp: 1, tolerance: 0.1, prompt: "in US$m, to 1 decimal place",
       ask: ({ V, L }) => `The building costs ${R.m(V, 1)} and the loan covers ${R.pct(L, 0)} of it. How much equity does the investor put in? Ignore fees.`,
       solve: i => i.Eq,
-      wrongs: ({ V, L }) => [
+      wrongs: ({ V, L, ir }) => [
         { value: V * L, trap: "inverted", note: "That's the loan. Equity pays the rest: price × (1 − loan-to-value)." },
-        { value: V, trap: "missed-step", note: "That's the whole price. The loan pays for most of it." }],
+        { value: V, trap: "missed-step", note: "That's the whole price. The loan pays for most of it." },
+        { value: V * (1 - L) - V * L * ir, trap: "double-count", note: "That also takes off a year's interest. Interest is paid from the rent over time; it doesn't change what the investor puts in at the start." }],
       why: ({ V, L, Eq }) => `Equity = ${R.num(V, 1)} × (1 − ${R.pct(L, 0)}) = ${R.m(Eq, 1)}.` },
     { unit: "%", dp: 1, tolerance: 0.1, prompt: "as a percentage, to 1 decimal place",
       ask: ({ Eq, V, L, ir, NOI }) => `The investor puts in ${R.m(Eq, 1)} and borrows ${R.m(V * L, 1)} at ${R.pct(ir, 2)}, interest only. NOI is ${R.m(NOI, 2)}. What is the year-1 cash-on-cash return (cash left after interest ÷ equity)?`,
       solve: i => i.CoC,
-      wrongs: ({ NOI, Eq, V }) => [
+      wrongs: ({ NOI, Eq, V, Int, ir }) => [
         { value: NOI / Eq, trap: "missed-step", note: "That leaves out the interest, which is paid before the investor gets anything." },
-        { value: NOI / V, trap: "wrong-measure", note: "That's the cap rate (the unlevered yield on the whole price), not the return on the investor's equity." }],
+        { value: NOI / V, trap: "wrong-measure", note: "That's the cap rate (the unlevered yield on the whole price), not the return on the investor's equity." },
+        { value: (NOI - Int) / V, trap: "wrong-measure", note: "That divides by the whole price. Cash-on-cash divides by the investor's own money only: the equity." },
+        { value: (NOI - V * ir) / Eq, trap: "double-count", note: "That charges interest on the whole price. Only the loan pays interest." }],
       why: ({ V, L, ir, NOI, Eq, Int, CoC }) => `Interest = ${R.num(V * L, 1)} × ${R.pct(ir, 2)} = ${R.m(Int, 2)}. Cash after interest = ${R.num(NOI, 2)} − ${R.num(Int, 2)} = ${R.m(NOI - Int, 2)}. Cash-on-cash = ${R.num(NOI - Int, 2)} ÷ ${R.num(Eq, 1)} = ${R.pct(CoC)}.` }
   ]
 });
@@ -1365,7 +1392,9 @@ Bank.case("fig", {
     { unit: "US$m", dp: 1, tolerance: 0.1, prompt: "in US$m, to 1 decimal place",
       ask: () => "What is its net interest income?",
       solve: i => i.NII,
-      wrongs: ({ NII, F }) => [{ value: NII + F, trap: "double-count", note: "That adds the fees. Net interest income is the interest margin alone: assets × NIM." }],
+      wrongs: ({ NII, F, ci }) => [
+        { value: NII + F, trap: "double-count", note: "That adds the fees. Net interest income is the interest margin alone: assets × NIM." },
+        { value: NII * (1 - ci), trap: "double-count", note: "That already takes off operating costs. Net interest income comes before costs: assets × NIM." }],
       why: ({ A, nim, NII }) => `Net interest income = ${R.num(A)} × ${R.pct(nim, 2)} = ${R.m(NII, 1)}.` },
     { unit: "US$m", dp: 1, tolerance: 0.15, prompt: "in US$m, to 1 decimal place",
       ask: ({ NII, F, ci, LL, t }) => `Net interest income is ${R.m(NII, 1)} and fees are ${R.m(F)}. With a ${R.pct(ci, 0)} cost/income ratio, ${R.m(LL)} of loan losses and a ${R.pct(t, 0)} tax rate, what is net income?`,
@@ -1378,26 +1407,35 @@ Bank.case("fig", {
     { unit: "%", dp: 1, tolerance: 0.1, prompt: "as a percentage, to 1 decimal place",
       ask: ({ NI, TBV, GW }) => `Net income is ${R.m(NI, 1)}. Equity is ${R.m(TBV + GW)}, including ${R.m(GW)} of goodwill. What is the return on tangible equity (ROTE)?`,
       solve: i => i.NI / i.TBV,
-      wrongs: ({ NI, TBV, GW }) => [{ value: NI / (TBV + GW), trap: "wrong-measure", note: "That's return on equity. ROTE takes goodwill out of equity first." }],
+      wrongs: ({ NI, TBV, GW, t }) => [
+        { value: NI / (TBV + GW), trap: "wrong-measure", note: "That's return on equity. ROTE takes goodwill out of equity first." },
+        { value: NI / (TBV - GW), trap: "double-count", note: "That takes goodwill off twice. Equity minus goodwill once gives the tangible equity." },
+        { value: NI * (1 - t) / TBV, trap: "double-count", note: "That takes tax off again. Net income is already after tax." }],
       why: ({ NI, TBV, GW }) => `Tangible equity = ${R.num(TBV + GW)} − ${R.num(GW)} = ${R.m(TBV)}. ROTE = ${R.num(NI, 1)} ÷ ${R.num(TBV)} = ${R.pct(NI / TBV)}.` },
     { unit: "x", dp: 2, tolerance: 0.02, prompt: "as a multiple, to 2 decimal places",
       ask: ({ rote, k, g }) => `ROTE is ${R.pct(rote, 1)}, the cost of equity ${R.pct(k, 1)} and long-run growth ${R.pct(g, 1)}. What price to tangible book (P/TBV) does that justify?`,
       solve: ({ rote, k, g }) => (rote - g) / (k - g),
       wrongs: ({ rote, k, g }) => [
         { value: rote / k, trap: "missed-step", note: "That leaves out growth. Take g off both the return and the cost of equity." },
-        { value: (k - g) / (rote - g), trap: "inverted", note: "That's flipped: returns go on top, the cost of equity underneath." }],
+        { value: (k - g) / (rote - g), trap: "inverted", note: "That's flipped: returns go on top, the cost of equity underneath." },
+        { value: rote / (k - g), trap: "missed-step", note: "That takes growth off the cost of equity only. Take it off the return too: (ROTE − g) ÷ (cost of equity − g)." },
+        { value: (rote - g) / k, trap: "missed-step", note: "That takes growth off the return only. Take it off the cost of equity too: (ROTE − g) ÷ (cost of equity − g)." }],
       why: ({ rote, k, g }) => `P/TBV = (${R.pct(rote, 1)} − ${R.pct(g, 1)}) ÷ (${R.pct(k, 1)} − ${R.pct(g, 1)}) = ${R.x((rote - g) / (k - g), 2)}.` },
     { unit: "US$m", dp: 0, tolerance: 1, prompt: "in US$m, to the nearest million",
       ask: ({ pt, TBV }) => `The justified P/TBV is ${R.x(pt, 2)} and tangible equity is ${R.m(TBV)}. What market value does that imply for the bank's equity?`,
       solve: i => i.pt * i.TBV,
       wrongs: ({ pt, TBV, GW }) => [
         { value: pt * (TBV + GW), trap: "wrong-measure", note: "That applies the multiple to book equity including goodwill. P/TBV applies to tangible equity." },
-        { value: TBV, trap: "missed-step", note: "That's tangible book itself. Multiply by the P/TBV." }],
+        { value: TBV, trap: "missed-step", note: "That's tangible book itself. Multiply by the P/TBV." },
+        { value: pt * (TBV - GW), trap: "double-count", note: "That takes goodwill off again. The tangible equity given already leaves it out." }],
       why: ({ pt, TBV, V }) => `Implied value = ${R.x(pt, 2)} × ${R.num(TBV)} = ${R.m(V)}.` },
     { unit: "US$", dp: 2, tolerance: 0.02, prompt: "in US$ per share, to 2 decimal places",
       ask: ({ V, S }) => `The equity is worth ${R.m(V)} and there are ${R.num(S)} million shares. What is that per share?`,
       solve: i => i.V / i.S,
-      wrongs: ({ TBV, S }) => [{ value: TBV / S, trap: "wrong-measure", note: "That's tangible book value per share. Use the implied market value." }],
+      wrongs: ({ TBV, S, V, NI }) => [
+        { value: TBV / S, trap: "wrong-measure", note: "That's tangible book value per share. Use the implied market value." },
+        { value: S / V, trap: "inverted", note: "That's flipped: divide the value by the number of shares." },
+        { value: NI / S, trap: "wrong-measure", note: "That's earnings per share. The question asks for the value of each share." }],
       why: ({ V, S }) => `Value per share = ${R.num(V)} ÷ ${R.num(S)} = US$${R.num(V / S, 2)}.` }
   ]
 });
@@ -1571,7 +1609,10 @@ Bank.case("rev", {
     { unit: "US$m", dp: 2, tolerance: 0.02, prompt: "in US$m, to 2 decimal places",
       ask: () => "How much does the operator earn in fees each year?",
       solve: i => i.fees,
-      wrongs: ({ Rv }) => [{ value: 0.03 * Rv, trap: "missed-step", note: "That's only the base fee. The incentive fee (10% of GOP) is paid on top." }],
+      wrongs: ({ Rv, GOP }) => [
+        { value: 0.03 * Rv, trap: "missed-step", note: "That's only the base fee. The incentive fee (10% of GOP) is paid on top." },
+        { value: 0.1 * GOP, trap: "missed-step", note: "That's only the incentive fee. The base fee (3% of revenue) is paid on top." },
+        { value: 0.13 * Rv, trap: "wrong-measure", note: "That charges the incentive fee on revenue. It's 10% of GOP, which is much smaller." }],
       why: ({ Rv, GOP, fees }) => `Base fee = 3% × ${Rv} = ${R.m(0.03 * Rv, 2)}. Incentive fee = 10% × ${R.num(GOP, 1)} = ${R.m(0.1 * GOP, 2)}. Total = ${R.m(fees, 2)}.` },
     { unit: "US$m", dp: 2, tolerance: 0.02, prompt: "in US$m, to 2 decimal places",
       ask: ({ fees, F }) => `Fees are ${R.m(fees, 2)} and fixed charges ${R.m(F, 1)}. What is the owner's EBITDA after fees and fixed charges?`,
@@ -1583,22 +1624,32 @@ Bank.case("rev", {
     { unit: "US$m", dp: 2, tolerance: 0.02, prompt: "in US$m, to 2 decimal places",
       ask: ({ EB, Rv }) => `EBITDA after fees is ${R.m(EB, 2)} and revenue ${R.m(Rv)}. After the 4% FF&E reserve, what are the hotel's net earnings?`,
       solve: i => i.NOI,
-      wrongs: ({ EB, GOP }) => [{ value: EB - 0.04 * GOP, trap: "wrong-measure", note: "The reserve is 4% of total revenue, not of GOP." }],
+      wrongs: ({ EB, GOP }) => [
+        { value: EB - 0.04 * GOP, trap: "wrong-measure", note: "The reserve is 4% of total revenue, not of GOP." },
+        { value: EB, trap: "missed-step", note: "That leaves out the FF&E reserve, which buyers take off before valuing a hotel." },
+        { value: EB * 0.96, trap: "wrong-measure", note: "The reserve is 4% of total revenue, not of EBITDA." }],
       why: ({ EB, Rv, NOI }) => `FF&E reserve = 4% × ${Rv} = ${R.m(0.04 * Rv, 2)}. Net earnings = ${R.num(EB, 2)} − ${R.num(0.04 * Rv, 2)} = ${R.m(NOI, 2)}.` },
     { unit: "US$m", dp: 1, tolerance: 0.1, prompt: "in US$m, to 1 decimal place",
       ask: ({ NOI, c }) => `Net earnings are ${R.m(NOI, 2)} and the cap rate is ${R.pct(c, 2)}. What is the hotel worth once trading normally?`,
       solve: i => i.NOI / i.c,
-      wrongs: ({ GOP, c }) => [{ value: GOP / c, trap: "wrong-measure", note: "That capitalises GOP. The owner's income is what's left after fees, fixed charges and the FF&E reserve." }],
+      wrongs: ({ GOP, EB, NOI, c }) => [
+        { value: GOP / c, trap: "wrong-measure", note: "That capitalises GOP. The owner's income is what's left after fees, fixed charges and the FF&E reserve." },
+        { value: EB / c, trap: "missed-step", note: "That capitalises EBITDA before the FF&E reserve. Buyers value the earnings after the reserve." },
+        { value: NOI * c, trap: "inverted", note: "Divide by the cap rate, don't multiply: value = net earnings ÷ cap rate." }],
       why: ({ NOI, c, V }) => `Value = ${R.num(NOI, 2)} ÷ ${R.pct(c, 2)} = ${R.m(V, 1)}.` },
     { unit: "US$m", dp: 1, tolerance: 0.1, prompt: "in US$m, to 1 decimal place",
       ask: ({ V, P }) => `The hotel is worth ${R.m(V, 1)} once trading normally, and the buyer must spend ${R.m(P, 1)} on the brand's renovation. What should the buyer pay?`,
       solve: i => i.price,
-      wrongs: ({ V, P }) => [{ value: V + P, trap: "sign", note: "The renovation is the buyer's cost, so it comes off the value." }],
+      wrongs: ({ V, P }) => [
+        { value: V + P, trap: "sign", note: "The renovation is the buyer's cost, so it comes off the value." },
+        { value: V, trap: "missed-step", note: "That's the value before the renovation. The buyer will have to spend that money, so it comes off the price." }],
       why: ({ V, P, price }) => `Price = ${R.num(V, 1)} − ${R.num(P, 1)} = ${R.m(price, 1)}.` },
     { unit: "US$", dp: 0, tolerance: 1000, prompt: "in US$, to the nearest US$1,000",
       ask: ({ price, N }) => `At a price of ${R.m(price, 1)} for ${N} rooms, what is the price per key?`,
       solve: i => Math.round(i.key / 1000) * 1000,
-      wrongs: ({ V, N }) => [{ value: V * 1e6 / N, trap: "missed-step", note: "That uses the value before the renovation. Use the price the buyer pays." }],
+      wrongs: ({ V, N, NOI }) => [
+        { value: V * 1e6 / N, trap: "missed-step", note: "That uses the value before the renovation. Use the price the buyer pays." },
+        { value: NOI * 1e6 / N, trap: "wrong-measure", note: "That's net earnings per room. Price per key divides the price, not the income, by the rooms." }],
       why: ({ price, N, key }) => `Price per key = ${R.num(price, 1)}m ÷ ${N} ≈ US$${R.num(Math.round(key / 1000) * 1000)}. Compare it with recent sales of similar hotels.` }
   ]
 });
