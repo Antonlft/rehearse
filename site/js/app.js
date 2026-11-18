@@ -132,7 +132,10 @@ db.askConfidence ??= true;
 //      its number from 0, the fix by its position as shown, or null), and their answer log entries have type: "spot",
 //      given (those two picks) and, when the line was right but the fix wrong, cause: "wrong-fix". Only both right
 //      counts; rated for confidence like answer + reason. No new top-level fields.
-const SCHEMA_VERSION = 17;
+//  18: a timed round left part-way (Save & exit, another screen, the page closed or hidden) is paused: it gains
+//      pausedAt (when it was left), and on coming back its deadline and start move on by the time away, then pausedAt
+//      is removed. Rounds saved before this have no pausedAt and keep their deadline. No new top-level fields.
+const SCHEMA_VERSION = 18;
 db.schemaVersion = Math.max(db.schemaVersion || 1, SCHEMA_VERSION);
 let saveWarned = false;
 const persist = () => {
@@ -516,6 +519,15 @@ function ensureTiming(at) {
   at.spentMs ||= Array(at.items.length).fill(0);
   at.answeredAt ||= Array(at.items.length).fill(null);
 }
+// Pausing a timed round: leaving it records when; coming back moves its deadline and start on by the time away, so
+// only time spent in the round counts. Learning rounds have no countdown, so they're never paused.
+function pauseRound(at) { if (at && !at.learning && at.pausedAt == null) at.pausedAt = Date.now(); }
+function resumeRound(at) {
+  if (!at || at.pausedAt == null) return;
+  const away = Math.max(0, Date.now() - at.pausedAt);
+  at.deadline += away; at.start += away;
+  delete at.pausedAt;
+}
 function startVisit(at) { ensureTiming(at); at.viewStart = Date.now(); at.viewIdx = at.cur; }
 function endVisit(at) {
   ensureTiming(at);
@@ -562,13 +574,26 @@ function go(v) {
   if (v.name !== "quiz") CalcUI.hide(); // the calculator only lives on the quiz screen
   if (v.name !== "sprint") sprint = null; // leaving a sprint abandons it; only finished sprints are saved
   // Leaving a live round (Save & exit, logo, etc.): stop its clock so time away isn't counted.
-  if (view.name === "quiz" && view.live && db.attempts[view.mode]) { endVisit(db.attempts[view.mode]); persist(); }
+  if (view.name === "quiz" && view.live && db.attempts[view.mode]) { endVisit(db.attempts[view.mode]); pauseRound(db.attempts[view.mode]); persist(); }
   view = v;
   clearInterval(tick);
   closeModal();
   window.scrollTo(0, 0);
   render();
 }
+// Hiding or closing the page during a timed round (another tab or app, phone locked, tab closed) pauses it too;
+// showing the page again resumes it.
+function pageAway() {
+  const at = view.name === "quiz" && view.live ? db.attempts[view.mode] : null;
+  if (!at || at.pausedAt != null) return;
+  endVisit(at); pauseRound(at); persist();
+}
+document.addEventListener("visibilitychange", () => {
+  if (document.visibilityState === "hidden") return pageAway();
+  const at = view.name === "quiz" && view.live ? db.attempts[view.mode] : null;
+  if (at && at.pausedAt != null) { resumeRound(at); startVisit(at); persist(); }
+});
+window.addEventListener("pagehide", pageAway);
 function render() {
   app.classList.toggle("wide", view.name === "lessons" || view.name === "home"); // the lessons grid and the home page use the full header width
   if (view.name === "quiz") renderQuiz();
@@ -923,8 +948,10 @@ function renderQuiz() {
   clearInterval(tick);
   const at = db.attempts[view.mode];
   if (!at) return go({ name: "home" });
-  // Coming back to a round whose deadline passed while away: tell the user before scoring it.
-  // A live countdown (view.live) still auto-submits in update() below.
+  // Coming back to a paused round: its clock picks up where it stopped.
+  if (!view.live) { resumeRound(at); persist(); }
+  // Coming back to a round whose deadline passed while away (only rounds saved before pausing existed): tell the
+  // user before scoring it. A live countdown (view.live) still auto-submits in update() below.
   if (!view.live && at.deadline - Date.now() <= 0) return renderExpired(at);
   // Entering the round: start timing the current question from now. A visit left open by a closed tab is
   // discarded rather than counted, so time spent away from the site never shows up as time on a question.
@@ -999,6 +1026,7 @@ function renderQuiz() {
 
   if (at.learning) return; // no countdown in Learning mode
   const update = () => {
+    if (at.pausedAt != null) return; // the page is hidden: the clock waits
     const left = at.deadline - Date.now(), clock = document.getElementById("clock");
     if (!clock) return;
     clock.textContent = fmt(left);
