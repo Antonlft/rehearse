@@ -322,14 +322,23 @@ if (alarmTried && alarmHits / alarmTried > 0.05) fail(`the mistake detective fla
 // "undefined", "NaN", "null" or "[object" in the text the user pastes into Claude.
 let askChecked = 0;
 const askBad = /undefined|NaN|\bnull\b|\[object/;
+// Each question is checked in all three versions: wrong (the first wrong option picked), right (the right answer
+// given) and skipped (no answer).
+const ASK_WORK = { wrong: "My working: ", right: "Why I picked it: ", skipped: "What I tried: " };
 const askCheck = (where, it, ans, opts = {}) => {
   askChecked++;
+  const outcome = opts.outcome || "wrong";
   let m;
-  try { m = ctx.AskClaude.message(it, ans, { cat: "Test", work: "My working", notes: ["A note."], ...opts }); }
-  catch (e) { return fail(`${where}: the Ask Claude message threw: ${e.message}`); }
-  if (askBad.test(m)) fail(`${where}: the Ask Claude message has a gap: ${m.match(new RegExp(`.{0,60}${askBad.source}.{0,20}`))?.[0]}`);
-  if (!m.includes("My working: My working") || !m.includes("What the site said about my answer: A note.")) fail(`${where}: the Ask Claude message is missing the working or the notes`);
+  try { m = ctx.AskClaude.message(it, ans, { cat: "Test", work: "Typed text", notes: outcome === "wrong" ? ["A note."] : [], ...opts }); }
+  catch (e) { return fail(`${where} (${outcome}): the Ask Claude message threw: ${e.message}`); }
+  if (askBad.test(m)) fail(`${where} (${outcome}): the Ask Claude message has a gap: ${m.match(new RegExp(`.{0,60}${askBad.source}.{0,20}`))?.[0]}`);
+  if (!m.includes(ASK_WORK[outcome] + "Typed text")) fail(`${where} (${outcome}): the Ask Claude message is missing the user's working`);
+  if (outcome === "wrong" && !m.includes("What the site said about my answer: A note.")) fail(`${where}: the Ask Claude message is missing what the site said`);
+  if (!m.includes({ wrong: "got this question wrong", right: "got this question right", skipped: "skipped this question" }[outcome])) fail(`${where} (${outcome}): the Ask Claude message opens with the wrong request`);
 };
+const rightPick = q => q.type === "reason" ? [0, 0] : q.type === "spot" ? [q.wrong, 0] : q.type === "order" ? q.answer.map((_, k) => k)
+  : q.type === "grid" ? q.rows.map(r => r.answer) : q.type === "numeric" ? String(q.answer) : 0;
+const askAll = (where, it, wrong, right) => { askCheck(where, it, wrong); askCheck(where, it, right, { outcome: "right" }); askCheck(where, it, null, { outcome: "skipped" }); };
 const asShown = q => { // a question as a round shows it, right option first (only the fields the message reads)
   if (q.type === "reason") return { ...q, ans: q.answers, ansOk: 0, ansX: [null, ...q.answerNotes], rsn: q.reasons, rsnOk: 0, rsnX: [null, ...q.reasonNotes] };
   if (q.type === "spot") return { ...q, fix: q.fixes, fixOk: 0, fixX: [null, ...q.fixNotes] };
@@ -340,13 +349,13 @@ const wrongPick = q => q.type === "reason" || q.type === "spot" ? [q.type === "s
   : q.type === "order" ? q.answer.map((_, k) => k).reverse() : q.type === "grid" ? q.rows.map(r => (r.answer + 1) % q.columns.length) : 1;
 if (!ctx.AskClaude) fail("js/askclaude.js didn't define AskClaude");
 else {
-  for (const [cat, list] of writtenLists) list.forEach((q, n) => { if (q.type !== "walk") askCheck(`${cat} written #${n + 1} (${q.type || "mcq"})`, asShown(q), wrongPick(q)); });
-  for (const [cat, list] of Object.entries(Bank.gens)) list.forEach((fn, n) => askCheck(`${cat} generator #${n + 1}`, asShown(fn()), 1));
-  for (const [cat, list] of Object.entries(Bank.numeric || {})) list.forEach((fn, n) => askCheck(`${cat} typed-answer generator #${n + 1}`, fn(), "12.5"));
+  for (const [cat, list] of writtenLists) list.forEach((q, n) => { if (q.type !== "walk") askAll(`${cat} written #${n + 1} (${q.type || "mcq"})`, asShown(q), wrongPick(q), rightPick(q)); });
+  for (const [cat, list] of Object.entries(Bank.gens)) list.forEach((fn, n) => askAll(`${cat} generator #${n + 1}`, asShown(fn()), 1, 0));
+  for (const [cat, list] of Object.entries(Bank.numeric || {})) list.forEach((fn, n) => { const q = fn(); askAll(`${cat} typed-answer generator #${n + 1}`, q, "12.5", rightPick(q)); });
   for (const [cat, list] of Object.entries(Bank.cases || {})) list.forEach((fn, n) => {
-    const c = fn(), vals = c.steps.map(() => "1");
-    askCheck(`${cat} case study #${n + 1}`, c, vals);
-    c.steps.forEach((_, k) => askCheck(`${cat} case study #${n + 1} step ${k + 1}`, c, vals, { step: k }));
+    const c = fn(), vals = c.steps.map(() => "1"), rights = c.steps.map(s => String(s.answer));
+    askAll(`${cat} case study #${n + 1}`, c, vals, rights);
+    c.steps.forEach((_, k) => { askCheck(`${cat} case study #${n + 1} step ${k + 1}`, c, vals, { step: k }); askCheck(`${cat} case study #${n + 1} step ${k + 1}`, c, rights, { step: k, outcome: "right" }); });
   });
 }
 
@@ -511,7 +520,7 @@ if (errors.length) {
   process.exit(1);
 }
 console.log(`✓ ${written - formatQuestions} written questions, ${formatQuestions} new-format questions, ${gens} generators, ${typed} typed-answer generators and ${cases} case stud${cases === 1 ? "y" : "ies"} (${RUNS} samples each) passed.`);
-console.log(`✓ ${askChecked} "Ask Claude" messages built, one per question and case step, with nothing missing.`);
+console.log(`✓ ${askChecked} "Ask Claude" messages built (wrong, right and skipped versions of every question and case step), with nothing missing.`);
 console.log(`✓ The mistake detective flagged ${(alarmHits / Math.max(1, alarmTried) * 100).toFixed(1)}% of ${alarmTried} ordinary wrong typed answers as a slip (5% at most).`);
 console.log(`✓ ${Object.keys(Lessons).length} lessons for ${categoryIds.length} categories (${Object.entries(lessonCounts).map(([k, v]) => `${v} ${k}`).join(", ")}).`);
 console.log(`✓ ${Glossary.length} glossary terms; every acronym in the lessons has one.`);

@@ -391,6 +391,8 @@ main { padding-block: 30px 48px; }
    and the copy button. Sits inside the red feedback box (and under review items), so it uses the page colour. */
 .ask-claude { margin-top: 4px; border-top: 1px solid var(--bad-line); padding-top: 8px; }
 .item .ask-claude { border-top-color: var(--rule); margin-top: 12px; }
+.feedback.ok .ask-claude { border-top-color: var(--good-line); }
+.ask-claude.unsure summary { color: var(--amber); }
 .ask-claude summary { cursor: pointer; font-size: 13px; font-weight: 500; color: var(--ink); width: fit-content; text-decoration: underline; text-underline-offset: 3px; }
 .ask-claude summary:focus-visible { outline: 2px solid var(--navy); outline-offset: 2px; border-radius: 2px; }
 .ask-body { display: grid; gap: 8px; margin-top: 10px; }

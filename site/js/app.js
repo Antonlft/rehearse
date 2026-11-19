@@ -345,27 +345,35 @@ const causeText = g => g.unreadable ? "Your answer couldn't be read as a number.
      : g.rel != null && Math.abs(g.rel) <= 0.5 ? "That's a fair way off, so a step is probably missing or done differently: check the method."
      : "That's far off, so check the method from the start."].filter(Boolean).join(" ");
 
-/* "Ask Claude about this", under a wrong answer: an optional box for the user's working, a button that copies a
-   ready-made message (AskClaude.message, in askclaude.js) and a link that opens Claude. The site sends nothing
-   anywhere. The working typed here isn't saved: it's kept only until the page is closed, so it survives the screen
-   being redrawn. askKey names one wrong answer (round position + the start of the question). */
+/* "Ask Claude about this", under every answer (right, wrong, or skipped on the review page): an optional box for the
+   user's working, a button that copies a ready-made message (AskClaude.message, in askclaude.js) and a link that opens
+   Claude. The site sends nothing anywhere. The working typed here isn't saved: it's kept only until the page is
+   closed, so it survives the screen being redrawn. askKey names one answer (round position + the start of the question).
+   The wording follows the outcome; a right answer rated "Guess" or "Think so" gets a stronger nudge. */
+const ASK_TEXT = {
+  wrong: { head: "Still not sure why? Ask Claude", label: "How did you get your answer?", eg: "For example: EBIT 18, plus depreciation 20 = 38" },
+  right: { head: "Right, but not sure why? Ask Claude", label: "Why did you pick it?", eg: "For example: depreciation isn't cash, so only the tax saving is" },
+  unsure: { head: "You weren't sure, so this one's worth checking: ask Claude", label: "Why did you pick it?", eg: "For example: depreciation isn't cash, so only the tax saving is" },
+  skipped: { head: "Skipped this one? Ask Claude to walk you through it", label: "What did you try, or where did you get stuck?", eg: "For example: I didn't know whether to take tax off" }
+};
 const askBuild = new Map(), askWork = new Map(), askOpen = new Set(), askIds = new Map();
 const askKey = (where, i, it, step) => `${where}${i}${step != null ? "s" + step : ""}:${String(it.q).slice(0, 60)}`;
-function askHtml(key, build) {
+function askHtml(key, build, kind = "wrong") {
   if (!window.AskClaude) return "";
+  const t = ASK_TEXT[kind] || ASK_TEXT.wrong;
   if (!askIds.has(key)) askIds.set(key, askIds.size + 1);
   const id = askIds.get(key);
   askBuild.set(id, build);
-  return `<details class="ask-claude" data-ask="${id}"${askOpen.has(id) ? " open" : ""}>
-      <summary>Still not sure why? Ask Claude</summary>
+  return `<details class="ask-claude${kind === "unsure" ? " unsure" : ""}" data-ask="${id}"${askOpen.has(id) ? " open" : ""}>
+      <summary>${esc(t.head)}</summary>
       <div class="ask-body">
-        <label class="ask-label" for="askWork${id}">How did you get your answer? <span class="muted">(optional)</span></label>
-        <textarea class="ask-work" id="askWork${id}" data-ask-work="${id}" rows="2" placeholder="For example: EBIT 18, plus depreciation 20 = 38">${esc(askWork.get(id) || "")}</textarea>
+        <label class="ask-label" for="askWork${id}">${esc(t.label)} <span class="muted">(optional)</span></label>
+        <textarea class="ask-work" id="askWork${id}" data-ask-work="${id}" rows="2" placeholder="${esc(t.eg)}">${esc(askWork.get(id) || "")}</textarea>
         <div class="ask-actions">
           <button class="btn primary" type="button" data-ask-copy="${id}">Copy for Claude</button>
           <a class="btn" href="https://claude.ai/new" target="_blank" rel="noopener noreferrer">Open Claude <span aria-hidden="true">↗</span></a>
         </div>
-        <p class="ask-hint" id="askHint${id}" aria-live="polite">Copies a message with the question, your answer, the right answer and the site's working. Paste it into Claude and send.</p>
+        <p class="ask-hint" id="askHint${id}" aria-live="polite">Copies a message with the question, ${kind === "skipped" ? "" : "your answer, "}the right answer and the site's working. Paste it into Claude and send.</p>
         <textarea class="ask-fallback" id="askFallback${id}" readonly hidden aria-label="Message for Claude: select it all and copy"></textarea>
       </div>
     </details>`;
@@ -400,12 +408,14 @@ const askNotes = (it, ans, g) => it.type === "numeric" ? [causeText(g)]
   : it.type === "grid" ? it.rows.map((r, k) => Array.isArray(ans) && ans[k] !== r.answer && r.note ? `${r.text}: ${r.note}` : null).filter(Boolean)
   : it.type === "order" ? []
   : [it.x[ans]].filter(Boolean);
-// The Ask Claude section for a whole question (not shown for right answers, blanks or walk-throughs).
-const askFor = (where, i, it, ans) => {
-  if (it.type === "walk" || isBlank(ans)) return "";
-  const g = grade(it, ans);
-  if (g.ok) return "";
-  return askHtml(askKey(where, i, it), work => AskClaude.message(it, ans, { cat: catById(it.cat).name, notes: askNotes(it, ans, g), work }));
+// Which version of the section an answer gets: wrong, right (unsure = rated "Guess" or "Think so"), or skipped.
+const askKind = (ok, blank, conf) => blank ? "skipped" : !ok ? "wrong" : conf === "guess" || conf === "think" ? "unsure" : "right";
+// The Ask Claude section for a whole question (not for walk-throughs, which the user marks themselves).
+const askFor = (where, i, it, ans, conf = null) => {
+  if (it.type === "walk") return "";
+  const blank = isBlank(ans), g = blank ? { ok: false } : grade(it, ans), kind = askKind(g.ok, blank, conf);
+  const outcome = kind === "unsure" ? "right" : kind;
+  return askHtml(askKey(where, i, it), work => AskClaude.message(it, ans, { cat: catById(it.cat).name, outcome, notes: outcome === "wrong" ? askNotes(it, ans, g) : [], work }), kind);
 };
 
 const MISSED_WEIGHT = 3;
@@ -1045,7 +1055,7 @@ function renderQuiz() {
         <p class="feedback-title">${ans === it.a ? "Correct" : `Not quite. The answer is: ${esc(it.o[it.a])}`}</p>
         ${ans !== it.a && it.x[ans] ? `<p>${esc(it.x[ans])}</p>` : ""}
         <p>${rich(it.why)}</p>
-        ${askFor("q", at.cur, it, ans)}
+        ${askFor("q", at.cur, it, ans, confOf(at, at.cur))}
       </div>` : ""}`}
       ${confNeeded(at, at.cur) && !revealed ? confBar(at, at.cur) : ""}
       ${confNeeded(at, at.cur) && revealed ? `<p class="conf-note">You said: <b>${esc(confLabel(confOf(at, at.cur)))}</b>.${confOf(at, at.cur) === "sure" && !grade(it, ans).ok ? " A confident mistake: worth reviewing first, because it's the one you'd repeat in an interview." : ""}</p>` : ""}
@@ -1122,7 +1132,7 @@ function typedArea(at, it, ans, revealed) {
       <p class="feedback-title">${g.ok ? `Correct: ${esc(right)}` : `Not quite. The answer is ${esc(right)}${g.value != null ? `; you gave ${esc(Typed.show(g.value, it.unit))}` : ""}.`}</p>
       ${g.ok ? "" : `<p>${esc(causeText(g))}</p>`}
       <p>${rich(it.why)}</p>
-      ${askFor("q", at.cur, it, ans)}
+      ${askFor("q", at.cur, it, ans, confOf(at, at.cur))}
     </div>` : ""}`;
 }
 function wireTyped(at, it) {
@@ -1175,7 +1185,7 @@ function caseArea(at, it, ans) {
           <p class="feedback-title">${g.ok ? `Correct: ${esc(right)}` : `Not quite. The answer is ${esc(right)}${g.value != null ? `; you gave ${esc(Typed.show(g.value, s.unit))}` : ""}.`}</p>
           ${g.ok ? "" : `<p>${esc(causeText(g))}</p>`}
           <p>${rich(s.why)}</p>
-          ${g.ok || isBlank(vals[k]) ? "" : askHtml(askKey("q", at.cur, it, k), work => AskClaude.message(it, vals, { cat: catById(it.cat).name, step: k, notes: [causeText(g)], work }))}
+          ${isBlank(vals[k]) ? "" : askHtml(askKey("q", at.cur, it, k), work => AskClaude.message(it, vals, { cat: catById(it.cat).name, step: k, outcome: g.ok ? "right" : "wrong", notes: g.ok ? [] : [causeText(g)], work }), g.ok ? "right" : "wrong")}
         </div>` : `<p class="typed-hint" id="caseHint" aria-live="polite">${esc(typedHint(s, vals[k]))}</p>`}
       </li>`;
   };
@@ -1233,7 +1243,7 @@ function orderArea(at, it, ans, revealed) {
       <p class="feedback-title">${g.ok ? "Correct order" : `Not quite: ${g.placed} of ${n} steps are in the right place.`}</p>
       ${g.ok ? "" : `<p>The right order is:</p><ol class="order-correct">${it.answer.map(a => `<li>${esc(a)}</li>`).join("")}</ol>`}
       <p>${rich(it.why)}</p>
-      ${askFor("q", at.cur, it, ans)}
+      ${askFor("q", at.cur, it, ans, confOf(at, at.cur))}
     </div>` : `<div class="order-foot">
       <p class="typed-hint" id="orderHint">${isBlank(ans) ? "Use ▲ ▼ to put the steps in order. Not answered yet." : "Your order is saved."}</p>
       ${isBlank(ans) ? `<button class="btn" id="orderKeep" type="button">Use this order</button>` : ""}
@@ -1278,7 +1288,7 @@ function gridArea(at, it, ans, revealed) {
     ${revealed ? `<div class="feedback ${g.ok ? "ok" : "no"}" id="feedback" role="status" tabindex="-1">
       <p class="feedback-title">${g.ok ? `All ${n} right` : `Not quite: ${g.right} of ${n} right.`}</p>
       <p>${rich(it.why)}</p>
-      ${askFor("q", at.cur, it, ans)}
+      ${askFor("q", at.cur, it, ans, confOf(at, at.cur))}
     </div>` : `<div class="order-foot">
       <p class="typed-hint" id="gridHint">${done} of ${n} rows answered${done && done < n ? ". Rows left empty count as wrong." : "."}</p>
       ${at.learning ? `<button class="btn primary" id="checkBtn" type="button">Check</button>` : ""}
@@ -1321,7 +1331,7 @@ function reasonArea(at, it, ans, revealed) {
         ${!g.answerOk && it.ansX[p[0]] ? `<p>${esc(it.ansX[p[0]])}</p>` : ""}
         ${!g.reasonOk && it.rsnX[p[1]] ? `<p>${esc(it.rsnX[p[1]])}</p>` : ""}
         <p>${rich(it.why)}</p>
-        ${askFor("q", at.cur, it, ans)}
+        ${askFor("q", at.cur, it, ans, confOf(at, at.cur))}
       </div>` : ""}`;
 }
 /* Spot the error on the quiz screen: tap the line with the mistake (part 0), then pick the fix (part 1). The lines are
@@ -1346,7 +1356,7 @@ function spotArea(at, it, ans, revealed) {
         ${!g.lineOk && it.lineNotes[p[0]] ? `<p>Line ${p[0] + 1}: ${esc(it.lineNotes[p[0]])}</p>` : ""}
         ${!g.fixOk && it.fixX[p[1]] ? `<p>${esc(it.fixX[p[1]])}</p>` : ""}
         <p>${rich(it.why)}</p>
-        ${askFor("q", at.cur, it, ans)}
+        ${askFor("q", at.cur, it, ans, confOf(at, at.cur))}
       </div>` : ""}`;
 }
 // Picks one part of a two-part question (answer + reason, or spot the error).
@@ -2268,7 +2278,7 @@ function reviewItem(it, i, ans, marked, misread, conf = null) {
           return `<li class="${cls}"><span class="mark" aria-hidden="true">${j === it.a ? "✓" : j === ans ? "✗" : ""}</span><div><span>${esc(o)}${j === ans ? " <em>(your answer)</em>" : ""}</span>${note ? `<span class="note">${rich(note)}</span>` : ""}</div></li>`;
         }).join("")}
       </ul>`}
-      ${st[0] === "no" ? askFor("r", i, it, ans) : ""}
+      ${askFor("r", i, it, ans, conf)}
       ${st[0] !== "ok" ? learnLink() : ""}
     </article>`;
 }

@@ -1,12 +1,15 @@
-/* "Ask Claude about this": builds a ready-made message about a wrong answer, for the user to paste into Claude
+/* "Ask Claude about this": builds a ready-made message about an answer, for the user to paste into Claude
    (claude.ai) themselves. The site sends nothing anywhere: the message is only copied to the clipboard.
-   It holds the question, the user's answer, the right answer, the site's explanation, what the site thinks went
-   wrong, and the user's own working if they typed it. Nothing personal (no name, no email, no progress).
+   It holds the question, the user's answer, the right answer, the site's explanation, what the site said about the
+   answer, and the user's own working if they typed it. Nothing personal (no name, no email, no progress).
+   Three versions, by outcome: a wrong answer (find the mistake), a right answer the user isn't sure about (check the
+   reasoning, or whether it was luck) and a skipped question (walk me through it).
 
-   AskClaude.message(it, ans, opts) works on a question as shown in a round (after shuffling), for every format that
-   can be wrong: multiple choice, typed answers, case studies, answer + reason, spot the error, ordering and grids.
+   AskClaude.message(it, ans, opts) works on a question as shown in a round (after shuffling), for multiple choice,
+   typed answers, case studies, answer + reason, spot the error, ordering and grids.
    opts = { cat (category name), step (case studies: the step asked about, from 0; leave out for the whole case),
-            notes (what the site said about the answer, e.g. "That's EBITDA..."), work (the user's working) } */
+            outcome ("wrong" (default), "right" or "skipped"), notes (what the site said about the answer, e.g.
+            "That's EBITDA..."), work (the user's working, or what they tried) } */
 window.AskClaude = {
   // Plain text from the site's explanation markup: {{a // b}} fractions become (a) ÷ (b).
   plain(s) {
@@ -59,15 +62,37 @@ window.AskClaude = {
     } else { // multiple choice
       out.push(list("Options:", it.o), `My answer: ${pick(it.o, ans)}`, `Right answer: ${pick(it.o, it.a)}`);
     }
+    if (opts.outcome === "right") out.push("(My answer was right.)");
+    if (opts.outcome === "skipped") out.push("(I didn't answer this one.)");
     return out;
   },
-  message(it, ans, opts = {}) {
-    const P = s => this.plain(s), caseStep = it.type === "case" && opts.step != null;
-    const parts = [
+  // The opening: what the user wants from Claude, by outcome.
+  ask(it, outcome) {
+    const options = !it.type || it.type === "reason" || it.type === "spot";
+    if (outcome === "right") return [
+      "I'm practising for finance interviews. I got this question right, but I'm not sure I really understand why. Please:",
+      "1. Check whether my reasoning holds up (if I wrote it below), or tell me if I may have got there by luck.",
+      `2. Explain in plain words why the right answer is right${options ? ", and why each of the other options is wrong" : ", and the mistakes people usually make on it"}.`,
+      "3. Give me one similar question to try, and keep its answer hidden until I ask."];
+    if (outcome === "skipped") return [
+      "I'm practising for finance interviews and skipped this question. Please:",
+      "1. Walk me through how to solve it, step by step, using the numbers. If I wrote what I tried below, start from there.",
+      "2. Point out the mistakes people usually make on it.",
+      "3. Give me one similar question to try, and keep its answer hidden until I ask."];
+    return [
       "I'm practising for finance interviews and got this question wrong. Please:",
       "1. Find where my reasoning went wrong. If I wrote my working below, point to the exact step.",
       "2. Explain the right method in plain words, using the numbers.",
-      "3. Give me one similar question to try, and keep its answer hidden until I ask.",
+      "3. Give me one similar question to try, and keep its answer hidden until I ask."];
+  },
+  message(it, ans, opts = {}) {
+    const P = s => this.plain(s), caseStep = it.type === "case" && opts.step != null, outcome = opts.outcome || "wrong";
+    const work = opts.work && opts.work.trim() ? opts.work.trim()
+      : outcome === "skipped" ? "(nothing written; please start from the beginning)"
+      : outcome === "right" ? "(not written down; please explain the reasoning from scratch)"
+      : "(not written down; please work out the most likely mistake)";
+    const parts = [
+      ...this.ask(it, outcome),
       "Use US$, follow IFRS first (mention US GAAP only where it differs), and answer in English.",
       "",
       `Topic: ${opts.cat || "Finance"}${it.type === "case" ? " (case study)" : ""}`,
@@ -79,7 +104,7 @@ window.AskClaude = {
       ...(caseStep ? [] : ["", `The site's explanation: ${P(it.why)}`]),
       ...(opts.notes && opts.notes.length ? ["", `What the site said about my answer: ${opts.notes.map(P).join(" ")}`] : []),
       "",
-      `My working: ${opts.work && opts.work.trim() ? opts.work.trim() : "(not written down; please work out the most likely mistake)"}`
+      `${outcome === "skipped" ? "What I tried" : outcome === "right" ? "Why I picked it" : "My working"}: ${work}`
     ];
     return parts.join("\n");
   }
