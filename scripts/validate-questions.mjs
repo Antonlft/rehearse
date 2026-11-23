@@ -21,7 +21,7 @@
 //    Multiple-choice and typed questions may carry a `table` { caption?, corner?, cols: 2–6, rows: 2–8 of { head, cells } }
 //    with one cell per column and an optional `base` [row, column] inside it.
 //  - every category has a lesson (site/lessons/<category>.js, loaded by index.html); a "stub" may be empty, but a
-//    "draft" or "reviewed" lesson needs a method, a worked example (question, working, answer) and a source;
+//    "draft" or "reviewed" lesson needs a method, a worked example (question, working, answer) and a source (or a list);
 //    method items are paragraphs, { section } headings or blocks { kind, title?, text, note? } (kinds: Lessons.BLOCKS);
 //    within each section blocks follow Lessons.ORDER, and a kind repeated in a section needs a title on each block;
 //    every section of a draft or reviewed lesson has an Example block, right under the rule it illustrates;
@@ -416,9 +416,15 @@ for (const [cat, l] of Object.entries(Lessons)) {
     if (!text(e.question) || !text(e.answer)) fail(`${where}: example needs a question and an answer`);
     if (e.working != null && (!Array.isArray(e.working) || e.working.some(w => !text(w)))) fail(`${where}: example working must be a list of non-empty steps`);
   }
+  // source: one { text, url? } or a non-empty list of them (a lesson spanning several jurisdictions cites each).
   if (l.source != null) {
-    if (!text(l.source.text)) fail(`${where}: source needs text`);
-    if (l.source.url != null && l.source.url !== "" && !/^https?:\/\//i.test(l.source.url)) fail(`${where}: source url must start with http:// or https://`);
+    const list = Array.isArray(l.source) ? l.source : [l.source];
+    if (!list.length) fail(`${where}: source list is empty`);
+    list.forEach((x, k) => {
+      const at = list.length > 1 ? `source ${k + 1}` : "source";
+      if (!x || !text(x.text)) fail(`${where}: ${at} needs text`);
+      else if (x.url != null && x.url !== "" && !/^https?:\/\//i.test(x.url)) fail(`${where}: ${at} url must start with http:// or https://`);
+    });
   }
   if (l.widgets != null && !Array.isArray(l.widgets)) fail(`${where}: widgets must be a list of { type, values }`);
   for (const lw of [l.widget, ...(Array.isArray(l.widgets) ? l.widgets : [])]) {

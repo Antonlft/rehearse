@@ -98,7 +98,7 @@ Lessons.add("val", {
     working: ["Step 1 …", "Step 2 …"],
     answer: "The result, with a line on what it means."
   },
-  source: { text: "Author, Title (edition), chapter", url: "https://…" }, // url optional
+  source: { text: "Author, Title (edition), chapter", url: "https://…" }, // url optional; or a list of { text, url } for several
   widget: { type: "evBridge", values: { debt: 500 } }, // optional interactive "Try it"; values change its starting numbers
   widgets: [{ type: "dilutedShares", values: {} }]    // optional extra "Try it" widgets, shown below the main one
 });

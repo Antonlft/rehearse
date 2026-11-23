@@ -2106,7 +2106,9 @@ const lessonStatusPill = l => l.status === "stub" ? `<span class="pill lesson-st
 function renderLesson() {
   const c = catById(view.cat), l = Lessons.all[view.cat] || { status: "stub" }, back = view.back || { name: "home" };
   const missing = `<p class="muted">This lesson hasn't been written yet.</p>`;
-  const src = l.source, safeUrl = src && /^https?:\/\//i.test(src.url || "") ? src.url : null; // only plain web links
+  // A lesson cites one source { text, url? } or a list of them; links are shown only for plain web addresses.
+  const srcs = (Array.isArray(l.source) ? l.source : l.source ? [l.source] : []).filter(x => x && x.text);
+  const srcHtml = x => /^https?:\/\//i.test(x.url || "") ? `<a href="${esc(x.url)}" target="_blank" rel="noopener noreferrer">${esc(x.text)}</a>` : esc(x.text);
   const ex = l.example;
   // "widget" is the lesson's main "Try it"; an optional "widgets" list adds more below it.
   const tries = [l.widget, ...(Array.isArray(l.widgets) ? l.widgets : [])].filter(w => w && Widgets.registry[w.type]);
@@ -2137,8 +2139,8 @@ function renderLesson() {
           </div>
         </div>` : missing}
       ${tries.length ? `<h2>Try it</h2>${tries.map((_, i) => `<div class="lesson-widget" id="lessonWidget${i}"></div>`).join("")}` : ""}
-      <h2>Source</h2>
-      ${src ? `<p>${safeUrl ? `<a href="${esc(safeUrl)}" target="_blank" rel="noopener noreferrer">${esc(src.text)}</a>` : esc(src.text)}</p>` : missing}
+      <h2>${srcs.length > 1 ? "Sources" : "Source"}</h2>
+      ${srcs.length ? srcs.map(x => `<p class="lesson-source">${srcHtml(x)}</p>`).join("") : missing}
     </section>
     <div class="result-actions">
       <button class="btn primary lg" id="practiseBtn" type="button">Practise this category</button>
