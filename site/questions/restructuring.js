@@ -195,3 +195,24 @@ Bank.addFormat("rx", [
       "The plan takes effect and the company emerges from Chapter 11"],
     why: "The stay and DIP financing come first, to keep the business running. The plan comes next, then the vote by class, and the court confirms the plan only if it meets tests such as the best interests of creditors and feasibility." }
 ]);
+
+// UK restructuring plans (Companies Act 2006, Part 26A): the quick check for the lesson's UK and Europe section.
+Bank.addFormat("rx", [
+  { id: "rx-why-03", lv: 2, type: "reason",
+    q: "A company proposes a UK restructuring plan. Its unsecured creditors would get 12% of their claims under the plan, against 5% in an administration, the most likely outcome if the plan fails. They vote only 60% in favour by value. The secured lenders, who'd be repaid in that administration, vote 90% in favour. Can the court still sanction the plan?",
+    answers: ["Yes, it can bind the class that voted against it", "No, every class must approve with 75% by value", "No, only a scheme can bind a class that votes no", "Only once the unsecured class is first paid in full"],
+    answerNotes: [
+      "That's the usual threshold within a class, but a restructuring plan can still bind a class that falls short if two conditions are met.",
+      "It's the other way round: a scheme of arrangement needs every class to approve, while a restructuring plan can bind a dissenting class.",
+      "That's the US absolute priority rule for a cram-down. A UK plan has no fixed rule like it; the court judges whether the plan is fair."],
+    reasons: [
+      "They're no worse off than in the likely alternative, and a class that would be paid voted for it",
+      "Unsecured creditors rank below secured lenders, so their vote is overridden once the lenders approve",
+      "A plan needs 75% by value in every class, and the court has no power to override a class that falls short",
+      "A dissenting class must be repaid in full before a junior class keeps any value, as in a US cram-down"],
+    reasonNotes: [
+      "Ranking doesn't override a vote. The court can bind the dissenting class only if both cram-down conditions hold, and it keeps a discretion even then.",
+      "75% by value is the test within each class, but Part 26A lets the court bind a class that falls short (cross-class cram-down).",
+      "That's the US absolute priority rule. A UK court has no fixed rule like it: it checks whether the plan shares the value fairly."],
+    why: "A restructuring plan (Part 26A) can bind a class that votes against it if two conditions hold. First, no one in that class is worse off than in the relevant alternative, what would most likely happen without the plan: here 12% against 5% in an administration. Second, a class that would be paid, or has a genuine economic interest, in that alternative voted for the plan: the secured lenders, at 90%. The court then still decides whether the plan is fair. A scheme of arrangement can't do this: every class must approve." }
+]);
