@@ -681,15 +681,20 @@ function render() {
 }
 
 /* Round setup */
+// Setup screen: category descriptions are cut to one line once you've played a main-test round (they spell out every
+// acronym, which adds a lot of scrolling for a returning user); "Show full descriptions" expands them. First-timers
+// see them in full. The choice lasts until the page is closed; nothing is saved.
+let setupFullDesc = null;
 function renderSetup() {
   meta.innerHTML = `<button class="link" id="backHome" type="button">All assessments</button>`;
-  const sel = new Set(selectedCats());
+  const sel = new Set(selectedCats()), fullDesc = setupFullDesc ?? !db.totals.mixed;
+  const descLabel = full => full ? "Shorter descriptions" : "Show full descriptions";
   app.innerHTML = `
     <div class="title-row"><div><h1>Financial aptitude test</h1><p>Set up your round</p></div></div>
-    <section class="card setup">
+    <section class="card setup${fullDesc ? "" : " short-desc"}" id="setupCard">
       <div class="setup-head">
         <div><h2>Choose your categories</h2><p class="muted">Untick anything that isn't relevant to you. Your choice is remembered for next time.</p></div>
-        <div class="setup-links"><button class="link" id="allBtn" type="button">Select all</button><button class="link" id="noneBtn" type="button">Clear all</button></div>
+        <div class="setup-links"><button class="link" id="allBtn" type="button">Select all</button><button class="link" id="noneBtn" type="button">Clear all</button><button class="link" id="descBtn" type="button" aria-pressed="${fullDesc}">${descLabel(fullDesc)}</button></div>
       </div>
       ${GROUPS.map(g => `
         <div class="check-group">
@@ -698,7 +703,7 @@ function renderSetup() {
             ${CATEGORIES.filter(c => c.group === g.id).map(c => `
               <label class="check" for="cat-${c.id}">
                 <input type="checkbox" id="cat-${c.id}" value="${c.id}" data-group="${c.group}" ${sel.has(c.id) ? "checked" : ""}>
-                <span><b>${esc(c.name)}</b><small>${esc(c.desc)}</small></span>
+                <span><b>${esc(c.name)}</b><small title="${esc(c.desc)}">${esc(c.desc)}</small></span>
               </label>`).join("")}
           </div>
         </div>`).join("")}
@@ -740,6 +745,11 @@ function renderSetup() {
   });
   document.getElementById("formatsAllow").onchange = e => { db.newFormats = e.target.checked; persist(); };
   calcAllow.onchange = () => { db.calcPrefs[calcKey("test", db.roundModes.test === "learning")] = calcAllow.checked; persist(); sync(); };
+  document.getElementById("descBtn").onclick = e => {
+    const full = document.getElementById("setupCard").classList.toggle("short-desc") === false;
+    setupFullDesc = full;
+    e.target.textContent = descLabel(full); e.target.setAttribute("aria-pressed", full);
+  };
   document.getElementById("allBtn").onclick = () => { boxes.forEach(b => b.checked = true); sync(); };
   document.getElementById("noneBtn").onclick = () => { boxes.forEach(b => b.checked = false); sync(); };
   app.querySelectorAll("[data-only]").forEach(l => l.onclick = () => { boxes.forEach(b => b.checked = b.dataset.group === l.dataset.only); sync(); });

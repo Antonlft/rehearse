@@ -212,7 +212,7 @@ main { padding-block: 30px 48px; }
 /* Round setup */
 .setup-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px 24px; flex-wrap: wrap; margin-bottom: 16px; }
 .setup-head h2 { font-size: 16px; font-weight: 600; margin-bottom: 2px; }
-.setup-links { display: flex; gap: 16px; padding-top: 3px; }
+.setup-links { display: flex; flex-wrap: wrap; gap: 6px 16px; padding-top: 3px; }
 .check-group + .check-group { margin-top: 18px; }
 .check-group-head { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; margin-bottom: 8px; }
 .check-group-head h3 { font-size: 11px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: var(--muted); }
@@ -228,6 +228,8 @@ main { padding-block: 30px 48px; }
 .check span { min-width: 0; display: grid; gap: 1px; }
 .check b { font-size: 13.5px; font-weight: 600; }
 .check small { font-size: 12px; color: var(--muted); line-height: 1.4; }
+/* Setup screen, shorter descriptions: one line each, cut with "…" (the full text stays in the page and in a tooltip) */
+.setup.short-desc .check small { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .setup-foot { display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; margin-top: 18px; padding-top: 16px; border-top: 1px solid var(--rule); }
 .setup-foot p { font-size: 13px; color: var(--muted); font-variant-numeric: tabular-nums; }
 
