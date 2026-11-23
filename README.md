@@ -119,11 +119,11 @@ All progress lives in one `localStorage` key, `rehearse.v3` (the light/dark choi
 | Field | What it holds |
 |---|---|
 | `schemaVersion` | Version of this format (see history). Only ever goes up |
-| `attempts` | Rounds in progress, by mode (`"mixed"`, a category ID, or `"retry"`) |
+| `attempts` | Rounds in progress, by mode (`"mixed"`, a category ID, `"retry"` or `"due"`) |
 | `history` | Last 5 finished rounds per mode, for the results and review screens |
 | `totals` | Per mode: rounds played, sum of scores, best score |
 | `seen` | Per category: written question IDs already shown in the current cycle |
-| `catStats` | Per category: questions answered and correct (excludes retry rounds) |
+| `catStats` | Per category: questions answered and correct (excludes retry rounds; review rounds count) |
 | `excluded` | Category IDs unticked on the setup screen |
 | `qStats` | Per written question ID: times answered, times wrong or skipped, and whether the last answer was right |
 | `log` | Permanent answer log (below). Only ever appended to |
@@ -148,7 +148,7 @@ All progress lives in one `localStorage` key, `rehearse.v3` (the light/dark choi
   at: 1794043291081,      // when the round was submitted (ms timestamp)
   usedMs: 42150,          // time the question was on screen, summed across visits
   answeredAt: 1794043280000, // when the answer was last chosen (null for answers given before v2)
-  mode: "mixed",          // "mixed", a category ID, or "retry"
+  mode: "mixed",          // "mixed", a category ID, "retry" or "due"
   i: 4,                   // position in the round (from v4)
   timePressure: false,    // answer last chosen in the final 10% of the round's time (from v4)
   trap: "inverted" }      // mistake type of the wrong option chosen, only if that option is tagged (from v4)
@@ -166,7 +166,7 @@ Rounds in progress also keep `spentMs[]` and `answeredAt[]` per question. Time o
 - Right answer: interval doubles (first time: 2 days), capped at 60 days. A right answer given before the question is due leaves the schedule as it is.
 - "Due" means from local midnight of that day.
 
-When it's on for a category, each written-question slot in a round takes a due question first (most overdue first). With nothing due, or when it's off globally or for that category, question picking is exactly what it was before spaced repetition existed. Switching it off never changes the schedule; it only stops it being used. Controls are on the home page, below the category table.
+When it's on for a category, each written-question slot in a round takes a due question first (most overdue first). The **Due for review** tile on the Practice tab also starts a separate review round (mode `"due"`): only the written questions due now in your selected categories where it's on, most overdue first, up to 20. It has its own in-progress round, history and totals, apart from the main test; it's always timed (1 minute a question) and uses the category-practice calculator setting. Unlike mistakes practice, its answers count toward category accuracy and the weak-spots report, because they're fresh reviews. With nothing due, the tile says so and offers no round. With nothing due, or when it's off globally or for that category, question picking is exactly what it was before spaced repetition existed. Switching it off never changes the schedule; it only stops it being used. Controls are on the home page, below the category table.
 
 **Timed test vs Learning mode.** Chosen on the setup screen (main test) and next to "Practise one category" (category practice); mistakes practice is always timed. A Learning round keeps a `deadline`, set 100 years ahead, because `Infinity` can't be saved as JSON. It shows "No time limit" instead of a countdown. Each answer locks once chosen and the explanation appears straight away. Learning answers count toward accuracy, the weak spots report and spaced repetition like any other, and their log entries carry `learning: true`, so they can be told apart later.
 

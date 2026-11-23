@@ -30,8 +30,13 @@ const groupLabel = ids => {
   return gs.length === 1 ? GROUPS.find(g => g.id === gs[0]).name : "Finance, real estate & hospitality";
 };
 const RETRY = "retry";
+// "Due for review": a round of only the written questions due for spaced-repetition review, most overdue first, kept
+// apart from the main test (its own attempts / history / totals entry, like "retry"). Unlike retry it counts toward
+// category accuracy and the weak-spots report: these are fresh reviews, not a re-ask of a fixed list of misses.
+const DUE = "due", DUE_MAX = 20;
 const modeInfo = mode => mode === "mixed" ? { title: "Financial aptitude test", sub: "Finance & accounting", n: 20 }
   : mode === RETRY ? { title: "Mistakes practice", sub: "Questions you got wrong or skipped", n: 0 }
+  : mode === DUE ? { title: "Due for review", sub: "Questions due for review", n: DUE_MAX }
   : { title: catById(mode).name, sub: "Category practice", n: 10 };
 
 const store = {
@@ -89,14 +94,14 @@ db.roundModes ||= {};
 db.roundModes.test ||= "timed";
 db.roundModes.practice ||= "timed";
 const LEARNING_MS = 100 * 365 * 864e5; // Learning rounds keep a deadline, just 100 years away (Infinity can't be saved as JSON)
-const learningFor = mode => mode === RETRY ? false : db.roundModes[mode === "mixed" ? "test" : "practice"] === "learning";
+const learningFor = mode => mode === RETRY || mode === DUE ? false : db.roundModes[mode === "mixed" ? "test" : "practice"] === "learning";
 //   7: added db.calcPrefs; rounds in progress, results and answer log entries carry calc: true when the calculator was allowed
 // Is the calculator allowed? Default: off in the timed main test (like a real interview), on everywhere else.
 // Overrides are remembered per entry point and mode, e.g. { "test-timed": true }; only overrides are stored.
 db.calcPrefs ||= {};
 const calcKey = (entry, learning) => `${entry}-${learning ? "learning" : "timed"}`;
 const calcPref = (entry, learning) => db.calcPrefs[calcKey(entry, learning)] ?? (calcKey(entry, learning) !== "test-timed");
-const calcFor = mode => mode === RETRY ? calcPref("practice", false) : calcPref(mode === "mixed" ? "test" : "practice", learningFor(mode));
+const calcFor = mode => mode === RETRY || mode === DUE ? calcPref("practice", false) : calcPref(mode === "mixed" ? "test" : "practice", learningFor(mode));
 //   8: added db.newFormats; typed-answer questions keep their typed text in attempts' answers[] and a checked[] list in
 //      Learning mode; their answer log entries gain given (the number read) and cause ("calculation-slip" | "concept-gap")
 // New question formats (typed answers; ordering later) are opt-in, so rounds stay exactly as before unless switched on.
@@ -550,7 +555,21 @@ function beginAttempt(mode, items, sub, learning = false, calc = false) {
   go({ name: "quiz", mode });
 }
 
+// Written questions due now, in the selected categories where spaced repetition is on, most overdue first: [question, category].
+function dueQuestions() {
+  const now = Date.now();
+  return selectedCats().filter(srsOn).flatMap(cat => written(cat).filter(q => db.schedule[q.id] && db.schedule[q.id].dueAt <= now).map(q => [q, cat]))
+    .sort((a, b) => db.schedule[a[0].id].dueAt - db.schedule[b[0].id].dueAt);
+}
+// A review round: always timed (1 minute a question, like mistakes practice); calculator as set for category practice.
+function startDue() {
+  const due = dueQuestions().slice(0, DUE_MAX);
+  if (!due.length) return confirmModal("Nothing due right now", "No questions are due for review in your selected categories. Answered questions come back here when they're due.", "OK", () => {}, null);
+  beginAttempt(DUE, due.map(([q, cat]) => materialize(q, cat)), `${due.length} question${due.length > 1 ? "s" : ""} due for review, most overdue first`, false, calcFor(DUE));
+}
+
 function startRound(mode) {
+  if (mode === DUE) return startDue();
   const cats = mode === "mixed" ? selectedCats() : [mode], learning = learningFor(mode);
   const sub = (mode === "mixed" ? `${groupLabel(cats)} · ${selectionLabel(cats)}` : "Category practice") + (learning ? " · Learning mode" : "");
   const items = buildRound(mode, cats);
@@ -862,22 +881,23 @@ function renderPracticeTab() {
     </div>`;
 }
 
-// Practice tile: questions due for review in the categories the main test draws from. Its button is the main test's
-// own button (Start round opens the setup screen; Resume if a round is in progress): due questions already come
-// first in rounds when spaced repetition is on, so there's no separate review round.
+// Practice tile: questions due for review in the categories the main test draws from. It starts its own review round
+// (mode DUE: only due questions, most overdue first, up to DUE_MAX), separate from the main test's Start / Resume.
 function dueTile() {
-  const cats = selectedCats().filter(srsOn), due = cats.reduce((s, c) => s + dueCount(c), 0);
-  const text = !db.srsEnabled ? "Spaced repetition is off, so nothing is scheduled for review."
+  const due = dueQuestions().length, at = db.attempts[DUE], done = at ? at.answers.filter(a => !isBlank(a)).length : 0;
+  const text = at ? `Review in progress: <b>${done}</b> of ${at.items.length} answered.`
+    : !db.srsEnabled ? "Spaced repetition is off, so nothing is scheduled for review."
     : !Object.keys(db.schedule).length ? "Questions you answer are scheduled to come back: wrong ones the next day, right ones later."
-    : due ? `<b>${due}</b> question${due > 1 ? "s" : ""} due in your selected categories. They come first in your next round.`
+    : due ? `<b>${due}</b> question${due > 1 ? "s" : ""} due in your selected categories${due > DUE_MAX ? `. A review takes the ${DUE_MAX} most overdue` : ", most overdue first"}.`
     : "Nothing due in your selected categories right now.";
-  const action = !db.srsEnabled ? `<button class="link" type="button" data-goto-tab="progress">Turn it on in Progress &amp; settings</button>`
-    : db.attempts.mixed ? `<button class="btn" type="button" data-resume="mixed">Resume round</button>`
-    : `<button class="btn" type="button" data-new="mixed">Start round</button>`;
+  const action = at ? `<button class="btn primary" type="button" data-resume="${DUE}">Resume · ${done}/${at.items.length}</button><button class="btn" type="button" data-discard="${DUE}">Discard</button>`
+    : !db.srsEnabled ? `<button class="link" type="button" data-goto-tab="progress">Turn it on in Progress &amp; settings</button>`
+    : due ? `<button class="btn" type="button" data-new="${DUE}">Start review · ${Math.min(due, DUE_MAX)} question${due > 1 ? "s" : ""}</button>`
+    : "";
   return `<section class="card home-tile">
         <h2>Due for review</h2>
         <p>${text}</p>
-        <div class="tile-actions">${action}</div>
+        ${action ? `<div class="tile-actions">${action}</div>` : ""}
       </section>`;
 }
 
@@ -982,7 +1002,8 @@ function wireHome() {
   });
   app.querySelectorAll("[data-snooze]").forEach(b => b.onclick = () => { db.backupNudgeDismissedAt = Date.now(); persist(); renderHome(); });
   app.querySelectorAll("[data-resume]").forEach(b => b.onclick = () => go({ name: "quiz", mode: b.dataset.resume }));
-  app.querySelectorAll("[data-discard]").forEach(b => b.onclick = () => confirmModal("Discard this practice?", "Your mistakes practice in progress will be deleted.", "Discard",
+  app.querySelectorAll("[data-discard]").forEach(b => b.onclick = () => confirmModal(b.dataset.discard === DUE ? "Discard this review?" : "Discard this practice?",
+    b.dataset.discard === DUE ? "Your review round in progress will be deleted. The questions stay due." : "Your mistakes practice in progress will be deleted.", "Discard",
     () => { delete db.attempts[b.dataset.discard]; persist(); renderHome(); }));
   app.querySelectorAll("[data-review]").forEach(b => b.onclick = () => {
     const h = db.history[b.dataset.review];
@@ -2184,7 +2205,8 @@ function renderResults() {
         </div>
       </div>
       <div class="result-actions">
-        ${view.mode !== RETRY ? `<button class="btn primary lg" id="againBtn" type="button">Generate another round</button>` : ""}
+        ${view.mode === DUE ? (() => { const n = Math.min(dueQuestions().length, DUE_MAX); return n ? `<button class="btn primary lg" id="againBtn" type="button">Start another review · ${n}</button>` : ""; })()
+          : view.mode !== RETRY ? `<button class="btn primary lg" id="againBtn" type="button">Generate another round</button>` : ""}
         ${wrongN + skipN ? `<button class="btn ${view.mode === RETRY ? "primary " : ""}lg" id="retryBtn" type="button">Practise these again · ${wrongN + skipN}</button>` : ""}
         <button class="btn lg" id="homeBtn" type="button">All assessments</button>
       </div>
