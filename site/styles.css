@@ -612,9 +612,13 @@ sup { font-size: 0.72em; line-height: 0; vertical-align: super; }
 .home-tabs { display: flex; justify-content: center; margin: -6px 0 20px; }
 .home-tabs .seg { display: flex; width: fit-content; max-width: 100%; }
 .home-tabs .seg button { padding: 6px 16px; font-size: 13px; line-height: 1.25; }
+.home-tabs .tab-short { display: none; }
 @media (max-width: 520px) {
   .home-tabs .seg { width: 100%; }
-  .home-tabs .seg button { flex: 1 1 0; padding: 6px 8px; }
+  .home-tabs .seg button { flex: 1 1 0; padding: 6px 8px; white-space: nowrap; }
+  /* Short labels on phones, so the three tabs are the same height (the full names wrapped to two lines) */
+  .home-tabs .tab-full { display: none; }
+  .home-tabs .tab-short { display: inline; }
 }
 .style-row { display: flex; align-items: center; gap: 10px 14px; flex-wrap: wrap; }
 .style-label { font-size: 13px; font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase; color: var(--muted); }

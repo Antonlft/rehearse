@@ -783,7 +783,8 @@ function catRow(c, grp) {
 /* Home: a title, a tab bar and one of three sections. The open tab is transient (not saved): a reload always lands
    on Practice, while coming back from a screen opened inside the site returns to the tab you left. */
 let homeTab = "practice";
-const HOME_TABS = [["practice", "Practice"], ["browse", "Browse categories"], ["progress", "Progress & settings"]];
+// [value, full label, short label]: phones (520px and narrower) show the short label, so all three tabs fit on one line.
+const HOME_TABS = [["practice", "Practice", "Practice"], ["browse", "Browse categories", "Browse"], ["progress", "Progress & settings", "Progress"]];
 
 function renderHome() {
   meta.innerHTML = `<span>Progress is saved in this browser</span>`;
@@ -795,7 +796,7 @@ function renderHome() {
     </div>
     <nav class="home-tabs" aria-label="Home sections">
       <div class="seg" role="group" aria-label="Home sections">
-        ${HOME_TABS.map(([v, l]) => `<button type="button" data-home-tab="${v}" aria-pressed="${homeTab === v}">${esc(l)}</button>`).join("")}
+        ${HOME_TABS.map(([v, l, short]) => `<button type="button" data-home-tab="${v}" aria-pressed="${homeTab === v}" aria-label="${esc(l)}"><span class="tab-full">${esc(l)}</span><span class="tab-short" aria-hidden="true">${esc(short)}</span></button>`).join("")}
       </div>
     </nav>
     ${body}`;
