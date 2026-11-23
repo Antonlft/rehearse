@@ -151,12 +151,32 @@ for (const [k, raw, kind, says] of caseKinds) {
 if (Typed.grade(plant.steps[0], "113").hint) fails.push("typed 113 without the case's figures shouldn't be read as a figure from the question");
 // Percentages: only a number below 1 is also read as a decimal ("0.125" = 12.5%); "12.4" is 12.4%, never 1,240%.
 if (Typed.readings("12.4", "%").length !== 1) fails.push(`"12.4" on a % question should have one reading, got ${Typed.readings("12.4", "%")}`);
+// Readiness (weak-spots report): the worked examples from the plan. mk(ok, wrong, sureWrong) builds answers, oldest
+// first, with sureWrong of the wrong ones rated "Sure".
+const mk = (ok, wrong, sureWrong = 0) => [...Array(ok).fill({ ok: true }), ...Array(wrong).fill(0).map((_, k) => ({ ok: false, ...(k < sureWrong ? { confidence: "sure" } : {}) }))];
+const R = ctx.Readiness;
+const readyCases = [
+  ["Valuation: 17/20, 1 confident mistake, 2 due", mk(17, 3, 1), 2, "ready", ""],
+  ["LBO: 17/20, 3 confident mistakes", mk(17, 3, 3), 0, "nearly", "3 confident mistakes"],
+  ["Credit: 12/14, 6 due", mk(12, 2), 6, "nearly", "6 due for review"],
+  ["Accounting: 12/20, 7 due", mk(12, 8), 7, "work", "60% right · 7 due for review"],
+  ["FIG: 6 answers", mk(5, 1), 0, "none", "6 of 10 answers needed"],
+  ["70% right, nothing else", mk(14, 6), 0, "nearly", "70% right"],
+  ["Only the last 20 count: 10 old wrongs then 20 right", [...mk(0, 10), ...mk(20, 0)], 0, "ready", ""],
+  ["Exactly 80% and 4 due is ready", mk(16, 4), 4, "ready", ""],
+  ["Exactly 65% is nearly ready", mk(13, 7), 0, "nearly", "65% right"],
+  ["60% needs work", mk(12, 8), 0, "work", "60% right"],
+];
+for (const [name, answers, due, level, why] of readyCases) {
+  const r = R.of(answers, due);
+  if (r.level !== level || r.reasons.join(" · ") !== why) fails.push(`readiness ${name}: got ${r.level} ("${r.reasons.join(" · ")}"), expected ${level} ("${why}")`);
+}
 const shows = [[12.5, "%", undefined, "12.5%"], [1.2, "US$m", undefined, "US$1.2m"], [2.5, "x", undefined, "2.5x"], [-3, "%", undefined, "−3%"],
   [6.993811140994688, "%", 1, "7.0%"], [8.4249, "%", 2, "8.42%"],
   [350000, "US$", 0, "US$350,000"], [1.8512, "US$", 2, "US$1.85"], [6, "years", 0, "6 years"], [1, "years", 0, "1 year"]];
 for (const [v, u, dp, want] of shows) if (Typed.show(v, u, dp) !== want) fails.push(`Typed.show(${v}, ${u}, ${dp}) = ${Typed.show(v, u, dp)}, expected ${want}`);
 
-const total = values.length + errors.length + formats.length + fractions.length + typedRight.length + typedCauses.length + 4 + kinds.length + 2 + caseKinds.length + 2 + shows.length;
+const total = values.length + errors.length + formats.length + fractions.length + typedRight.length + typedCauses.length + 4 + kinds.length + 2 + caseKinds.length + 2 + readyCases.length + shows.length;
 if (fails.length) {
   console.error(`✗ ${fails.length} of ${total} calculator and typed-answer checks failed:`);
   for (const f of fails) console.error("  - " + f);

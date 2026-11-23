@@ -156,7 +156,7 @@ All progress lives in one `localStorage` key, `rehearse.v3` (the light/dark choi
 
 The log can also hold **notes** added after a round, such as the review screen's "I read the question wrong" button. They're appended like everything else, never edited: `{ kind: "cause", cause: "misread", ref: <the round's submit time>, i, at }`. Undoing adds `cause: null`, and the latest note for a given `ref` and `i` wins. Anything reading answers should skip entries that have a `kind`.
 
-The **weak spots report** (results page box, plus a full page linked from it and from the home page) is worked out from the most recent 400 answers in the log. Mistakes practice rounds are left out of accuracy figures. A pattern only shows once there's enough data behind it.
+The **weak spots report** (results page box, plus a full page linked from it and from the home page) is worked out from the most recent 400 answers in the log. Mistakes practice rounds are left out of accuracy figures. A pattern only shows once there's enough data behind it. Its "By category" table also shows **readiness** for every category (`Readiness.of` in `bank.js`), from that category's last 20 answers in the whole log (mistakes practice left out): *Not enough data* under 10 answers; *Needs work* under 65% right; *Ready* at 80%+ right with at most one confident mistake ("Sure" but wrong) and fewer than 5 questions due; *Nearly ready* otherwise. A "Holding it back" column says why, and the results-page box sums it up in one line. No saved data of its own.
 
 Rounds in progress also keep `spentMs[]` and `answeredAt[]` per question. Time only counts while the question is on screen: it pauses on Save & exit, and time away (including a closed tab) is never counted.
 

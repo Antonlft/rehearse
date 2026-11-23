@@ -244,6 +244,32 @@ window.TRAPS = {
   "concept": "misunderstanding the concept itself"
 };
 
+/* Readiness, per category, for the weak-spots report. answers = that category's answer log entries, oldest first,
+   mistakes practice already left out; due = its written questions due for review now (0 if spaced repetition is off
+   for it). Only the last READY_WINDOW answers count, so it reflects current form, not lifetime accuracy.
+     Not enough data: fewer than READY_MIN answers.
+     Needs work:      under 65% of them right.
+     Ready:           80%+ right, at most 1 confident mistake ("Sure" but wrong) and fewer than 5 due.
+     Nearly ready:    everything else (65–79% right, or 80%+ held back by confident mistakes or questions due).
+   Returns { level: "none" | "work" | "nearly" | "ready", n, pct, sureWrong, due, reasons: [what's holding it back] }. */
+window.Readiness = {
+  WINDOW: 20, MIN: 10,
+  LABELS: { ready: "Ready", nearly: "Nearly ready", work: "Needs work", none: "Not enough data" },
+  ORDER: ["work", "nearly", "ready", "none"], // worst first; not enough data last
+  of(answers, due = 0) {
+    const last = (answers || []).slice(-this.WINDOW), n = last.length;
+    if (n < this.MIN) return { level: "none", n, pct: null, sureWrong: 0, due, reasons: [`${n} of ${this.MIN} answers needed`] };
+    const pct = Math.round(last.filter(e => e.ok).length / n * 100);
+    const sureWrong = last.filter(e => e.confidence === "sure" && !e.ok).length;
+    const level = pct < 65 ? "work" : pct >= 80 && sureWrong <= 1 && due < 5 ? "ready" : "nearly";
+    const reasons = [];
+    if (pct < 80) reasons.push(`${pct}% right`);
+    if (sureWrong >= 2) reasons.push(`${sureWrong} confident mistakes`);
+    if (due >= 5) reasons.push(`${due} due for review`);
+    return { level, n, pct, sureWrong, due, reasons };
+  }
+};
+
 /* Lessons: one per category, in site/lessons/<category>.js. See README for the template.
    status: "stub" (not written yet) → "draft" → "reviewed". Draft and reviewed lessons need a method, an example and a source. */
 window.Lessons = {

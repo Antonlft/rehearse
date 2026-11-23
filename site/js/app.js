@@ -1637,28 +1637,52 @@ function diagnose() {
   return { insights, empty, cats, traps, tagged, answers: answers.length, tp, calm, slips, gaps, conf, sureWrongBy };
 }
 
+// Readiness for every category (Readiness.of in bank.js): its last answers in the whole log, mistakes practice left
+// out, plus its written questions due now when spaced repetition is on for it.
+function readinessByCat() {
+  const by = {};
+  for (const e of db.log) if (isAnswer(e) && e.mode !== RETRY) (by[e.cat] ||= []).push(e);
+  return Object.fromEntries(CATEGORIES.map(c => [c.id, Readiness.of(by[c.id], srsOn(c.id) ? dueCount(c.id) : 0)]));
+}
+const readyPill = r => `<span class="pill rd-${r.level}">${esc(Readiness.LABELS[r.level])}</span>`;
+// One line for the results page: how many categories sit at each level.
+function readinessLine() {
+  const rs = Object.values(readinessByCat()), count = l => rs.filter(r => r.level === l).length;
+  return Readiness.ORDER.filter(count).map(l => `<b>${count(l)}</b> ${esc(Readiness.LABELS[l].toLowerCase())}`).join(" · ");
+}
+
 function insightsBox(withLink) {
   const d = diagnose();
   return `<section class="card insights" id="insights">
       <div class="insights-head"><h2>Your recurring issues</h2>${withLink ? `<button class="link" type="button" data-report>See full report</button>` : ""}</div>
       ${d.insights.length ? `<ul>${d.insights.map(t => `<li>${esc(t)}</li>`).join("")}</ul>` : `<p class="muted">${esc(d.empty)}</p>`}
+      ${withLink ? `<p class="readiness-line">Readiness by category: ${readinessLine()} <span class="muted">· from your last ${Readiness.WINDOW} answers in each</span></p>` : ""}
     </section>`;
 }
 
 function renderReport() {
   const d = diagnose(), back = view.back || { name: "home" };
   meta.innerHTML = `<button class="link" id="backLink" type="button">Back</button>`;
-  const rows = Object.entries(d.cats).filter(([, c]) => c.n).sort((a, b) => a[1].ok / a[1].n - b[1].ok / b[1].n);
+  // Every category, worst readiness first, then lowest recent accuracy; the older columns cover the last 400 answers.
+  const ready = readinessByCat(), rank = id => Readiness.ORDER.indexOf(ready[id].level);
+  const rows = CATEGORIES.map(c => [c.id, d.cats[c.id] || { n: 0, ok: 0, tpN: 0, tpOk: 0, misread: 0 }])
+    .sort((a, b) => rank(a[0]) - rank(b[0]) || (ready[a[0]].pct ?? 101) - (ready[b[0]].pct ?? 101) || b[1].n - a[1].n);
+  const anyData = rows.some(([, c]) => c.n);
   const traps = Object.entries(d.traps).sort((a, b) => b[1] - a[1]);
   app.innerHTML = `
     <div class="title-row"><div><h1>Your weak spots</h1><p>Based on your last ${d.answers} answers · mistakes practice isn't counted in accuracy</p></div></div>
     ${insightsBox(false)}
-    <div class="section-head"><h2>By category</h2><p>Worst first</p></div>
-    ${rows.length ? `<div class="table-wrap"><table class="report-table">
-      <thead><tr><th scope="col">Category</th><th scope="col">Answers</th><th scope="col">Right</th><th scope="col">Under time pressure</th><th scope="col">Misread</th></tr></thead>
-      <tbody>${rows.map(([id, c]) => `<tr><th scope="row">${esc(catById(id)?.name || id)}</th><td>${c.n}</td><td>${pctOf(c.ok, c.n)}%</td>
-        <td>${c.tpN ? `${pctOf(c.tpOk, c.tpN)}% <span class="muted">of ${c.tpN}</span>` : `<span class="muted">–</span>`}</td><td>${c.misread || `<span class="muted">–</span>`}</td></tr>`).join("")}</tbody>
-    </table></div>` : `<div class="card"><p class="muted">Play a round to see your results by category.</p></div>`}
+    <div class="section-head"><h2>By category</h2><p>Readiness from your last ${Readiness.WINDOW} answers in each category · worst first</p></div>
+    ${anyData ? `<div class="table-wrap"><table class="report-table readiness-table">
+      <thead><tr><th scope="col">Category</th><th scope="col">Readiness</th><th scope="col">Last ${Readiness.WINDOW}</th><th scope="col">Holding it back</th><th scope="col">Answers</th><th scope="col">Right</th><th scope="col">Under time pressure</th><th scope="col">Misread</th></tr></thead>
+      <tbody>${rows.map(([id, c]) => { const r = ready[id]; return `<tr><th scope="row">${esc(catById(id)?.name || id)}</th>
+        <td>${readyPill(r)}</td>
+        <td>${r.pct == null ? `<span class="muted">–</span>` : `${r.pct}% <span class="muted">of ${r.n}</span>`}</td>
+        <td class="rd-why">${r.reasons.length ? esc(r.reasons.join(" · ")) : `<span class="muted">–</span>`}</td>
+        <td>${c.n || `<span class="muted">–</span>`}</td><td>${c.n ? `${pctOf(c.ok, c.n)}%` : `<span class="muted">–</span>`}</td>
+        <td>${c.tpN ? `${pctOf(c.tpOk, c.tpN)}% <span class="muted">of ${c.tpN}</span>` : `<span class="muted">–</span>`}</td><td>${c.misread || `<span class="muted">–</span>`}</td></tr>`; }).join("")}</tbody>
+    </table></div>
+    <p class="muted report-note">Ready: at least 80% of your last ${Readiness.WINDOW} answers right, at most 1 confident mistake ("Sure" but wrong) and fewer than 5 questions due for review. Nearly ready: 65–79% right, or held back by confident mistakes or questions due. Needs work: under 65%. Not enough data: fewer than ${Readiness.MIN} answers. Answers and Right cover your last ${REPORT_WINDOW} answers overall.</p>` : `<div class="card"><p class="muted">Play a round to see your results by category.</p></div>`}
     <div class="section-head"><h2>Mistake types</h2><p>${d.tagged ? `${d.tagged} tagged mistakes` : ""}</p></div>
     ${traps.length ? `<div class="table-wrap"><table class="report-table">
       <thead><tr><th scope="col">Mistake</th><th scope="col">Times</th></tr></thead>
