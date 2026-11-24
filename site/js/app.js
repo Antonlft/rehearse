@@ -1975,10 +1975,18 @@ const MB_ICONS = {
   summary: `<circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5"/><circle cx="12" cy="12" r="1.2"/>`
 };
 const mbIcon = k => MB_ICONS[k] ? `<svg class="mb-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${MB_ICONS[k]}</svg>` : "";
+// A line that opens with a short label ("Churn: the share of...") shows the label in bold, so a block can be skimmed by
+// its labels. Only in the reading blocks below, only for labels of up to 7 words, and never for lines with sums in them.
+const LEAD_KINDS = new Set(["how", "read", "example", "watch", "practice"]);
+const LEAD = /^([A-Z][^:=.÷×+−]{0,45}?):\s+(?=\S)/;
+const leadLine = line => {
+  const m = LEAD.exec(line);
+  return m && m[1].split(/\s+/).length <= 7 ? `<b class="mb-lead">${rich(m[1])}:</b> ${rich(line.slice(m[0].length))}` : rich(line);
+};
 function methodHtml(items) {
   const block = b => `<div class="mblock mb-${esc(b.kind)}">
       <span class="mb-label">${mbIcon(b.kind)}${esc(Lessons.BLOCKS[b.kind] || b.kind)}${b.title ? ` · ${esc(b.title)}` : ""}</span>
-      ${b.kind === "formula" ? `<p class="mb-eq">${b.text.split("\n").map(line => `<span class="mb-line">${rich(line)}</span>`).join("")}</p>` : `<p class="mb-text">${b.text.split("\n").map(line => `<span class="mb-line">${rich(line)}</span>`).join("")}</p>`}
+      ${b.kind === "formula" ? `<p class="mb-eq">${b.text.split("\n").map(line => `<span class="mb-line">${rich(line)}</span>`).join("")}</p>` : `<p class="mb-text">${b.text.split("\n").map(line => `<span class="mb-line">${LEAD_KINDS.has(b.kind) ? leadLine(line) : rich(line)}</span>`).join("")}</p>`}
       ${b.note ? `<p class="mb-note">${b.note.split("\n").map(line => `<span class="mb-line">${rich(line)}</span>`).join("")}</p>` : ""}
     </div>`;
   const item = b => typeof b === "string" ? `<p>${rich(b)}</p>`
