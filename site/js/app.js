@@ -149,7 +149,12 @@ db.askConfidence ??= true;
 //      sections and the "3 of 6 read" count on lesson cards. Only lessons shown as sections (two or more) use it.
 //      Keyed by the section's title (without any "1." numbering), so renaming a section drops its tick.
 db.lessonRead ||= {};
-const SCHEMA_VERSION = 19;
+//  20: Learning mode asks missed questions again at the end of the round. A Learning round in progress can hold extra
+//      items after the original ones, each with againOf (the original's position) and again (try number, 2 or 3),
+//      and its per-question arrays grow to match. On submit they're removed again, so finished rounds, the answer log
+//      and stats hold first tries only; a finished Learning round can have laterRight (how many missed questions were
+//      then answered right on a later try). No new top-level fields.
+const SCHEMA_VERSION = 20;
 db.schemaVersion = Math.max(db.schemaVersion || 1, SCHEMA_VERSION);
 let saveWarned = false;
 const persist = () => {
@@ -605,10 +610,9 @@ function newRound(mode) {
   else startRound(mode);
 }
 
-// Re-ask a finished round's missed items. Each item is rebuilt as "correct option first"
-// and run through materialize() again, so the options come back in a new order.
-function startRetry(items) {
-  const go_ = () => beginAttempt(RETRY, shuffle(items).map(it => {
+// An item asked again: rebuilt as "correct option first" and run through materialize() again, so the options come
+// back in a new order. Used by mistakes practice and by Learning mode's second tries.
+function reaskItem(it) {
     if (it.type === "numeric") return { ...it }; // typed answers have no options to reshuffle
     if (it.type === "order") return { ...it, start: orderStart(it.answer.length) }; // a fresh starting order
     if (it.type === "grid") return { ...it, rowOrder: shuffle([...it.rows.keys()]) }; // rows in a new order
@@ -620,7 +624,10 @@ function startRetry(items) {
     return materialize({ id: it.id, gen: it.gen, lv: it.lv, q: it.q, why: it.why,
       o: [it.o[it.a], ...wrong.map(j => it.o[j])], x: wrong.map(j => it.x[j]),
       ...(it.trap ? { trap: wrong.map(j => it.trap[j]) } : {}), ...(it.table ? { table: it.table } : {}) }, it.cat);
-  }), `${items.length} question${items.length > 1 ? "s" : ""} you got wrong or skipped`, false, calcFor(RETRY));
+}
+// Re-ask a finished round's missed items, in a new order.
+function startRetry(items) {
+  const go_ = () => beginAttempt(RETRY, shuffle(items).map(reaskItem), `${items.length} question${items.length > 1 ? "s" : ""} you got wrong or skipped`, false, calcFor(RETRY));
   if (db.attempts[RETRY]) confirmModal("Start a new mistakes practice?", "Your mistakes practice in progress will be discarded.", "Start practice", go_);
   else go_();
 }
@@ -1118,7 +1125,8 @@ function renderQuiz() {
         : `<div class="timer" id="timer" role="timer"><span>Time left</span><strong id="clock">${fmt(at.deadline - Date.now())}</strong></div>`}
     </div>
     <section class="card question" aria-labelledby="qtext">
-      <p class="label">${esc(catById(it.cat).name)} · Question ${at.cur + 1} of ${n}${it.lv ? ` · ${LEVELS[it.lv]}` : ""}${it.type === "case" ? ` · Case study, ${it.steps.length} steps` : ""}</p>
+      ${it.againOf != null ? `<p class="again-note">You missed this one earlier: try again. Only your first try counts toward your score. <button class="link" type="button" id="submitNow">Submit now</button></p>` : ""}
+      <p class="label">${esc(catById(it.cat).name)} · Question ${at.cur + 1} of ${n}${it.again ? ` · Try ${it.again} of ${AGAIN_MAX}` : ""}${it.lv ? ` · ${LEVELS[it.lv]}` : ""}${it.type === "case" ? ` · Case study, ${it.steps.length} steps` : ""}</p>
       <p class="prompt" id="qtext">${esc(it.q)}</p>
       ${it.table ? qTable(it.table) : ""}
       ${it.type === "numeric" ? typedArea(at, it, ans, revealed) : it.type === "order" ? orderArea(at, it, ans, revealed) : it.type === "grid" ? gridArea(at, it, ans, revealed) : it.type === "walk" ? walkArea(at, it, ans, revealed) : it.type === "case" ? caseArea(at, it, ans) : it.type === "reason" ? reasonArea(at, it, ans, revealed) : it.type === "spot" ? spotArea(at, it, ans, revealed) : `
@@ -1159,6 +1167,8 @@ function renderQuiz() {
   document.getElementById("prevBtn").onclick = () => move(at.cur - 1);
   document.getElementById("nextBtn").onclick = () => move(at.cur + 1);
   document.getElementById("markBtn").onclick = toggleMark;
+  const submitNow = document.getElementById("submitNow");
+  if (submitNow) submitNow.onclick = () => confirmModal("Submit now?", "The questions you still haven't got right won't come back this round. Your score counts first tries only.", "Submit", () => submit(false));
   if (it.type === "numeric" && !revealed) wireTyped(at, it);
   if (it.type === "order" && !revealed) wireOrder(at, it);
   if (it.type === "grid" && !revealed) wireGrid(at, it);
@@ -1549,8 +1559,42 @@ function choose(i) {
 function move(pos) { const at = db.attempts[view.mode]; if (pos < 0 || pos >= at.items.length) return; endVisit(at); at.cur = pos; startVisit(at); persist(); renderQuiz(); }
 function toggleMark() { const at = db.attempts[view.mode]; at.marked[at.cur] = !at.marked[at.cur]; persist(); renderQuiz(); }
 
+/* Learning mode: questions missed (wrong or skipped) come back at the end of the round, in a new order, up to 3 tries
+   each; only the first try counts toward the score, stats and spaced review. Getting an answer right more than once,
+   spread out, is what makes it last (Karpicke & Roediger, 2008; Rawson & Dunlosky, 2011). A second try is a copy
+   appended to the round with againOf (the original's position) and again (its try number). Typed answers and case
+   studies keep their numbers, and walk-through cards are self-rated, so those aren't asked again. */
+const AGAIN_MAX = 3;
+const canReask = it => !["numeric", "case", "walk"].includes(it.type);
+function queueAgain(at) {
+  const n0 = at.items.length, latest = new Map();
+  at.items.forEach((it, i) => latest.set(it.againOf ?? i, i)); // each original's latest try
+  const add = [];
+  for (const [orig, i] of latest) {
+    const it = at.items[i];
+    if (!canReask(it) || (it.again || 1) >= AGAIN_MAX) continue;
+    if (!isBlank(at.answers[i]) && grade(it, at.answers[i]).ok) continue;
+    add.push({ ...reaskItem(at.items[orig]), againOf: orig, again: (it.again || 1) + 1 });
+  }
+  if (!add.length) return false;
+  for (const k of Object.keys(at)) if (k !== "items" && Array.isArray(at[k]) && at[k].length === n0)
+    at[k].push(...add.map(() => k === "marked" ? false : k === "spentMs" ? 0 : null));
+  at.items.push(...shuffle(add));
+  return true;
+}
+// At submit: drop the second tries (so everything after scores first tries only) and count the questions put right.
+function stripAgain(at) {
+  const n0 = at.items.findIndex(it => it.againOf != null);
+  if (n0 < 0) return null;
+  const fixed = new Set();
+  at.items.forEach((it, i) => { if (i >= n0 && !isBlank(at.answers[i]) && grade(it, at.answers[i]).ok) fixed.add(it.againOf); });
+  for (const k of Object.keys(at)) if (Array.isArray(at[k]) && at[k].length > n0) at[k] = at[k].slice(0, n0);
+  return fixed.size;
+}
+
 function askSubmit() {
   const at = db.attempts[view.mode];
+  if (at.learning) { const first = at.items.length; if (queueAgain(at)) return move(first); }
   const blank = at.answers.filter(a => isBlank(a)).length, flagged = at.marked.filter(Boolean).length;
   const bits = [];
   if (blank) bits.push(`${blank} unanswered question${blank > 1 ? "s" : ""}`);
@@ -1561,6 +1605,7 @@ function askSubmit() {
 function submit(timedOut) {
   const mode = view.mode, at = db.attempts[mode];
   endVisit(at);
+  const laterRight = stripAgain(at);
   const submittedAt = Date.now();
   // "Under time pressure" = answer last chosen in the final 10% of the round's time.
   const pressureFrom = at.deadline - (at.deadline - at.start) * 0.1;
@@ -1597,7 +1642,7 @@ function submit(timedOut) {
   });
   const pct = Math.round(correct / at.items.length * 100);
   const result = { at: submittedAt, mode, items: at.items, answers: at.answers, marked: at.marked, ...(at.conf ? { conf: at.conf } : {}), correct, total: at.items.length, pct,
-    usedMs: Math.min(Date.now(), at.deadline) - at.start, timedOut, ...(at.learning ? { learning: true } : {}), ...(at.calc ? { calc: true } : {}) };
+    usedMs: Math.min(Date.now(), at.deadline) - at.start, timedOut, ...(at.learning ? { learning: true } : {}), ...(at.calc ? { calc: true } : {}), ...(laterRight != null ? { laterRight } : {}) };
   db.history[mode] = [...(db.history[mode] || []), result].slice(-5);
   const t = (db.totals[mode] ||= { rounds: 0, sum: 0, best: 0 });
   t.rounds++; t.sum += pct; t.best = Math.max(t.best, pct);
@@ -2518,7 +2563,7 @@ function renderResults() {
         <div class="score-big">${r.correct}<small> / ${r.total}</small></div>
         <div>
           <p class="verdict">${verdict} · ${r.pct}%</p>
-          <p class="muted">${r.learning ? `Learning mode · time spent ${fmt(r.usedMs)}` : `${r.timedOut ? "Time ran out · " : ""}Time used ${fmt(r.usedMs)} of ${fmt(r.total * 60000)}`} · ${wrongN} wrong · ${skipN} unanswered</p>
+          <p class="muted">${r.learning ? `Learning mode · time spent ${fmt(r.usedMs)}${r.laterRight ? ` · ${r.laterRight} right on a later try` : ""}` : `${r.timedOut ? "Time ran out · " : ""}Time used ${fmt(r.usedMs)} of ${fmt(r.total * 60000)}`} · ${wrongN} wrong · ${skipN} unanswered</p>
         </div>
       </div>
       <div class="result-actions">

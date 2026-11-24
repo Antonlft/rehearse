@@ -164,6 +164,7 @@ Rounds in progress also keep `spentMs[]` and `answeredAt[]` per question. Time o
 
 - Wrong answer: due tomorrow, interval reset to 1 day.
 - Right answer: interval doubles (first time: 2 days), capped at 60 days. A right answer given before the question is due leaves the schedule as it is.
+- Learning mode: questions missed in the round (wrong or skipped) come back at its end in a new order, up to 3 tries each (`AGAIN_MAX`); typed answers, case studies and walk-through cards aren't asked again. Only the first try counts toward the score, stats, log and spaced review; the results add "N right on a later try". "Submit now" ends the round early.
 - Confidence (when rated): a right answer marked "Guess" counts like a miss (due tomorrow); "Think so" keeps the current interval instead of doubling it (first time: 1 day); "Sure" doubles as above.
 - "Due" means from local midnight of that day.
 
