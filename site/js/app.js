@@ -1024,6 +1024,7 @@ function renderProgressTab() {
       <h2>Your progress</h2>
       ${db.log.some(isAnswer) ? `<p class="report-link"><button class="link" type="button" data-report>See your weak spots</button> <span class="muted">· accuracy by category, time pressure and the kinds of mistake you make</span></p>`
         : `<p class="muted">Your weak-spots report appears once you've answered some questions.</p>`}
+      ${(() => { const line = db.askConfidence || db.log.some(e => e.confidence) ? calibrationLine(diagnose().conf, false) : null; return line ? `<p class="calib-line"><b>How sure vs how right.</b> ${esc(line)}</p>` : ""; })()}
     </section>
     <section class="card settings-card">
       <h2>Settings</h2>
@@ -1714,10 +1715,13 @@ function diagnose() {
   const cats = {}, cat = id => (cats[id] ||= { n: 0, ok: 0, tpN: 0, tpOk: 0, tpWrong: 0, misread: 0 });
   const all = { n: 0, ok: 0 }, tp = { n: 0, ok: 0 }, calm = { n: 0, ok: 0 }, traps = {};
   let tagged = 0, misreads = 0, slips = 0, gaps = 0, wrongReasons = 0;
-  const conf = { sure: { n: 0, ok: 0 }, think: { n: 0, ok: 0 }, guess: { n: 0, ok: 0 } }, sureWrongBy = {};
+  const conf = { sure: { n: 0, ok: 0 }, think: { n: 0, ok: 0 }, guess: { n: 0, ok: 0 } }, sureWrongBy = {}, confBy = {};
   for (const e of answers) {
     // Confidence: how often each rating was right (mistakes practice left out, as for accuracy).
-    if (e.mode !== RETRY && conf[e.confidence]) { conf[e.confidence].n++; if (e.ok) conf[e.confidence].ok++; else if (e.confidence === "sure") sureWrongBy[e.cat] = (sureWrongBy[e.cat] || 0) + 1; }
+    if (e.mode !== RETRY && conf[e.confidence]) {
+      conf[e.confidence].n++; if (e.ok) conf[e.confidence].ok++; else if (e.confidence === "sure") sureWrongBy[e.cat] = (sureWrongBy[e.cat] || 0) + 1;
+      const b = ((confBy[e.cat] ||= { sure: { n: 0, ok: 0 }, think: { n: 0, ok: 0 }, guess: { n: 0, ok: 0 } })[e.confidence]); b.n++; if (e.ok) b.ok++;
+    }
     // Mistakes practice re-asks known misses, so it's left out of accuracy (as in category accuracy on the home page).
     if (e.mode !== RETRY) {
       const c = cat(e.cat);
@@ -1761,11 +1765,37 @@ function diagnose() {
     const most = Object.entries(sureWrongBy).sort((a, b) => b[1] - a[1])[0];
     found.push([sureWrong / conf.sure.n * 80, `You were sure but wrong on ${sureWrong} of your ${conf.sure.n} "Sure" answers${most && most[1] >= 2 ? `, most often in ${name(most[0])}` : ""}. Review those first: a confident mistake is the one you'd repeat in an interview.`]);
   }
+  const unsure = { n: conf.think.n + conf.guess.n, ok: conf.think.ok + conf.guess.ok };
+  if (unsure.n >= CALIB_MIN && unsure.ok / unsure.n >= CALIB_UNDER)
+    found.push([unsure.ok / unsure.n * 30, `When you weren't sure ("Think so" or "Guess") you were still right ${pctOf(unsure.ok, unsure.n)}% of the time. You know more than you think: in an interview, commit to your first method and say it with confidence.`]);
   const insights = found.sort((a, b) => b[0] - a[0]).slice(0, 3).map(f => f[1]);
   const empty = answers.length < 10
     ? `Patterns appear once you've answered a few more questions (${answers.length} logged so far).`
     : `No clear weak spots in your last ${answers.length} answers. This updates after every round.`;
-  return { insights, empty, cats, traps, tagged, answers: answers.length, tp, calm, slips, gaps, conf, sureWrongBy };
+  return { insights, empty, cats, traps, tagged, answers: answers.length, tp, calm, slips, gaps, conf, sureWrongBy, confBy };
+}
+
+/* Calibration: does how sure you feel match how often you're right? From a set of { sure, think, guess } counts.
+   Overconfident: "Sure" right less than 75% of the time. Underconfident: "Think so" and "Guess" together right 75% or
+   more. Well judged: "Sure" right 85% or more (and not underconfident). Each needs CALIB_MIN rated answers to judge. */
+const CALIB_MIN = 5, CALIB_OVER = 0.75, CALIB_GOOD = 0.85, CALIB_UNDER = 0.75;
+function calibration(c) {
+  const unsure = { n: c.think.n + c.guess.n, ok: c.think.ok + c.guess.ok };
+  if (c.sure.n >= CALIB_MIN && c.sure.ok / c.sure.n < CALIB_OVER) return { key: "over", label: "Overconfident", tone: "rd-work" };
+  if (unsure.n >= CALIB_MIN && unsure.ok / unsure.n >= CALIB_UNDER) return { key: "under", label: "You know more than you think", tone: "rd-nearly" };
+  if (c.sure.n >= CALIB_MIN && c.sure.ok / c.sure.n >= CALIB_GOOD) return { key: "good", label: "Well judged", tone: "rd-ready" };
+  if (c.sure.n + unsure.n < CALIB_MIN) return { key: "few", label: "Too few yet", tone: "rd-none" };
+  return { key: "ok", label: "About right", tone: "rd-none" };
+}
+// One plain sentence for the overall calibration (null below CALIB_MIN rated answers). onReport: the per-topic table
+// is right below it; elsewhere the sentence points to the weak-spots report instead.
+function calibrationLine(c, onReport = true) {
+  const v = calibration(c), sure = pctOf(c.sure.ok, c.sure.n), unsure = pctOf(c.think.ok + c.guess.ok, c.think.n + c.guess.n);
+  if (v.key === "few") return null;
+  if (v.key === "over") return `When you say "Sure" you're right ${sure}% of the time, so some confident answers are wrong. ${onReport ? "Slow down on the topics marked Overconfident below: those are the mistakes you'd repeat in an interview." : "The weak-spots report shows which topics."}`;
+  if (v.key === "under") return `When you're unsure you're still right ${unsure}% of the time: you know more than you think. Trust your first method.`;
+  if (v.key === "good") return `Your confidence is well judged: "Sure" is right ${sure}% of the time${unsure != null ? `, against ${unsure}% when you're unsure` : ""}.`;
+  return `"Sure" is right ${sure ?? "–"}% of the time${unsure != null ? ` and unsure answers ${unsure}%` : ""}. Aim for "Sure" to be right at least ${CALIB_GOOD * 100}% of the time.`;
 }
 
 // Readiness for every category (Readiness.of in bank.js): its last answers in the whole log, mistakes practice left
@@ -1824,7 +1854,17 @@ function renderReport() {
       <thead><tr><th scope="col">You said</th><th scope="col">Answers</th><th scope="col">Right</th></tr></thead>
       <tbody>${CONF.map(([k, l]) => `<tr><th scope="row">${l}</th><td>${d.conf[k].n}</td><td>${d.conf[k].n ? `${pctOf(d.conf[k].ok, d.conf[k].n)}%` : `<span class="muted">–</span>`}</td></tr>`).join("")}</tbody>
     </table></div>
-    ${Object.keys(d.sureWrongBy).length ? `<p class="muted report-note">Sure but wrong, by category: ${Object.entries(d.sureWrongBy).sort((a, b) => b[1] - a[1]).map(([c, n]) => `${esc(catById(c)?.name || c)} ${n}`).join(" · ")}</p>` : ""}` : ""; })()}
+    ${calibrationLine(d.conf) ? `<p class="report-note">${esc(calibrationLine(d.conf))}</p>` : ""}
+    ${(() => {
+      const cell = b => b.n ? `${pctOf(b.ok, b.n)}%<span class="calib-n">${b.n} answer${b.n > 1 ? "s" : ""}</span>` : `<span class="muted">–</span>`;
+      const order = { over: 0, under: 1, ok: 2, good: 3, few: 4 };
+      const list = Object.entries(d.confBy).map(([c, b]) => [c, b, calibration(b)]).filter(r => r[2].key !== "few").sort((a, b) => order[a[2].key] - order[b[2].key]);
+      return list.length ? `<h3 class="report-sub">By topic</h3><p class="muted report-note">How often each rating was right, with how many answers it's based on. Topics with fewer than ${CALIB_MIN} rated answers are left out.</p>
+    <div class="table-wrap"><table class="report-table calib-table">
+      <thead><tr><th scope="col">Topic</th>${CONF.map(([, l]) => `<th scope="col">${l}</th>`).join("")}</tr></thead>
+      <tbody>${list.map(([c, b, v]) => `<tr><th scope="row">${esc(catById(c)?.name || c)}<br><span class="pill ${v.tone}">${v.label}</span></th>${CONF.map(([k]) => `<td>${cell(b[k])}</td>`).join("")}</tr>`).join("")}</tbody>
+    </table></div>` : "";
+    })()}` : ""; })()}
     ${d.slips + d.gaps ? `<div class="section-head"><h2>Typed answers</h2><p>Wrong typed answers, by how far off they were</p></div>
     <div class="table-wrap"><table class="report-table">
       <thead><tr><th scope="col">Kind of miss</th><th scope="col">Times</th></tr></thead>
