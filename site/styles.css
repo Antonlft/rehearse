@@ -132,6 +132,7 @@ h1, h2, h3, p { margin: 0; }
 .theme-toggle { grid-column: 1; grid-row: 1; justify-self: start; display: inline-flex; align-items: center; gap: 7px; height: 32px; padding: 0 12px 0 10px; border: 1px solid var(--rule-strong); border-radius: 16px; background: var(--page); color: var(--ink); font-size: 12px; font-weight: 500; cursor: pointer; }
 .theme-toggle:hover { border-color: var(--navy); }
 .theme-toggle svg { width: 15px; height: 15px; flex: none; }
+.theme-toggle[hidden] { display: none; }
 @media (max-width: 640px) {
   .top .wrap { grid-template-columns: auto auto 1fr; }
   .theme-toggle { width: 32px; padding: 0; justify-content: center; }
@@ -608,6 +609,17 @@ sup { font-size: 0.72em; line-height: 0; vertical-align: super; }
 .gl-name span { color: var(--muted); }
 .gl-def { margin-top: 2px; font-size: 13.5px; }
 .gl-def .link { font-size: 12.5px; margin-left: 4px; }
+/* Site search results: one row per lesson section, formula or glossary term, with the matching words in bold. */
+.sr-group { margin-bottom: 8px; }
+.sr-hit { display: grid; gap: 3px; width: 100%; text-align: left; padding: 10px 8px; margin: 0 -8px; width: calc(100% + 16px); background: none; border: 0; border-radius: 6px; color: var(--ink); font: inherit; cursor: pointer; }
+.sr-hit + .sr-hit { border-top: 1px dashed var(--rule); border-radius: 0; }
+.sr-hit:hover { background: var(--select); }
+.sr-hit:focus-visible { outline: 2px solid var(--navy); outline-offset: -2px; }
+.sr-title { font-size: 14.5px; font-weight: 600; }
+.sr-title .muted { font-weight: 400; }
+.sr-snip { font-size: 13.5px; line-height: 1.5; color: var(--muted); max-width: 70ch; }
+.sr-snip b { color: var(--ink); font-weight: 600; }
+.sr-more { font-size: 13px; margin: 6px 0 0; }
 
 /* Home: compact tiles under the main test */
 .home-tiles { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; margin-top: 14px; }

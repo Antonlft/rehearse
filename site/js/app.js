@@ -721,6 +721,7 @@ document.addEventListener("visibilitychange", () => {
 });
 window.addEventListener("pagehide", pageAway);
 function render() {
+  if (searchBtn) searchBtn.hidden = view.name === "quiz" || view.name === "sprint"; // no searching during a timed round
   app.classList.toggle("wide", view.name === "lessons" || view.name === "home" || view.name === "formulas"); // the lessons grid, the home page and the formula sheet use the full header width
   if (view.name === "quiz") renderQuiz();
   else if (view.name === "results") renderResults();
@@ -731,6 +732,7 @@ function render() {
   else if (view.name === "lessons") renderLessons();
   else if (view.name === "glossary") renderGlossary();
   else if (view.name === "formulas") renderFormulas();
+  else if (view.name === "search") renderSearch();
   else renderHome();
 }
 
@@ -2251,9 +2253,118 @@ function renderGlossary() {
     list.querySelectorAll("[data-gl-lesson]").forEach(b => b.onclick = () => go({ name: "lesson", cat: b.dataset.glLesson, back: { name: "glossary", back } }));
   };
   input.oninput = draw;
+  if (view.q) input.value = view.q; // opened from a search result: show that term
   draw();
   document.getElementById("backLink").onclick = () => go(back);
 }
+
+/* Site search: lessons (summaries, sections, worked examples), formulas and the glossary. Questions are left out,
+   so a search can't give an answer away. A document also matches the full names of the acronyms it uses, so
+   "free cash flow" finds FCFF and "weighted average cost of capital" finds WACC. Built once, on first use. */
+const fold = s => String(s).normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
+const reEsc = s => s.replace(/[.*+?^${}()|[\]\\/]/g, "\\$&");
+const plainF = s => String(s).replace(/\{\{(.+?)\s\/\/\s(.+?)\}\}/g, "($1) ÷ ($2)").replace(/\^\(([^()]+)\)/g, "^$1");
+let searchDocs = null;
+function buildSearch() {
+  const docs = [];
+  const termRe = GL.length ? new RegExp(`(?<![A-Za-z0-9&-])(${GL.map(g => g.term).sort((a, b) => b.length - a.length).map(reEsc).join("|")})s?(?![A-Za-z0-9])`, "g") : null;
+  const expand = t => termRe ? [...new Set([...t.matchAll(termRe)].map(m => m[1]))].map(k => GL_RAW.get(k).full).join(" ") : "";
+  const add = (type, title, sub, text, to) => docs.push({ type, title, sub, text, to,
+    key: fold(`${title} ${sub} ${text} ${expand(`${title} ${text}`)}`), vkey: fold(`${title} ${sub} ${text}`), tkey: fold(title), skey: fold(sub) });
+  for (const c of CATEGORIES) {
+    const l = Lessons.all[c.id];
+    if (!l) continue;
+    const accordion = secTitles(l).length > 0;
+    const at = n => ({ name: "lesson", cat: c.id, ...(accordion && n >= 0 ? { openSec: n } : {}) });
+    if (Array.isArray(l.summary) && l.summary.length) add("lesson", c.name, "In 30 seconds", l.summary.join(" "), at(-1));
+    let sec = "", n = -1, buf = [];
+    const flush = () => { if (buf.length) add("lesson", c.name, sec || "Method", buf.join(" "), at(n)); buf = []; };
+    for (const b of l.method || []) {
+      if (b && b.section) { flush(); sec = b.section.replace(/^\d+\.\s*/, ""); n++; }
+      else if (b && b.text) {
+        buf.push((b.title ? b.title + ": " : "") + [plainF(b.text), b.note && plainF(b.note)].filter(Boolean).join(" "));
+        if (b.kind === "formula") add("formula", b.title || sec || c.name, c.name, plainF(b.text), at(n));
+      }
+    }
+    flush();
+    const ex = l.example;
+    if (ex && ex.question) add("lesson", c.name, "Worked example", plainF([ex.question, ...(ex.working || []), ex.answer].filter(Boolean).join(" ")), { name: "lesson", cat: c.id });
+  }
+  for (const g of GL) add("glossary", g.term, g.full, g.def, { name: "glossary", q: g.term });
+  return docs;
+}
+// Every word typed must start a word somewhere in the document (so "val" finds "valuation" but "ev" doesn't find
+// "every"); matches in the title count most, then the exact phrase, then words seen in the text itself.
+function searchSite(q) {
+  searchDocs ||= buildSearch();
+  const words = fold(q).split(/[^a-z0-9&%$.\/-]+/).filter(Boolean);
+  if (!words.length) return [];
+  const res = words.map(w => new RegExp(`(?:^|[^a-z0-9])${reEsc(w)}`));
+  const exact = fold(q.trim());
+  return searchDocs.map(d => {
+    if (!res.every(r => r.test(d.key))) return null;
+    const score = res.filter(r => r.test(d.tkey)).length * 3 + res.filter(r => r.test(d.skey)).length * 2 + res.filter(r => r.test(d.vkey)).length
+      + (words.length > 1 && d.vkey.includes(exact) ? 4 : 0) + (d.type === "glossary" && d.tkey === exact ? 20 : 0);
+    return { d, score };
+  }).filter(Boolean).sort((a, b) => b.score - a.score).map(h => h.d);
+}
+// A short extract around the first match, with the matching words in bold.
+function searchSnippet(text, q) {
+  const words = fold(q).split(/[^a-z0-9&%$.\/-]+/).filter(Boolean);
+  const f = fold(text);
+  let i = -1;
+  for (const w of words) { const m = new RegExp(`(?:^|[^a-z0-9])${reEsc(w)}`).exec(f); if (m) { i = m.index; break; } }
+  let a = Math.max(0, i - 60), b = Math.min(text.length, Math.max(i, 0) + 140);
+  if (a > 0) a = text.indexOf(" ", a) + 1;
+  if (b < text.length) b = text.lastIndexOf(" ", b);
+  let h = esc(text.slice(a, b));
+  for (const w of words.sort((x, y) => y.length - x.length)) h = h.replace(new RegExp(`(^|[^A-Za-z0-9>])(${reEsc(esc(w))}[A-Za-z0-9]*)`, "gi"), "$1<b>$2</b>");
+  return (a > 0 ? "… " : "") + h + (b < text.length ? " …" : "");
+}
+function renderSearch() {
+  const back = view.back || { name: "home" };
+  meta.innerHTML = `<button class="link" id="backLink" type="button">Back</button>`;
+  app.innerHTML = `
+    <div class="page-head">
+      <h1>Search</h1>
+      <p>Lessons, formulas and the glossary. Practice questions aren't searched, so nothing gives an answer away.</p>
+    </div>
+    <div class="gl-search">
+      <label class="style-label" for="siteSearch">Search</label>
+      <input id="siteSearch" class="typed-input" type="search" placeholder="e.g. WACC or free cash flow" autocomplete="off" spellcheck="false">
+      <span class="muted" id="srCount" aria-live="polite"></span>
+    </div>
+    <div id="srList"></div>`;
+  const input = document.getElementById("siteSearch"), list = document.getElementById("srList"), count = document.getElementById("srCount");
+  const GROUPS_SR = [["lesson", "Lessons"], ["formula", "Formulas"], ["glossary", "Glossary"]];
+  const MAX = 25;
+  let hits = [];
+  const draw = () => {
+    const q = input.value.trim();
+    view.q = q;
+    hits = q ? searchSite(q) : [];
+    count.textContent = q ? `${hits.length} result${hits.length === 1 ? "" : "s"}` : "";
+    if (!q) { list.innerHTML = ""; return; }
+    if (!hits.length) { list.innerHTML = `<p class="muted">Nothing matches “${esc(q)}”. Try fewer words, or the full name of an acronym.</p>`; return; }
+    list.innerHTML = GROUPS_SR.map(([type, name]) => {
+      const g = hits.filter(d => d.type === type);
+      if (!g.length) return "";
+      return `<section class="sr-group"><h2 class="gl-letter">${name} <span class="muted">${g.length}</span></h2>
+        ${g.slice(0, MAX).map(d => `<button type="button" class="sr-hit" data-i="${hits.indexOf(d)}">
+          <span class="sr-title">${esc(d.title)}<span class="muted"> · ${esc(d.sub)}</span></span>
+          <span class="sr-snip">${searchSnippet(d.text, q)}</span></button>`).join("")}
+        ${g.length > MAX ? `<p class="muted sr-more">${g.length - MAX} more: add a word to narrow the search.</p>` : ""}
+      </section>`;
+    }).join("");
+    list.querySelectorAll("[data-i]").forEach(b => b.onclick = () => go({ ...hits[+b.dataset.i].to, back: { name: "search", q: input.value.trim(), back } }));
+  };
+  input.oninput = draw;
+  if (view.q) input.value = view.q;
+  draw();
+  input.focus();
+  document.getElementById("backLink").onclick = () => go(back);
+}
+const openSearch = () => { if (view.name !== "search") go({ name: "search", back: { ...view } }); else document.getElementById("siteSearch")?.focus(); };
 
 /* Lessons: one page per category (content in site/lessons/<category>.js) */
 const LESSON_STATUS = { stub: "Not written yet", draft: "Draft", reviewed: "Reviewed" };
@@ -2522,6 +2633,15 @@ document.getElementById("homeLink").onclick = () => go({ name: "home" });
 const THEME_KEY = "rehearse.theme";
 const darkQuery = matchMedia("(prefers-color-scheme: dark)");
 const themeBtn = document.getElementById("themeBtn");
+const searchBtn = document.getElementById("searchBtn");
+if (searchBtn) searchBtn.onclick = openSearch;
+// "/" opens the search from anywhere except a timed round or a text box.
+document.addEventListener("keydown", e => {
+  if (e.key !== "/" || e.ctrlKey || e.metaKey || e.altKey || view.name === "quiz" || view.name === "sprint") return;
+  if (e.target.closest && e.target.closest("input, textarea, select, [contenteditable]")) return;
+  e.preventDefault();
+  openSearch();
+});
 const ICON_SUN = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg>`;
 const ICON_MOON = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 14.5A8 8 0 0 1 9.5 4a8 8 0 1 0 10.5 10.5z"/></svg>`;
 const currentTheme = () => document.documentElement.dataset.theme || (darkQuery.matches ? "dark" : "light");
