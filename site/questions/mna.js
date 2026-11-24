@@ -142,7 +142,35 @@ Bank.add("mna", [
   { id: "mna-36", lv: 2, trap: ["concept", "inverted", "concept"], q: "Why can a trade (strategic) buyer often pay more than a private equity buyer for the same company?",
     o: ["It can count on synergies, and doesn't need to hit a fund's target return in a few years", "It always borrows more, so its cost of capital is lower than a private equity fund's", "Private equity buyers can't use debt, so their equity cheques limit what they can pay", "Trade buyers don't need to do due diligence, so they save costs they can add to the price"],
     why: "A trade buyer values the target plus the synergies it brings to its own business, and it can hold forever. A private equity buyer values the company on its own, needs an exit in about 3–7 years, and works back from its target return to a maximum price.",
-    x: ["Trade buyers usually use less debt than private equity buyers, not more. Their edge is synergies.", "It's the opposite: private equity relies heavily on debt (that's the leverage in a leveraged buyout).", "Every buyer does due diligence. Trade buyers often know the industry better, but that isn't why they can pay more."] }
+    x: ["Trade buyers usually use less debt than private equity buyers, not more. Their edge is synergies.", "It's the opposite: private equity relies heavily on debt (that's the leverage in a leveraged buyout).", "Every buyer does due diligence. Trade buyers often know the industry better, but that isn't why they can pay more."] },
+  { id: "mna-37", lv: 2, trap: ["concept", "wrong-measure", "wrong-measure"], q: "In a merger of two listed companies, what does a contribution analysis compare?",
+    o: ["Each side's share of combined revenue, EBITDA and profit with its share of the new group", "Each company's share price over the past year, to set the exchange ratio from the trend", "The synergies each management team expects to deliver once the deal has completed", "Each company's net assets at book value, which by law sets the split of ownership"],
+    why: "It shows what each side brings. If a company contributes 40% of combined EBITDA but its shareholders would own only 30% of the group, they can argue for a better exchange ratio. It's a sense check rather than a valuation: it ignores differences in growth and risk, and where the two have different debt, EBITDA should be compared with each side's share of enterprise value, not of equity.",
+    x: ["Share price history feeds a different analysis. Contribution looks at what each business earns.", "Synergies come from combining the two, so they can't be split by contribution.", "Book values don't set the ownership split. It's negotiated, and contribution is one input."] },
+  { id: "mna-38", lv: 2, trap: ["concept", "concept", "inverted"], q: "A target has US$200m of unused tax losses, and the tax rate is 25%. Why might a buyer value them at well below US$50m?",
+    o: ["Their use may be capped after a change of owner, and the savings come over years", "Tax losses are always cancelled in full when a company is bought by another", "The buyer has to pay tax on the losses at the moment it takes control", "The losses stay with the seller, who keeps their benefit after the sale"],
+    why: "Losses only save tax when the company makes taxable profit, so US$200m × 25% = US$50m is the most they could save, spread over several years and worth less today. Many countries also restrict losses after a change of ownership: in the US, Section 382 caps how much can be used each year; the UK can disallow them if the business changes soon after the sale. Buyers value the savings they can actually use, discounted to today.",
+    x: ["Not always cancelled: they usually survive, but often with limits on how fast they can be used.", "Taking control doesn't trigger tax on losses. The issue is whether they can still be used.", "In a share deal the losses stay with the company being bought, so they pass to the buyer with it."] },
+  { id: "mna-39", lv: 2, trap: ["double-count", "missed-step", "wrong-measure"], q: "A buyer uses US$500m of its own cash to buy 100% of a target whose net assets are worth US$350m, at both book and fair value. How does the combined balance sheet differ from adding the two together?",
+    o: ["The target's equity goes, the buyer's cash falls by US$500m and US$150m of goodwill is added", "Both companies' equity is kept, and US$500m of goodwill is added to the combined assets", "Nothing is taken out, and US$150m of goodwill is added on top of both balance sheets", "The target's assets are left out, and the US$500m is shown as a single investment"],
+    why: "On consolidation, the buyer's investment is replaced by the target's assets and liabilities (at fair value), and the target's equity is eliminated: only the buyer's equity remains. Goodwill = price − fair value of net assets = 500 − 350 = US$150m. The buyer's cash falls by the US$500m it paid. The group still balances: net assets change by 350 + 150 − 500 = 0, and equity is unchanged.",
+    x: ["Keeping the target's equity counts it twice: the buyer has paid for it. Goodwill is the excess over net assets, not the full price.", "The target's equity has to be eliminated and the cash paid taken out, or the balance sheet double counts.", "That's how the buyer's own (unconsolidated) accounts show it. A group with control consolidates line by line."] },
+  { id: "mna-40", lv: 2, trap: ["concept", "concept", "sign"], q: "When working out the equity price of a takeover, why are the target's diluted shares calculated at the offer price rather than at its current share price?",
+    o: ["Options are settled on the deal terms, so at the offer price more are in the money", "The current share price already includes the premium, so it would count it twice", "Accounting rules require using the highest share price of the last 12 months", "Using the offer price lowers the share count, which reduces the price to pay"],
+    why: "Option holders are paid on the deal terms. At the higher offer price, more options are in the money and each is worth more, so the diluted share count, and the total equity price, both rise. Using the undisturbed share price would understate what the buyer pays.",
+    x: ["The undisturbed share price has no premium in it. That's why it's used to measure the premium.", "No such rule exists. The offer price is used because it's what option holders will be paid on.", "It's the opposite: at a higher price more options count, so the share count rises."] },
+  { id: "mna-41", lv: 2, trap: ["inverted", "concept", "concept"], q: "In a sale, the buyer pays part of the price with a vendor loan (seller note). Why might the seller agree to it?",
+    o: ["It bridges a funding gap and can support a higher headline price", "It ranks ahead of the buyer's bank debt, so it's close to risk-free", "It's repaid in full at completion, so the seller takes no risk at all", "It turns the seller's stake into ordinary shares in the buyer's group"],
+    why: "A vendor loan defers part of the price: the seller lends it to the buyer, to be repaid later with interest, usually ranking behind the bank debt. It helps when banks won't lend enough, signals the seller's confidence in the business, and can support a higher headline price. The cost is credit risk: if the business struggles, the seller may not be repaid in full.",
+    x: ["Vendor loans usually rank behind the bank debt. Lenders insist on it.", "It's paid later, not at completion. That deferral is the point, and the risk.", "That's a rollover of equity. A vendor loan is debt owed to the seller."] },
+  { id: "mna-42", lv: 1, trap: ["concept", "concept", "concept"], q: "Why might a target's shareholders prefer to be paid in cash rather than in the buyer's shares?",
+    o: ["Cash fixes the value they receive, with no exposure to how the buyer does", "Shares are always taxed more heavily than cash when a company is taken over", "Cash offers always come with a higher premium than offers paid in shares", "Taking the buyer's shares would mean giving up their voting rights entirely"],
+    why: "Cash locks in the value at completion. Shares leave them exposed to the buyer's share price and to whether the deal works, though they keep a slice of the upside and the synergies. Tax often points the other way: in many countries a share-for-share exchange can defer capital gains tax, while cash is taxed straight away.",
+    x: ["Often it's the reverse: a share exchange can defer capital gains tax, while cash is taxed now.", "Premiums depend on the deal, not just on how it's paid.", "They receive voting shares in the buyer, just a smaller stake in a bigger company."] },
+  { id: "mna-43", lv: 3, trap: ["concept", "concept", "inverted"], q: "A deal will add 5% to the buyer's earnings per share in its first year. Does that mean it creates value for the buyer's shareholders?",
+    o: ["Not necessarily: EPS ignores whether the price paid exceeds what the target is worth", "Yes: higher EPS means a higher share price if the buyer's P/E stays the same", "Yes, as long as the deal is paid for entirely with new debt rather than with shares", "No: a deal that adds to EPS shows the buyer has overpaid for the target"],
+    why: "Accretion only compares earnings per share before and after. Cheap debt makes almost any cash deal accretive, but it adds risk, so the buyer's P/E may fall. Value is created only if the target is worth more to the buyer (including synergies) than the price paid: compare the return on the money invested with its cost of capital.",
+    x: ["The P/E rarely stays the same: more debt and a riskier group usually lower it.", "Debt funding often makes a deal accretive precisely because debt looks cheap in EPS terms, while its risk is ignored.", "Accretion says nothing about overpaying either way: a deal can add to EPS and still destroy value, or the reverse."] }
 ]);
 
 // New-format questions (shown only when "new formats" is on). New IDs: the multiple-choice mna-09 above stays as it is.
@@ -201,7 +229,18 @@ Bank.addFormat("mna", [
       { text: "A pending lawsuit over a faulty product", answer: 2, note: "Legal reviews litigation, permits and compliance." },
       { text: "The market is shrinking and a new competitor is winning share", answer: 3, note: "Commercial due diligence tests the market and the business plan's assumptions." }
     ],
-    why: "Financial checks the numbers (normal earnings, net debt, working capital); tax checks past exposures and the deal's tax effects; legal checks contracts, disputes and compliance; commercial checks the market and the plan." }
+    why: "Financial checks the numbers (normal earnings, net debt, working capital); tax checks past exposures and the deal's tax effects; legal checks contracts, disputes and compliance; commercial checks the market and the plan." },
+  { id: "mna-grid-04", lv: 2, type: "grid", q: "Under IFRS, how is each cost of an acquisition accounted for?",
+    columns: ["Expensed when incurred", "Spread over the debt's life", "Deducted from equity"],
+    rows: [
+      { text: "Financial adviser's fee for the acquisition", answer: 0, note: "IFRS 3 treats the costs of doing a deal as an expense of the period, not part of the price, so they don't add to goodwill." },
+      { text: "Lawyers' fees for negotiating the share purchase agreement", answer: 0, note: "A cost of doing the deal, so it's expensed." },
+      { text: "Arrangement fee on the term loan that funds the deal", answer: 1, note: "Under IFRS 9 it's deducted from the loan and spread over its life as part of the effective interest rate." },
+      { text: "Due diligence costs", answer: 0, note: "A cost of doing the deal, so it's expensed, even if the work was done months before signing." },
+      { text: "Underwriting fee on new shares issued to fund the deal", answer: 2, note: "Costs of issuing equity come off equity (IAS 32), not the income statement." },
+      { text: "Original issue discount on a bond issued to fund the deal", answer: 1, note: "Like a fee, the discount is spread over the bond's life through the effective interest rate." }
+    ],
+    why: "Costs of doing the acquisition are expensed as incurred (IFRS 3). Costs of raising the money follow what was raised: debt costs reduce the debt and are spread over its life through the effective interest rate (IFRS 9), and equity issue costs come off equity (IAS 32). US GAAP is similar." }
 ]);
 
 // More new formats: answer + reason and spot the error.
@@ -265,5 +304,50 @@ Bank.addFormat("mna", [
       "The buyer pays US$30, so the deal is valued at the offer price. The undisturbed price is only used to measure the premium.",
       "Cash is netted off: the buyer gets it along with the company.",
       "Diluted shares are right: option and convertible holders will be paid at the offer price too."],
-    why: "Enterprise value = equity value + net debt: US$1,500m + US$200m = US$1,700m, or 10.0x EBITDA of US$170m. A buyer of the whole company takes on its debt and gets its cash, so net debt is added. Subtracting it makes the deal look cheaper than it is." }
+    why: "Enterprise value = equity value + net debt: US$1,500m + US$200m = US$1,700m, or 10.0x EBITDA of US$170m. A buyer of the whole company takes on its debt and gets its cash, so net debt is added. Subtracting it makes the deal look cheaper than it is." },
+
+  { id: "mna-why-03", lv: 2, type: "reason",
+    q: "A buyer pays US$400m in cash for a debt-free target that earns net income of US$20m a year. It funds the price with new debt at 6% interest, and the tax rate is 25%. Ignoring fees and synergies, is the deal accretive or dilutive to the buyer's EPS?",
+    answers: ["Accretive", "Dilutive", "Neither"],
+    answerNotes: [
+      "That compares pre-tax interest with after-tax earnings. Interest is tax-deductible, so it costs only US$18m after tax.",
+      "Net income rises by 20 − 18 = US$2m on the same number of shares, so EPS rises."],
+    reasons: [
+      "The after-tax interest, US$18m, is less than the US$20m the target adds",
+      "The pre-tax interest, US$24m, is more than the target's US$20m net income",
+      "Deals funded with debt are always dilutive, because interest cuts net income",
+      "No new shares are issued, so earnings per share cannot change at all"],
+    reasonNotes: [
+      "Interest is tax-deductible, so it costs 24 × (1 − 25%) = US$18m after tax. That's the figure to compare with net income.",
+      "Only when the after-tax interest exceeds what the target earns. Here it doesn't.",
+      "The share count is unchanged, but net income changes, so EPS does too."],
+    why: "In a debt-funded deal, compare what the target adds to net income with the after-tax cost of the debt. Interest is US$400m × 6% = US$24m, or US$18m after 25% tax. The target adds US$20m, so the buyer's net income rises by US$2m with the same number of shares: the deal is accretive. In a real model, fees and extra depreciation from fair-value write-ups would also come in." },
+
+  { id: "mna-spot-02", lv: 3, type: "spot",
+    q: "A buyer pays US$800m for 100% of a target's shares. The target's net assets have a book value of US$500m, and the buyer writes up its intangible assets by US$120m. The tax rate is 25%. A candidate works out the goodwill. Which line contains the mistake?",
+    lines: [
+      "Price paid for 100% of the shares: US$800m",
+      "Target's net assets at book value: US$500m",
+      "Write-up of intangibles to fair value: US$120m",
+      "Deferred tax on the write-up: none, as it's only an accounting entry",
+      "Net assets at fair value: 500 + 120 = US$620m",
+      "Goodwill: 800 − 620 = US$180m"],
+    wrong: 3,
+    lineNotes: [
+      "The price is given in the question.",
+      "The book value of net assets is given.",
+      "Right: identifiable intangibles are recognised at fair value.",
+      null,
+      "The addition is right, but it leaves out the deferred tax from line 4.",
+      "The subtraction is right, but it carries the mistake forward."],
+    fixes: [
+      "Deduct deferred tax of US$30m: net assets US$590m, goodwill US$210m",
+      "Add deferred tax of US$30m: net assets US$650m, goodwill US$150m",
+      "Deduct tax on all US$620m: US$155m, so goodwill is US$335m",
+      "Ignore the write-up too: net assets US$500m, goodwill US$300m"],
+    fixNotes: [
+      "The write-up creates a liability (more tax later), so it lowers net assets, which raises goodwill.",
+      "Only the write-up creates a new gap between book and tax values; the rest is already in the target's accounts.",
+      "Identifiable intangibles must be recognised at fair value. Leaving them out overstates goodwill."],
+    why: "In a share deal the target's tax values don't change, so writing its assets up in the accounts creates a gap between book and tax values: a deferred tax liability of 120 × 25% = US$30m. Net assets at fair value = 500 + 120 − 30 = US$590m, and goodwill = 800 − 590 = US$210m. (In an asset deal the tax values usually step up too, so no deferred tax arises.)" }
 ]);
