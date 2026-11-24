@@ -230,7 +230,35 @@ Bank.add("val", [
   { id: "val-58", lv: 2, trap: ["concept", "wrong-measure", "concept"], q: "A software company pays a salesperson a US$30,000 commission for signing a 3-year subscription. Under IFRS 15, how is the commission treated?",
     o: ["As an asset, spread over the contract's life: about US$10,000 a year", "As an expense in full when the contract is signed, like other selling costs", "As a deduction from revenue over the contract, like a discount to the customer", "As part of the contract liability, released when the customer pays"],
     why: "IFRS 15 treats the extra costs of winning a contract, ones the company wouldn't have paid without the sale, as an asset when it expects to recover them. The asset is spread (amortised) over the period the service is provided, here about US$10,000 a year. If that period is a year or less, the company may simply expense it. This smooths profit for subscription businesses.",
-    x: ["That's allowed only when the period is a year or less. For a 3-year contract the cost is spread.", "The commission is paid to the salesperson, not the customer, so it's a cost, not a reduction in revenue.", "The contract liability holds cash received from customers for service not yet delivered. A commission paid out has nothing to do with it."] }
+    x: ["That's allowed only when the period is a year or less. For a 3-year contract the cost is spread.", "The commission is paid to the salesperson, not the customer, so it's a cost, not a reduction in revenue.", "The contract liability holds cash received from customers for service not yet delivered. A commission paid out has nothing to do with it."] },
+  { id: "val-59", lv: 2, trap: ["concept", "missed-step", "missed-step"], q: "If approved, a drug's future cash flows would be worth US$1,000m today. It still needs final trials costing US$100m in present value, which will be spent whatever the result, and it has a 60% chance of approval. What is its risk-adjusted value?",
+    o: ["US$500m", "US$540m", "US$900m", "US$600m"],
+    why: "Risk-adjusted net present value (rNPV) weights each cash flow by the chance it happens. The trial costs will be paid for sure, so they count in full; the cash flows after approval count at 60%: 60% × 1,000 − 100 = US$500m. A drug company's pipeline is valued drug by drug this way, then added to the value of the drugs already on sale.",
+    x: ["That applies the 60% to the trial costs too. They'll be spent whatever the result, so they count in full.", "That ignores the 40% chance the drug fails, which is the main risk in drug development.", "That leaves out the trial costs still to be paid before any approval."] },
+  { id: "val-60", lv: 1, trap: ["concept", "concept", "wrong-measure"], q: "A drug company earns half its profit from one drug whose patent expires in two years. Why might a buyer value it well below what its EV/EBITDA multiple against peers suggests?",
+    o: ["Cheaper generic copies will cut that drug's sales sharply once the patent ends", "Patents are amortised, so EBITDA overstates profit while the patent still lasts", "When the patent expires, the drug's research costs must be written off at once", "An expiring patent counts as debt in the EV bridge, which lifts enterprise value"],
+    why: "When a patent ends, other makers can sell generic copies, and the original drug's sales often fall steeply within a year or two (the 'patent cliff'). A multiple of this year's EBITDA treats today's profit as lasting. Buyers forecast the decline drug by drug, or value the business as a sum of its parts.",
+    x: ["EBITDA is before amortisation, so the patent's amortisation isn't in it. The problem is future sales, not today's accounts.", "Capitalised development costs are amortised over the drug's life. The patent ending doesn't trigger a one-off write-off of research.", "A patent is an asset, not a claim on the company, so it has no place in the bridge from equity value to EV."] },
+  { id: "val-61", lv: 1, trap: ["wrong-measure", "concept", "wrong-measure"], q: "A retailer's total sales rose 12% this year, but its like-for-like sales fell 2%. What is the most likely explanation?",
+    o: ["New stores opened this year added sales the existing stores didn't", "Higher prices lifted total sales, while like-for-like counts only volumes", "Stores closed this year stay in like-for-like, which drags the figure down", "Like-for-like sales are measured after costs, unlike total sales"],
+    why: "Like-for-like (same-store) sales compare only the stores open in both periods, usually for at least a year, so new and closed stores don't flatter or drag the figure. Total sales up 12% with like-for-like down 2% means growth came from opening stores while existing ones sold less, a warning sign analysts look for.",
+    x: ["Like-for-like sales are measured in money, so price rises count in them, just as in total sales.", "Stores that closed are taken out of both years, so they can't drag the figure down.", "Both are sales figures, before any costs. The difference is which stores are included."] },
+  { id: "val-62", lv: 1, trap: ["concept", "inverted", "wrong-measure"], q: "An engineering company won US$1,200m of new orders this year and recognised US$1,000m of revenue, a book-to-bill ratio of 1.2x. What does that suggest?",
+    o: ["Its order backlog grew, pointing to higher revenue in the years ahead", "It billed customers 20% more than it delivered, so revenue is overstated", "Its backlog shrank by US$200m, as orders were turned into revenue", "Its margins rose 20%, since each order now earns more than it costs"],
+    why: "Book-to-bill divides new orders by the revenue recognised in the same period. Above 1.0x, more work came in than went out, so the order backlog (signed work not yet delivered) grew, by about US$200m here. That points to future revenue, though orders can be cancelled and their margins differ.",
+    x: ["'Bill' here means the revenue recognised. The ratio compares orders with revenue; it says nothing about invoicing more than was delivered.", "The backlog shrinks only when revenue exceeds new orders, a ratio below 1.0x.", "The ratio compares the value of orders and revenue. It says nothing about the profit on each order."] },
+  { id: "val-63", lv: 2, trap: ["concept", "concept", "wrong-measure"], q: "Why are oil and gas producers often valued on a net asset value (NAV) of their fields, rather than mainly on a DCF of the whole company with a terminal value?",
+    o: ["Their reserves run out, so value comes from producing a finite amount of oil", "Oil is mostly sold at prices fixed for decades, so a forecast adds little", "Accounting rules forbid producers from reporting EBITDA in their accounts", "Reserves are already carried at market value on the balance sheet"],
+    why: "A field holds a limited amount of oil and gas. A NAV values each field's production until it's exhausted, at a forecast price, less costs and taxes, and then subtracts net debt; there's no perpetual terminal value. Reserves are graded by how certain they are (proved, probable, possible), and the less certain ones get lower weights.",
+    x: ["Most oil is sold at market prices that swing widely. That makes the price forecast central to the value.", "Producers can and do report EBITDA, often before exploration costs as well. The issue is that the resource runs out.", "Under IFRS, fields are carried at historical cost less depreciation, not at market value."] },
+  { id: "val-64", lv: 1, trap: ["wrong-measure", "units", "wrong-measure"], q: "A mobile operator had 10.0m subscribers at the start of the year and 11.0m at the end. Its service revenue for the year was US$2,520m. What was its monthly average revenue per user (ARPU)?",
+    o: ["US$20.00", "US$19.09", "US$240.00", "US$21.00"],
+    why: "ARPU divides revenue by the average number of subscribers over the period, here (10.0 + 11.0) ÷ 2 = 10.5m, then by 12 for a monthly figure: 2,520 ÷ 10.5 ÷ 12 = US$20.00. Telecoms and media companies are tracked on subscribers, ARPU and churn.",
+    x: ["That uses the year-end subscribers. Revenue was earned across the year, when there were fewer of them.", "That's ARPU for the whole year. Operators usually quote it per month.", "That uses the opening subscribers, ignoring the million who joined during the year."] },
+  { id: "val-65", lv: 2, trap: ["concept", "concept", "double-count"], q: "A buyer pays an enterprise value of US$3.0bn for a cable operator with 1.5m subscribers, or US$2,000 per subscriber. Comparable deals were done at about US$1,500. Which would best justify the higher price?",
+    o: ["Its subscribers pay more each month and leave less often than peers'", "It has more subscribers in total than the companies in comparable deals", "The buyer paid partly in shares, which lifts the value per subscriber", "It carries more debt, which is included in its enterprise value per subscriber"],
+    why: "EV per subscriber is a quick sector yardstick, but a subscriber is only worth the cash flow they bring. One who pays more (a higher average revenue per user, ARPU) and stays longer (lower churn) is worth more, so a premium can be justified. Check it against EV/EBITDA too: if margins are similar, the higher ARPU should show up there.",
+    x: ["Size alone doesn't make each subscriber worth more: the measure is already per subscriber.", "How the price is paid doesn't change what the business is worth per subscriber.", "EV already includes the debt. More debt changes how EV splits between lenders and shareholders, not what each subscriber is worth."] }
 ]);
 
 // New-format questions (shown only when "new formats" is on).
@@ -287,7 +315,20 @@ Bank.addFormat("val", [
       { text: "A monthly subscription of US$5,000", answer: 0, note: "Monthly recurring revenue (MRR) × 12 gives its ARR: US$60,000." },
       { text: "Hardware sold once alongside the software", answer: 1, note: "A one-off sale, even though it comes with a subscription." }
     ],
-    why: "ARR is the yearly value of the contracts that repeat if customers simply stay: subscriptions, whatever their billing period, turned into a yearly figure. One-off fees, projects and hardware are real revenue but don't recur, so they're left out. Mixing them in makes ARR, and any multiple applied to it, look bigger." }
+    why: "ARR is the yearly value of the contracts that repeat if customers simply stay: subscriptions, whatever their billing period, turned into a yearly figure. One-off fees, projects and hardware are real revenue but don't recur, so they're left out. Mixing them in makes ARR, and any multiple applied to it, look bigger." },
+  { id: "val-grid-04", lv: 1, type: "grid", q: "Which industry is each of these performance measures mainly used for?",
+    columns: ["Retail", "Industrials", "Oil & gas", "Telecoms"],
+    rows: [
+      { text: "Like-for-like sales growth", answer: 0, note: "Sales growth from stores open in both years, leaving out new and closed ones." },
+      { text: "Sales per square metre of store space", answer: 0, note: "How hard each store works its space, compared across chains." },
+      { text: "Book-to-bill ratio", answer: 1, note: "New orders divided by revenue: above 1.0x, the order book is growing." },
+      { text: "Order backlog", answer: 1, note: "Signed work not yet delivered, which gives visibility on future revenue." },
+      { text: "Proved reserves and how many years they last", answer: 2, note: "How much oil and gas can be produced with reasonable certainty, and for how long." },
+      { text: "Production in barrels of oil equivalent a day", answer: 2, note: "Daily output, with gas converted into its oil equivalent." },
+      { text: "Average revenue per user (ARPU)", answer: 3, note: "Revenue per subscriber, usually per month." },
+      { text: "Monthly churn of mobile subscribers", answer: 3, note: "The share of subscribers who leave each month." }
+    ],
+    why: "Each sector is tracked on the few measures that drive its cash flow: how much each store sells (retail), how much work is lined up (industrials), how much resource is left and how fast it's produced (oil and gas), and how many customers pay how much for how long (telecoms). Interviewers often ask which you'd look at first for a given company." }
 ]);
 
 // Answer + reason: pick the answer, then why it's true. Right only if both are right. In each list the right one
@@ -397,7 +438,24 @@ Bank.addFormat("val", [
       "The loss comes from spending upfront on new customers, not from each sale. Once a customer has earned back that cost, it's profitable.",
       "Revenue multiples are higher for companies whose customers stay and are profitable to serve. Investors look through to the unit economics.",
       "IFRS expenses sales and marketing as it's spent (apart from some commissions). Nothing is added back to EBITDA."],
-    why: "Spending to win customers is expensed at once, while the customers pay for years. A fast-growing company therefore shows losses even when each customer is clearly profitable. Judge it on the unit economics: payback in 14 months and customers who stay several years point to value being created. The risks are churn rising, and funding running out before growth slows." }
+    why: "Spending to win customers is expensed at once, while the customers pay for years. A fast-growing company therefore shows losses even when each customer is clearly profitable. Judge it on the unit economics: payback in 14 months and customers who stay several years point to value being created. The risks are churn rising, and funding running out before growth slows." },
+
+  { id: "val-why-07", lv: 2, type: "reason",
+    q: "A retailer's like-for-like sales grew 5% this year, while the prices of the goods it sells rose 7%. Are its existing stores doing better than last year?",
+    answers: ["No", "Yes", "Only if margins rose"],
+    answerNotes: [
+      "Sales grew 5% in money, but prices rose 7%, so the stores sold less.",
+      "Margins are a separate question. Here the point is how much the stores sold, and that went down."],
+    reasons: [
+      "Prices rose faster than sales, so each store sold a smaller volume of goods",
+      "Like-for-like sales leave out price changes, so the 5% is all extra volume",
+      "New stores are included, so the older stores may have done even worse",
+      "Rising prices lift costs as well, so the stores' profit must have fallen"],
+    reasonNotes: [
+      "Like-for-like figures are in money, so the price rises are already inside the 5%.",
+      "Like-for-like sales only cover stores open in both years. New stores are left out.",
+      "Costs may well have risen too, but the question is whether the stores are selling more, and the volumes say no."],
+    why: "Like-for-like sales are measured in money, so they include price changes. With prices up 7% and sales up 5%, the volume sold fell by about 2% (1.05 ÷ 1.07 − 1 = −1.9%). Analysts split like-for-like growth into price and volume, or compare it with inflation, before calling it growth." }
 ]);
 
 // Spot the error: a short worked answer with one mistake. Tap the line, then pick the fix. Right only if both are right.
@@ -537,5 +595,31 @@ Bank.addFormat("val", [
       "Departures are a large part of what retention measures. Leaving them out hides the customers who left.",
       "Retention compares what the same customers pay now with what they paid a year ago, so the start goes underneath.",
       "That's gross revenue retention, a separate measure that ignores upsells. Net retention includes them."],
-    why: "Net revenue retention follows one group of customers: those you had a year ago. Take their starting ARR, add their upsells, and deduct their downgrades and departures: (50 + 8 − 6) ÷ 50 = 104%. New customers belong in total ARR growth (here 50 to 62, or 24%), not in retention. Including them makes retention look much stronger than it is." }
+    why: "Net revenue retention follows one group of customers: those you had a year ago. Take their starting ARR, add their upsells, and deduct their downgrades and departures: (50 + 8 − 6) ÷ 50 = 104%. New customers belong in total ARR growth (here 50 to 62, or 24%), not in retention. Including them makes retention look much stronger than it is." },
+
+  { id: "val-spot-06", lv: 2, type: "spot",
+    q: "An engineering company starts the year with an order backlog of US$2,000m. It wins new orders of US$900m and recognises revenue of US$1,000m. A candidate works out the year-end backlog and the book-to-bill ratio. Which line contains the mistake?",
+    lines: [
+      "Opening backlog: US$2,000m",
+      "Add the new orders won: + US$900m",
+      "Add the revenue recognised: + US$1,000m",
+      "Closing backlog: 2,000 + 900 + 1,000 = US$3,900m",
+      "Book-to-bill: 900 ÷ 1,000 = 0.9x"],
+    wrong: 2,
+    lineNotes: [
+      "Right: the year starts from the backlog carried over.",
+      "Right: new orders add to the work still to be delivered.",
+      null,
+      "The sum is right, but it adds the revenue from line 3 instead of deducting it.",
+      "Right: new orders divided by revenue recognised."],
+    fixes: [
+      "Deduct the revenue: 2,000 + 900 − 1,000 = US$1,900m",
+      "Leave revenue out, as it's been billed: 2,000 + 900 = US$2,900m",
+      "Deduct the new orders: 2,000 − 900 + 1,000 = US$2,100m",
+      "Start from zero each year: 900 − 1,000 = −US$100m"],
+    fixNotes: [
+      "Revenue recognised is work delivered, so it leaves the backlog whether or not it's been billed.",
+      "New orders are work still to do, so they add to the backlog.",
+      "The backlog carries over from year to year until the work is delivered."],
+    why: "The backlog is signed work not yet delivered. New orders add to it; revenue recognised, which is work delivered, takes it out: 2,000 + 900 − 1,000 = US$1,900m. With book-to-bill at 0.9x, the backlog had to shrink, here by US$100m. A shrinking backlog can mean slower revenue ahead, unless orders pick up." }
 ]);
