@@ -46,5 +46,9 @@ jobs:
       - uses: actions/upload-pages-artifact@v3
         with:
           path: site
+      - name: Wait for GitHub to register the upload
+        # Since Nov 2026 the deploy step sometimes looks for the upload before GitHub lists it ("No artifacts named
+        # github-pages were found"). A short pause gives GitHub time to catch up.
+        run: sleep 20
       - id: deployment
         uses: actions/deploy-pages@v4
