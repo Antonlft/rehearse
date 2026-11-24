@@ -810,14 +810,14 @@ sup { font-size: 0.72em; line-height: 0; vertical-align: super; }
 /* Printing (used by the formula sheet's "Print or save as PDF"): no header, buttons or pop-ups, and light colours
    whatever the screen theme, so it reads on paper. */
 @media print {
-  .top, .no-print, #glTip { display: none !important; }
+  .top, .foot, .no-print, #glTip { display: none !important; }
   :root, :root[data-theme="dark"], :root:not([data-theme="light"]) {
     --page: #ffffff; --tray: #f4f5f7; --ink: #1b2232; --muted: #4a5060; --rule: #d5d9e0; --rule-strong: #b5bbc6;
     --navy: #1f2b46; --navy-bg: #f3f6fc; --navy-line: #cdd8ee;
   }
   body { background: #fff; }
   /* The formula sheet prints in landscape, 4 columns, small type. */
-  .fs-page { page: formulas; }
+  body:has(.fs-page) { page: formulas; } /* the whole document, so no blank portrait page trails the sheet */
   .fs-head { margin-bottom: 6px; }
   .fs-head h1 { font-size: 15px; }
   .fs-head p { display: none; }

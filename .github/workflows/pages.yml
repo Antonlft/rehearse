@@ -42,6 +42,15 @@ jobs:
       - name: Stamp asset links with this commit
         # Each deploy gets new ?v= URLs, so browsers never mix a cached page with newer scripts or styles.
         run: sed -i "s/?v=dev\"/?v=${GITHUB_SHA::7}\"/g" site/index.html
+      - name: Make the formula sheet PDF
+        # Chrome (already installed on GitHub's machine) prints the formula sheet to site/formula-sheet.pdf, which the
+        # sheet's "Open as PDF" link opens. Rebuilt on every deploy, so it always matches the lessons.
+        run: |
+          python3 -m http.server 8000 --directory site >/dev/null 2>&1 &
+          sleep 2
+          google-chrome --headless --no-sandbox --disable-gpu --no-pdf-header-footer --virtual-time-budget=8000 \
+            --print-to-pdf=site/formula-sheet.pdf "http://localhost:8000/?page=formulas"
+          test -s site/formula-sheet.pdf
       - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v3
         with:

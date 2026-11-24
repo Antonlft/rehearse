@@ -159,7 +159,15 @@ const app = document.getElementById("app");
 const meta = document.getElementById("topMeta");
 const modalRoot = document.getElementById("modalRoot");
 let tick = null;
+// "?page=formulas" opens the formula sheet straight away (a direct link; the deploy also prints the PDF from it).
+// The address is then tidied back to the plain site, so a refresh later doesn't jump back to the sheet.
 let view = { name: "home" };
+try {
+  if (new URLSearchParams(location.search).get("page") === "formulas") {
+    view = { name: "formulas" };
+    history.replaceState(null, "", location.pathname);
+  }
+} catch {}
 let reviewFilter = "all";
 
 const esc = s => String(s).replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
@@ -2204,12 +2212,11 @@ function renderFormulas() {
     <div class="fs-page">
       <div class="page-head fs-head">
         <h1>Formula sheet</h1>
-        <p>${count} formulas from the lessons. <button class="link no-print" type="button" id="fsPrint">Print or save as PDF</button></p>
+        <p>${count} formulas from the lessons. <a class="link no-print" href="formula-sheet.pdf" target="_blank" rel="noopener">Open as PDF</a></p>
       </div>
       <div class="formula-sheet">${groups}</div>
     </div>`;
   document.getElementById("backLink").onclick = () => go(back);
-  document.getElementById("fsPrint").onclick = () => window.print();
   app.querySelectorAll("[data-lesson]").forEach(b => b.onclick = () => go({ name: "lesson", cat: b.dataset.lesson, back: { name: "formulas", back } }));
 }
 
