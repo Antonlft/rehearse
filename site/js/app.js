@@ -655,7 +655,7 @@ function glShow(el) {
   glFor = el;
   const c = catById(g.cat), l = Lessons.all[g.cat];
   const link = c && l && l.status !== "stub" && view.name !== "quiz" && !(view.name === "lesson" && view.cat === g.cat)
-    ? `<button type="button" class="link gl-tip-link" data-gl-lesson="${esc(g.cat)}">Open the ${esc(c.name)} lesson</button>` : "";
+    ? `<button type="button" class="link gl-tip-link" data-tip-lesson="${esc(g.cat)}">Open the ${esc(c.name)} lesson</button>` : "";
   glTip.innerHTML = `<span class="gl-tip-head"><b>${esc(g.term)}</b> · ${esc(g.full)}</span><span>${esc(g.def)}</span>${link}`;
   glTip.hidden = false;
   el.setAttribute("aria-describedby", "glTip");
@@ -675,8 +675,8 @@ document.addEventListener("mouseover", e => {
 document.addEventListener("focusin", e => { if (e.target.classList && e.target.classList.contains("gl")) glShow(e.target); });
 document.addEventListener("focusout", e => { if (e.target === glFor && !glPressing && !glTip.contains(e.relatedTarget)) glHide(); });
 document.addEventListener("click", e => {
-  const go2 = e.target.closest && e.target.closest("[data-gl-lesson]");
-  if (go2) { const cat = go2.dataset.glLesson; glHide(); go({ name: "lesson", cat, back: { ...view } }); return; }
+  const go2 = e.target.closest && e.target.closest("[data-tip-lesson]");
+  if (go2) { const cat = go2.dataset.tipLesson; glHide(); go({ name: "lesson", cat, back: { ...view } }); return; }
   if (e.target.closest && e.target.closest("#glTip")) { glPressing = false; return; }
   const el = e.target.closest && e.target.closest(".gl"); if (el) glShow(el); else if (glFor) glHide();
 });
