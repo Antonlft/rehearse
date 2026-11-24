@@ -5,6 +5,8 @@
 //  - an optional `trap` list (mistake type per wrong option) has exactly 3 entries, each null or a type from TRAPS in bank.js
 //  - every category used by the bank exists in app.js, and every question file is loaded by index.html
 //  - every generator, sampled RUNS times with the same 30-try retry the app uses, always yields a valid question
+//  - every calculation generator (multiple choice and typed) has a permanent key "<category>-g<n>" or "<category>-c<n>",
+//    unique across the bank (a calculation's two versions share one); spaced repetition schedules them by it
 //  - each question is checked by its `type`: multiple choice (no type, or "mcq"), "numeric" (typed answer: a number
 //    `answer`, a `tolerance` ≥ 0, an optional `unit`, optional known `wrongs`) or "order" (an `answer` list of 3–8
 //    unique steps) or "grid" (2–4 unique `columns`, 3–8 `rows` of { text, answer: column number, note }) or "walk"
@@ -256,6 +258,25 @@ for (const [cat, list] of Object.entries(Bank.gens)) {
     }
   });
 }
+
+// Permanent keys: spaced repetition schedules calculation questions by them, so each must exist, follow the pattern and
+// be unique. A calculation registers one multiple-choice and one typed function under the same key.
+const genKeys = new Set();
+for (const [cat, list] of Object.entries(Bank.gens)) list.forEach((fn, i) => {
+  const where = `${cat} generator #${i + 1}`;
+  if (!fn.key) return fail(`${where}: has no key, e.g. Bank.gen("${cat}", "${cat}-g<n>", ...) with the next free number`);
+  if (!new RegExp(`^${cat}-[gc][1-9][0-9]*$`).test(fn.key)) fail(`${where}: key "${fn.key}" should look like "${cat}-g<n>" or "${cat}-c<n>"`);
+  if (genKeys.has(fn.key)) fail(`${where}: key "${fn.key}" is used twice`);
+  genKeys.add(fn.key);
+});
+const typedKeys = new Set();
+for (const [cat, list] of Object.entries(Bank.numeric || {})) list.forEach((fn, i) => {
+  const where = `${cat} typed-answer generator #${i + 1}`;
+  if (!fn.key) return fail(`${where}: has no key (register it with Bank.calc("${cat}", "${cat}-c<n>", spec))`);
+  if (typedKeys.has(fn.key)) fail(`${where}: key "${fn.key}" is used twice`);
+  if (!(Bank.gens[cat] || []).some(g => g.key === fn.key)) fail(`${where}: key "${fn.key}" has no multiple-choice twin in the same category`);
+  typedKeys.add(fn.key);
+});
 
 // Typed-answer calculation generators (used only when new formats are on): same idea, with the app's retry rule.
 let typed = 0;

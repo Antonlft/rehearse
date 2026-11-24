@@ -69,7 +69,9 @@ db.backupNudgeDismissedAt ||= null; // when the home-page backup reminder was la
    "Sure", or no rating, doubles as above.
    A right answer given before the question is due doesn't double the interval, so practising the same question
    several times in a day can't push it weeks away. "Due" means from local midnight of that day.
-   The schedule is always kept up to date; switching spaced repetition off only stops draw() from using it. */
+   The schedule is always kept up to date; switching spaced repetition off only stops draw() from using it.
+   Calculation questions (new numbers each time) are scheduled too, by their generator's permanent key, as
+   "gen:<key>" (e.g. "gen:val-c2"); a calculation's multiple-choice and typed versions share one entry. */
 const SRS_MAX_DAYS = 60;
 const startOfDay = (ts, plusDays = 0) => { const d = new Date(ts); d.setHours(0, 0, 0, 0); d.setDate(d.getDate() + plusDays); return d.getTime(); };
 function scheduleAnswer(s, qid, ok, at, conf) {
@@ -81,10 +83,13 @@ function scheduleAnswer(s, qid, ok, at, conf) {
   else if (at < cur.dueAt) cur.lastOk = true; // right, but not due yet: keep the schedule
   else { const n = Math.min(SRS_MAX_DAYS, cur.intervalDays * 2); s[qid] = { dueAt: startOfDay(at, n), intervalDays: n, lastOk: true }; }
 }
-// Rebuild the whole schedule by replaying the answer log in order (written questions only).
+// What an item or a log entry is scheduled by: a written question's id, or "gen:" + a calculation's key. Null for
+// case studies and for calculation answers logged before keys existed (schema 21), which can't be scheduled.
+const schedKey = x => x.id || x.qid || (x.gkey ? "gen:" + x.gkey : null);
+// Rebuild the whole schedule by replaying the answer log in order.
 function buildSchedule(log) {
   const s = {};
-  for (const e of log) if (!e.kind && e.qid) scheduleAnswer(s, e.qid, e.ok, e.at, e.confidence);
+  for (const e of log) if (!e.kind && schedKey(e)) scheduleAnswer(s, schedKey(e), e.ok, e.at, e.confidence);
   return s;
 }
 db.schedule ||= buildSchedule(db.log); // question id -> { dueAt, intervalDays, lastOk }
@@ -154,7 +159,10 @@ db.lessonRead ||= {};
 //      and its per-question arrays grow to match. On submit they're removed again, so finished rounds, the answer log
 //      and stats hold first tries only; a finished Learning round can have laterRight (how many missed questions were
 //      then answered right on a later try). No new top-level fields.
-const SCHEMA_VERSION = 20;
+//  21: calculation questions join spaced repetition. Generated items in rounds (in progress and finished) can carry
+//      gkey, their generator's permanent key; their answer log entries carry gkey too, and db.schedule gains entries
+//      keyed "gen:<key>". Calculation answers logged before this have no gkey and stay unscheduled. No new top-level fields.
+const SCHEMA_VERSION = 21;
 db.schemaVersion = Math.max(db.schemaVersion || 1, SCHEMA_VERSION);
 let saveWarned = false;
 const persist = () => {
@@ -223,6 +231,10 @@ const formatQs = cat => db.newFormats ? (Bank.formats[cat] || []) : [];
 // (question style Mixed or New formats only).
 const reviewPool = cat => [...written(cat), ...formatQs(cat)];
 const isDue = (q, now = Date.now()) => !!db.schedule[q.id] && db.schedule[q.id].dueAt <= now;
+// Calculations by key: when one is due (Infinity if never answered since keys existed), its typed twin, and those due now.
+const genDueAt = fn => fn.key && db.schedule["gen:" + fn.key] ? db.schedule["gen:" + fn.key].dueAt : Infinity;
+const typedTwin = (cat, fn) => (Bank.numeric[cat] || []).find(t => t.key === fn.key) || null;
+const dueGens = (cat, now = Date.now()) => gens(cat).filter(fn => genDueAt(fn) <= now);
 // Walk-through cards only ever replace a question (at most one per 10 in a round), so they never add to capacity.
 const capacity = cat => gens(cat).length ? Infinity : written(cat).length + formatQs(cat).filter(q => q.type !== "walk").length;
 const WALK_EVERY = 10; // at most one walk-through card per this many questions in a round
@@ -246,7 +258,7 @@ function generated(fn) {
     g = fn();
     if (g.o.length === 4 && new Set(g.o).size === 4 && !g.o.some(s => /NaN|Infinity|undefined/.test(s))) break;
   }
-  return { ...g, gen: true };
+  return { ...g, gen: true, ...(fn.key ? { gkey: fn.key } : {}) };
 }
 
 // A random starting order for an ordering question that is never already the right one.
@@ -266,7 +278,7 @@ function materialize(src, cat) {
   if (src.type === "reason") return reasonItem(src, cat);
   if (src.type === "spot") return spotItem(src, cat);
   const perm = shuffle([0, 1, 2, 3]);
-  const item = { cat, id: src.id || null, gen: !!src.gen, lv: src.lv || null, q: src.q, why: src.why,
+  const item = { cat, id: src.id || null, gen: !!src.gen, ...(src.gkey ? { gkey: src.gkey } : {}), lv: src.lv || null, q: src.q, why: src.why,
     o: perm.map(i => src.o[i]), a: perm.indexOf(0), x: perm.map(i => i === 0 ? null : src.x[i - 1]), ...(src.table ? { table: src.table } : {}) };
   // Mistake-type tags travel with the wrong options through the shuffle (only when the question has them).
   if (src.trap) item.trap = perm.map(i => i === 0 ? null : src.trap[i - 1] || null);
@@ -309,7 +321,7 @@ const partLists = it => it.type === "reason" ? [it.ans, it.rsn] : [it.lines, it.
 function typedItem(fn, cat) {
   let g;
   for (let k = 0; k < 30; k++) { g = fn(); if (Number.isFinite(g.answer)) break; }
-  return { cat, id: null, gen: true, ...g };
+  return { cat, id: null, gen: true, ...(fn.key ? { gkey: fn.key } : {}), ...g };
 }
 
 // A case study, ready for a round (new numbers each time, like typed calculations).
@@ -490,6 +502,16 @@ function draw(cat, used) {
       return materialize(q, cat);
     }
   }
+  // Spaced repetition: a calculation that's due comes first in a calculation slot (most overdue first), with new
+  // numbers. With new formats on and a typed version, it's typed half the time, like any calculation slot.
+  if (srsOn(cat)) {
+    const now = Date.now(), dg = g.filter(fn => !used.has(fn) && genDueAt(fn) <= now);
+    if (dg.length) {
+      const fn = shuffle(dg).reduce((a, b) => genDueAt(b) < genDueAt(a) ? b : a), t = typedTwin(cat, fn);
+      used.add(fn); if (t) used.add(t); // one version per round
+      return t && db.newFormats && Math.random() < NUMERIC_SHARE ? typedItem(t, cat) : materialize(generated(fn), cat);
+    }
+  }
   // New formats: a calculation slot can become a case study, at most one per CASE_EVERY questions. Categories without
   // cases (and rounds with new formats off) skip this entirely, without drawing a random number.
   const freshCase = db.newFormats && used.caseLeft > 0 ? casesOf(cat).filter(fn => !used.has(fn)) : [];
@@ -534,9 +556,11 @@ function buildRoundNew(mode, cats) {
   let walksLeft = Math.floor(n / WALK_EVERY), casesLeft = Math.floor(n / CASE_EVERY);
   const lists = Object.fromEntries(cats.map(cat => {
     const f = Bank.formats[cat] || [];
-    const due = f.filter(q => srsOn(cat) && db.schedule[q.id] && db.schedule[q.id].dueAt <= now).sort((a, b) => db.schedule[a.id].dueAt - db.schedule[b.id].dueAt);
+    const due = f.filter(q => srsOn(cat) && db.schedule[q.id] && db.schedule[q.id].dueAt <= now);
+    const typed = Bank.numeric[cat] || [], dueTyped = srsOn(cat) ? typed.filter(fn => genDueAt(fn) <= now) : [];
+    const dueFirst = [...due.map(q => ({ q, t: db.schedule[q.id].dueAt })), ...dueTyped.map(fn => ({ fn, t: genDueAt(fn) }))].sort((a, b) => a.t - b.t);
     const rest = shuffle(f.filter(q => !due.includes(q)));
-    return [cat, [...due.map(q => ({ q })), ...shuffle([...rest.map(q => ({ q })), ...(Bank.numeric[cat] || []).map(fn => ({ fn })), ...casesOf(cat).map(cs => ({ cs }))])]];
+    return [cat, [...dueFirst, ...shuffle([...rest.map(q => ({ q })), ...typed.filter(fn => !dueTyped.includes(fn)).map(fn => ({ fn })), ...casesOf(cat).map(cs => ({ cs }))])]];
   }));
   const items = [];
   let progressed = true;
@@ -582,18 +606,25 @@ function beginAttempt(mode, items, sub, learning = false, calc = false) {
   go({ name: "quiz", mode });
 }
 
-// Written questions due now (new formats included when on), in the selected categories where spaced repetition is on,
-// most overdue first: [question, category].
+// A due calculation in a review round, with new numbers: typed when new formats are on and it has a typed version.
+function dueGenItem(fn, cat) {
+  const t = db.newFormats && typedTwin(cat, fn);
+  return t ? typedItem(t, cat) : materialize(generated(fn), cat);
+}
+// Questions due now in the selected categories where spaced repetition is on, most overdue first: written ones (new
+// formats included when on) and calculations. Each is { cat, dueAt, make() → the item for a round }.
 function dueQuestions() {
   const now = Date.now();
-  return selectedCats().filter(srsOn).flatMap(cat => reviewPool(cat).filter(q => isDue(q, now)).map(q => [q, cat]))
-    .sort((a, b) => db.schedule[a[0].id].dueAt - db.schedule[b[0].id].dueAt);
+  return selectedCats().filter(srsOn).flatMap(cat => [
+    ...reviewPool(cat).filter(q => isDue(q, now)).map(q => ({ cat, dueAt: db.schedule[q.id].dueAt, make: () => materialize(q, cat) })),
+    ...dueGens(cat, now).map(fn => ({ cat, dueAt: genDueAt(fn), make: () => dueGenItem(fn, cat) }))
+  ]).sort((a, b) => a.dueAt - b.dueAt);
 }
 // A review round: always timed (1 minute a question, like mistakes practice); calculator as set for category practice.
 function startDue() {
   const due = dueQuestions().slice(0, DUE_MAX);
   if (!due.length) return confirmModal("Nothing due right now", "No questions are due for review in your selected categories. Answered questions come back here when they're due.", "OK", () => {}, null);
-  beginAttempt(DUE, due.map(([q, cat]) => materialize(q, cat)), `${due.length} question${due.length > 1 ? "s" : ""} due for review, most overdue first`, false, calcFor(DUE));
+  beginAttempt(DUE, due.map(d => d.make()), `${due.length} question${due.length > 1 ? "s" : ""} due for review, most overdue first`, false, calcFor(DUE));
 }
 
 function startRound(mode) {
@@ -621,7 +652,7 @@ function reaskItem(it) {
     if (it.type === "reason") return reasonItem(reasonSource(it), it.cat); // answers and reasons in a new order
     if (it.type === "spot") return spotItem(spotSource(it), it.cat); // the same lines, the fixes in a new order
     const wrong = [0, 1, 2, 3].filter(j => j !== it.a);
-    return materialize({ id: it.id, gen: it.gen, lv: it.lv, q: it.q, why: it.why,
+    return materialize({ id: it.id, gen: it.gen, ...(it.gkey ? { gkey: it.gkey } : {}), lv: it.lv, q: it.q, why: it.why,
       o: [it.o[it.a], ...wrong.map(j => it.o[j])], x: wrong.map(j => it.x[j]),
       ...(it.trap ? { trap: wrong.map(j => it.trap[j]) } : {}), ...(it.table ? { table: it.table } : {}) }, it.cat);
 }
@@ -1063,7 +1094,7 @@ function wireHome() {
 
 /* Spaced repetition panel (home page) */
 let srsCatsOpen = false;
-const dueCount = cat => reviewPool(cat).filter(q => isDue(q)).length;
+const dueCount = cat => reviewPool(cat).filter(q => isDue(q)).length + dueGens(cat).length;
 function srsPanel() {
   const due = CATEGORIES.filter(c => srsOn(c.id)).reduce((s, c) => s + dueCount(c.id), 0);
   const off = CATEGORIES.filter(c => db.srsExcluded.includes(c.id)).length;
@@ -1613,10 +1644,11 @@ function submit(timedOut) {
   at.items.forEach((it, i) => {
     const g = grade(it, at.answers[i]), ok = g.ok;
     if (ok) correct++;
-    // Answer log: answered questions only (skips aren't logged). Calculation questions are logged with qid null.
+    // Answer log: answered questions only (skips aren't logged). Calculation questions are logged with qid null and,
+    // since schema 21, gkey (their generator's key; case studies have none).
     // i = position in the round, so later notes (e.g. "I read it wrong") can point at this entry via (at, i).
     if (!isBlank(at.answers[i])) {
-      const entry = { qid: it.id || null, cat: it.cat, ok, at: submittedAt, usedMs: at.spentMs[i], answeredAt: at.answeredAt[i], mode, i,
+      const entry = { qid: it.id || null, ...(it.gkey ? { gkey: it.gkey } : {}), cat: it.cat, ok, at: submittedAt, usedMs: at.spentMs[i], answeredAt: at.answeredAt[i], mode, i,
         timePressure: at.answeredAt[i] != null && at.answeredAt[i] >= pressureFrom };
       const firstWrong = it.type === "case" ? g.steps.find(s => !s.ok && !s.blank) : null;
       const trap = it.type === "numeric" ? g.trap : it.type === "case" ? (firstWrong && firstWrong.trap) || null : !ok && it.trap ? it.trap[at.answers[i]] : null;
@@ -1637,8 +1669,8 @@ function submit(timedOut) {
     if (mode !== RETRY) { const st = (db.catStats[it.cat] ||= { n: 0, ok: 0 }); st.n++; if (ok) st.ok++; }
     // Per-question record (written questions only; calculations get new numbers each time). Retries count here.
     if (it.id) { const qs = (db.qStats[it.id] ||= { n: 0, wrong: 0, last: null }); qs.n++; if (!ok) qs.wrong++; qs.last = ok ? "ok" : "wrong"; }
-    // Spaced repetition schedule follows the answer log (answered written questions), whether or not it's switched on.
-    if (it.id && !isBlank(at.answers[i])) scheduleAnswer(db.schedule, it.id, ok, submittedAt, confOf(at, i) && isRated(it) ? confOf(at, i) : null);
+    // Spaced repetition schedule follows the answer log (answered written and calculation questions), whether or not it's switched on.
+    if (schedKey(it) && !isBlank(at.answers[i])) scheduleAnswer(db.schedule, schedKey(it), ok, submittedAt, confOf(at, i) && isRated(it) ? confOf(at, i) : null);
   });
   const pct = Math.round(correct / at.items.length * 100);
   const result = { at: submittedAt, mode, items: at.items, answers: at.answers, marked: at.marked, ...(at.conf ? { conf: at.conf } : {}), correct, total: at.items.length, pct,

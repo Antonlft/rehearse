@@ -3,7 +3,7 @@ const HOTEL = () => R.pick(["The Harbour Hotel", "Kingsway House Hotel", "The La
 const SCHEME = () => R.pick(["Castle Yard", "Mill Lane", "Canal Point", "Abbey Court", "Foundry Wharf", "Park Street"]);
 
 /* Hotel economics & KPIs */
-Bank.gen("hk", () => {
+Bank.gen("hk", "hk-g1", () => {
   const occ = R.step(0.55, 0.92, 0.01), adr = R.step(70, 320, 5);
   return { trap: ["inverted", "inverted", "missed-step"], lv: 1,
     q: `${HOTEL()} runs at ${R.pct(occ, 0)} occupancy with an ADR of US$${adr}. What is its RevPAR?`,
@@ -12,7 +12,7 @@ Bank.gen("hk", () => {
     x: ["That divides ADR by occupancy instead of multiplying.", "That multiplies ADR by the unsold share of rooms.", "That's the ADR, which ignores empty rooms."] };
 });
 
-Bank.gen("hk", () => {
+Bank.gen("hk", "hk-g2", () => {
   const o1 = R.int(62, 82), d = R.pick([-6, -4, -3, -2, 2, 3, 4, 5, 6, 8]), o2 = o1 + d;
   const a1 = R.step(90, 220, 5), a2 = Math.round(a1 * (1 + R.pick([-0.06, -0.04, -0.03, 0.02, 0.03, 0.05, 0.07, 0.09]))), ra = a2 / a1 - 1, ro = o2 / o1 - 1;
   const tot = (o2 * a2) / (o1 * a1) - 1, s = (r, o) => `Rate ${R.spct(r)}, occupancy ${R.spct(o)}`;
@@ -23,7 +23,7 @@ Bank.gen("hk", () => {
     x: ["The two effects are swapped.", `Occupancy moved ${Math.abs(d)} percentage points, which is a ${R.pct(Math.abs(ro))} relative change.`, "Occupancy changed too, so not all the growth came from rate."] };
 });
 
-Bank.gen("hk", () => {
+Bank.gen("hk", "hk-g3", () => {
   const r1 = R.step(12, 60, 0.5), m1 = R.step(0.25, 0.42, 0.01), g1 = +(r1 * m1).toFixed(1);
   const dr = +(r1 * R.step(0.04, 0.15, 0.01)).toFixed(1), ft = R.step(0.4, 0.8, 0.05), g2 = +(g1 + dr * ft).toFixed(1), r2 = +(r1 + dr).toFixed(1);
   const f = (g2 - g1) / dr;
@@ -34,7 +34,7 @@ Bank.gen("hk", () => {
     x: ["That's the share of extra revenue absorbed by extra costs.", "That's the ratio upside down: Δrevenue ÷ ΔGOP.", "That's the new GOP margin, not the margin on the extra revenue."] };
 });
 
-Bank.gen("hk", () => {
+Bank.gen("hk", "hk-g4", () => {
   const k = R.step(80, 400, 10), occ = R.step(0.6, 0.9, 0.01), adr = R.step(80, 260, 5), rev = k * 365 * occ * adr / 1e6;
   return { trap: ["missed-step", "double-count", "units"], lv: 1,
     q: `A ${k}-room hotel open all year averages ${R.pct(occ, 0)} occupancy at an ADR of US$${adr}. What is its annual rooms revenue?`,
@@ -43,7 +43,7 @@ Bank.gen("hk", () => {
     x: ["That assumes every room is sold every night.", "That applies occupancy twice.", "That's one month of revenue, not a year."] };
 });
 
-Bank.gen("hk", () => {
+Bank.gen("hk", "hk-g5", () => {
   const k = R.step(100, 350, 10), occ = R.step(0.65, 0.88, 0.01), rev = R.step(8, 45, 0.5), gop = +(rev * R.step(0.25, 0.42, 0.01)).toFixed(1);
   const avail = k * 365, per = v => R.usd2(v);
   return { trap: ["wrong-measure", "wrong-measure", "wrong-measure"], lv: 2,
@@ -54,7 +54,7 @@ Bank.gen("hk", () => {
 });
 
 /* Hotel operating models */
-Bank.gen("hom", () => {
+Bank.gen("hom", "hom-g1", () => {
   const rev = R.step(10, 60, 1), gm = R.step(0.28, 0.4, 0.01), gop = +(rev * gm).toFixed(1), b = R.pick([0.02, 0.025, 0.03, 0.035]), i = R.pick([0.06, 0.08, 0.1]);
   const fee = b * rev + i * gop;
   return { trap: ["missed-step", "wrong-measure", "wrong-measure"], lv: 2,
@@ -64,7 +64,7 @@ Bank.gen("hom", () => {
     x: ["That's the base fee alone.", "That applies the incentive percentage to revenue instead of GOP.", "That applies the base fee percentage to GOP instead of revenue."] };
 });
 
-Bank.gen("hom", () => {
+Bank.gen("hom", "hom-g2", () => {
   const rev = R.step(20, 60, 1), gop = +(rev * R.step(0.32, 0.4, 0.01)).toFixed(1), b = 0.03, base = b * rev;
   const pr = +((gop - base) * R.step(0.4, 0.75, 0.05)).toFixed(1), i = R.pick([0.15, 0.2, 0.25]), adj = gop - base;
   return { trap: ["missed-step", "missed-step", "missed-step"], lv: 3,
@@ -74,7 +74,7 @@ Bank.gen("hom", () => {
     x: ["That ignores the owner's priority, which comes first.", "That ignores both the base fee and the owner's priority.", "That forgets to deduct the base fee from GOP."] };
 });
 
-Bank.gen("hom", () => {
+Bank.gen("hom", "hom-g3", () => {
   const e = R.step(4, 20, 0.5), c = R.step(1.3, 2.4, 0.1), rent = +(e / c).toFixed(1), rc = e / rent;
   return { trap: ["inverted", "wrong-measure", "wrong-measure"], lv: 2,
     q: `A leased hotel generates EBITDAR of ${R.usd(e, 1)} and pays rent of ${R.usd(rent, 1)}. What is its rent cover?`,
@@ -84,7 +84,7 @@ Bank.gen("hom", () => {
 });
 
 /* Real estate valuation */
-Bank.gen("rev", () => {
+Bank.gen("rev", "rev-g1", () => {
   const rent = R.step(1, 12, 0.25), c = +(rent * R.step(0.03, 0.15, 0.01)).toFixed(2), y = R.step(0.04, 0.075, 0.0025), noi = rent - c;
   return { trap: ["missed-step", "sign", "inverted"], lv: 1,
     q: `A let property earns gross rent of ${R.usd(rent, 2)} a year and the landlord bears ${R.usd(c, 2)} of non-recoverable costs. Similar assets trade at a ${R.pct(y, 2)} yield. What's it worth?`,
@@ -93,7 +93,7 @@ Bank.gen("rev", () => {
     x: ["That capitalises gross rent, ignoring the landlord's costs.", "Costs were added to rent instead of deducted.", "That multiplies NOI by the yield figure instead of dividing by the yield."] };
 });
 
-Bank.gen("rev", () => {
+Bank.gen("rev", "rev-g2", () => {
   const y1 = R.step(0.04, 0.08, 0.0025), dy = R.pick([-0.0075, -0.005, -0.0025, 0.0025, 0.005, 0.0075, 0.01]), y2 = +(y1 + dy).toFixed(4);
   const ch = y1 / y2 - 1, noi = R.step(2, 15, 0.5);
   return { trap: ["sign", "units", "wrong-measure"], lv: 2,
@@ -103,7 +103,7 @@ Bank.gen("rev", () => {
     x: [dy > 0 ? "Wrong direction: higher yields mean lower values." : "Wrong direction: lower yields mean higher values.", "That treats the yield move in percentage points as the change in value.", "That's the relative change in the yield, flipped, not the change in value."] };
 });
 
-Bank.gen("rev", () => {
+Bank.gen("rev", "rev-g3", () => {
   const k = R.step(80, 450, 10), p = R.step(15, 160, 1), pk = p * 1e6 / k;
   return { trap: ["units", "units", "units"], lv: 1,
     q: `${HOTEL()}, with ${k} rooms, sells for ${R.usd(p)}. What is the price per key?`,
@@ -112,7 +112,7 @@ Bank.gen("rev", () => {
     x: ["The answer is ten times too small.", "The answer is ten times too large.", "Dividing by 365 gives nothing meaningful here: price per key is per room, not per night."] };
 });
 
-Bank.gen("rev", () => {
+Bank.gen("rev", "rev-g4", () => {
   const rev = R.step(15, 80, 1), m = R.step(0.2, 0.32, 0.01), e = +(rev * m).toFixed(1), r = R.pick([0.03, 0.04, 0.05]), y = R.step(0.065, 0.09, 0.0025);
   const adj = e - r * rev;
   return { trap: ["missed-step", "wrong-measure", "inverted"], lv: 3,
@@ -123,7 +123,7 @@ Bank.gen("rev", () => {
 });
 
 /* Living sectors */
-Bank.gen("liv", () => {
+Bank.gen("liv", "liv-g1", () => {
   const beds = R.step(200, 1000, 25), w = R.step(140, 320, 5), wk = R.pick([44, 48, 51]), occ = R.step(0.94, 0.995, 0.005), g = beds * w * wk * occ / 1e6;
   return { trap: ["missed-step", "missed-step", "units"], lv: 2,
     q: `${SCHEME()}, a ${beds}-bed PBSA scheme, charges US$${w} per bed per week on ${wk}-week tenancies and is ${R.pct(occ)} let. What is its annual gross rental income?`,
@@ -132,7 +132,7 @@ Bank.gen("liv", () => {
     x: ["That assumes every bed is let.", "That assumes 52 weeks and full occupancy.", "That treats the weekly rent as monthly."] };
 });
 
-Bank.gen("liv", () => {
+Bank.gen("liv", "liv-g2", () => {
   const beds = R.step(200, 900, 25), gross = R.step(2, 12, 0.25), gtn = R.pick([0.25, 0.28, 0.3, 0.32, 0.35]), y = R.step(0.045, 0.065, 0.0025);
   const noi = gross * (1 - gtn), pb = v => R.usd0(v * 1e6 / beds);
   return { trap: ["missed-step", "wrong-measure", "wrong-measure"], lv: 3,
@@ -142,7 +142,7 @@ Bank.gen("liv", () => {
     x: ["That capitalises gross rent, ignoring operating costs.", "That's NOI per bed, not value per bed.", "That capitalises the costs instead of the net income."] };
 });
 
-Bank.gen("liv", () => {
+Bank.gen("liv", "liv-g3", () => {
   const gross = R.step(4, 20, 0.5), cs = R.pick([0.2, 0.22, 0.25, 0.28, 0.3]), c = +(gross * cs).toFixed(2), g = R.pick([0.02, 0.03, 0.04, 0.05, 0.06]);
   const n1 = gross - c, n2 = gross * (1 + g) - c, ch = n2 / n1 - 1;
   return { trap: ["missed-step", "wrong-measure", null], lv: 3,
@@ -153,7 +153,7 @@ Bank.gen("liv", () => {
 });
 
 /* Property finance & rates */
-Bank.gen("pf", () => {
+Bank.gen("pf", "pf-g1", () => {
   const v = R.step(30, 300, 5), l = Math.round(v * R.step(0.4, 0.7, 0.05)), ltv = l / v;
   return { trap: ["wrong-measure", "inverted", "wrong-measure"], lv: 1,
     q: `An asset worth ${R.usd(v)} is financed with a ${R.usd(l)} loan. What is its LTV?`,
@@ -162,7 +162,7 @@ Bank.gen("pf", () => {
     x: ["That's the equity share of value.", "That's value ÷ loan, upside down.", "That's debt ÷ equity, not debt ÷ value."] };
 });
 
-Bank.gen("pf", () => {
+Bank.gen("pf", "pf-g2", () => {
   const l = R.step(20, 200, 5), r = R.step(0.045, 0.08, 0.0025), noi = +(l * r * R.step(1.2, 2.6, 0.1)).toFixed(2), i = l * r;
   return { trap: ["inverted", "wrong-measure", "wrong-measure"], lv: 1,
     q: `A property with NOI of ${R.usd(noi, 2)} has an interest-only loan of ${R.usd(l)} at an all-in rate of ${R.pct(r, 2)}. What is its interest cover (ICR)?`,
@@ -171,7 +171,7 @@ Bank.gen("pf", () => {
     x: ["That's interest ÷ NOI, upside down.", "That subtracts interest before dividing; ICR compares NOI with interest directly.", "That's based on the debt yield, not interest cover."] };
 });
 
-Bank.gen("pf", () => {
+Bank.gen("pf", "pf-g3", () => {
   const v = R.step(50, 250, 5), ny = R.step(0.055, 0.08, 0.0025), noi = +(v * ny).toFixed(2), r = R.step(0.05, 0.08, 0.0025);
   const ltvMax = R.pick([0.55, 0.6, 0.65]), icr = R.pick([1.5, 1.75, 2.0]), dy = R.pick([0.08, 0.09, 0.1]);
   const a = v * ltvMax, b = noi / icr / r, c = noi / dy, tests = [[a, "LTV binds"], [b, "ICR binds"], [c, "debt yield binds"]];
@@ -185,7 +185,7 @@ Bank.gen("pf", () => {
     x: ["That test allows more debt, but the loan must pass all three.", "That test allows more debt, but the loan must pass all three.", "That ignores the ICR multiple, letting interest absorb all the NOI."] };
 });
 
-Bank.gen("pf", () => {
+Bank.gen("pf", "pf-g4", () => {
   const y = R.step(0.045, 0.075, 0.0025), ltv = R.pick([0.4, 0.5, 0.6]), r = R.step(0.035, 0.08, 0.0025), p = 100;
   const coc = (p * y - p * ltv * r) / (p * (1 - ltv));
   return { trap: ["wrong-measure", "missed-step", "wrong-measure"], lv: 2,
@@ -195,7 +195,7 @@ Bank.gen("pf", () => {
     x: ["That's the unlevered yield.", "That ignores the interest paid on the loan.", "That's the yield minus the rate, not the return on equity."] };
 });
 
-Bank.gen("pf", () => {
+Bank.gen("pf", "pf-g5", () => {
   const mg = R.step(0.015, 0.035, 0.0025), sw = R.step(0.03, 0.045, 0.0025);
   return { trap: ["missed-step", "missed-step", "sign"], lv: 2,
     q: `A borrower has a loan at SONIA + ${R.pct(mg, 2)} and swaps it, paying a fixed ${R.pct(sw, 2)} and receiving SONIA. Ignoring fees, what is its all-in cost?`,
@@ -204,7 +204,7 @@ Bank.gen("pf", () => {
     x: ["The SONIA legs cancel, so no floating rate remains.", "The loan margin still has to be paid.", "That nets the margin against the swap rate instead of adding it."] };
 });
 
-Bank.gen("pf", () => {
+Bank.gen("pf", "pf-g6", () => {
   const ltv = R.pick([0.4, 0.5, 0.55, 0.6, 0.65, 0.7]), f = R.pick([0.05, 0.1, 0.15, 0.2, 0.25]);
   const eq = -f / (1 - ltv);
   return { trap: ["missed-step", "wrong-measure", "inverted"], lv: 3,
@@ -214,7 +214,7 @@ Bank.gen("pf", () => {
     x: ["That's the unlevered change; leverage magnifies it.", "That shrinks the fall instead of magnifying it.", "That divides by the debt share rather than the equity share."] };
 });
 
-Bank.gen("pf", () => {
+Bank.gen("pf", "pf-g7", () => {
   const v1 = R.step(60, 250, 5), l = Math.round(v1 * R.step(0.55, 0.65, 0.05)), v2 = Math.round(v1 * (1 - R.step(0.1, 0.3, 0.05))), m = R.pick([0.5, 0.55, 0.6]);
   const gap = l - m * v2;
   return { trap: ["wrong-measure", "missed-step", "wrong-measure"], lv: 2,
@@ -225,7 +225,7 @@ Bank.gen("pf", () => {
 });
 
 /* Hospitality & living deal structuring */
-Bank.gen("hds", () => {
+Bank.gen("hds", "hds-g1", () => {
   const e = R.step(4, 25, 0.5), c = R.pick([1.6, 1.75, 1.8, 2.0, 2.2]), y = R.step(0.05, 0.07, 0.0025), rent = e / c;
   return { trap: ["missed-step", "wrong-measure", "inverted"], lv: 2,
     q: `An operator with hotel EBITDAR of ${R.usd(e, 1)} plans a sale-and-leaseback. Investors want rent cover of ${R.x(c, 2)} and will buy at a ${R.pct(y, 2)} yield. Roughly what proceeds can it raise?`,
@@ -234,7 +234,7 @@ Bank.gen("hds", () => {
     x: ["That capitalises all of the EBITDAR, leaving no rent cover.", "That capitalises the operator's margin after rent, not the rent.", "That multiplies by the cover ratio instead of dividing, setting rent above EBITDAR."] };
 });
 
-Bank.gen("hds", () => {
+Bank.gen("hds", "hds-g2", () => {
   const s = R.pick([0.5, 0.55, 0.6, 0.65]), m = R.pick([0.1, 0.15, 0.2]), rs = R.step(0.05, 0.07, 0.0025), rm = R.step(0.09, 0.13, 0.005);
   const bl = (s * rs + m * rm) / (s + m);
   return { trap: ["wrong-measure", "inverted", "double-count"], lv: 3,
@@ -244,7 +244,7 @@ Bank.gen("hds", () => {
     x: ["A simple average ignores that senior is the bigger tranche.", "The weights are swapped between the tranches.", "Adding the rates double-counts."] };
 });
 
-Bank.gen("hds", () => {
+Bank.gen("hds", "hds-g3", () => {
   const op = R.pick([0.05, 0.1, 0.2]), h = R.step(10, 40, 2), above = R.step(6, 40, 2), pr = R.pick([0.2, 0.3, 0.4]);
   const share = op * h + pr * above, tot = h + above;
   return { trap: ["missed-step", "wrong-measure", "missed-step"], lv: 3,

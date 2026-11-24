@@ -6,7 +6,15 @@ window.Bank = {
   cases: {},   // multi-step case studies (linked typed steps), only used when "new formats" is switched on
   add(cat, list) { (this.written[cat] ||= []).push(...list); },
   addFormat(cat, list) { (this.formats[cat] ||= []).push(...list); },
-  gen(cat, fn) { (this.gens[cat] ||= []).push(fn); },
+  /* Calculation questions are registered with a permanent name (key), e.g. Bank.gen("val", "val-g3", fn) or
+     Bank.calc("val", "val-c2", spec). It is what spaced repetition schedules them by ("gen:val-c2"), so a key must
+     never change or be reused once published; a new generator takes the next free number. The question check makes
+     sure every key is there and unique. A calculation's multiple-choice and typed versions share its key. */
+  gen(cat, key, fn) {
+    if (typeof key === "function") [key, fn] = [null, key];
+    if (key) fn.key = key;
+    (this.gens[cat] ||= []).push(fn);
+  },
   /* One definition, two formats. spec = {
        make()      → inputs (all randomness happens here),
        solve(i)    → the right answer, as a plain number (e.g. 0.0842 for 8.42%),
@@ -19,19 +27,22 @@ window.Bank = {
        table(i)    → optional: a table shown under the question, { caption, corner, cols: [..], rows: [{ head, cells: [..] }], base: [row, col] } }
      The multiple-choice version is registered exactly where a plain Bank.gen would be, and is identical to one;
      the typed version goes into Bank.numeric. */
-  calc(cat, spec) {
+  calc(cat, key, spec) {
+    if (typeof key === "object") [key, spec] = [null, key];
     const toUnit = v => spec.unit === "%" ? v * 100 : v;
-    this.gen(cat, () => {
+    this.gen(cat, key, () => {
       const i = spec.make(), w = spec.wrongs(i);
       return { ...(spec.lv ? { lv: spec.lv } : {}), trap: w.map(x => x.trap || null),
         q: spec.ask(i), o: [spec.fmt(spec.solve(i)), ...w.map(x => spec.fmt(x.value))], why: spec.why(i), x: w.map(x => x.note), ...(spec.table ? { table: spec.table(i) } : {}) };
     });
-    (this.numeric[cat] ||= []).push(() => {
+    const typed = () => {
       const i = spec.make();
       return { type: "numeric", ...(spec.lv ? { lv: spec.lv } : {}), unit: spec.unit, tolerance: spec.tolerance, ...(spec.dp != null ? { dp: spec.dp } : {}),
         q: `${spec.ask(i)} Type your answer${spec.prompt ? " " + spec.prompt : ""}.`, answer: toUnit(spec.solve(i)), why: spec.why(i),
         wrongs: spec.wrongs(i).map(x => ({ value: toUnit(x.value), note: x.note, trap: x.trap || null })), ...(spec.table ? { table: spec.table(i) } : {}) };
-    });
+    };
+    if (key) typed.key = key;
+    (this.numeric[cat] ||= []).push(typed);
   },
   /* Multi-step case study: a scenario and 3–8 linked typed steps, checked one at a time. spec = {
        lv, make() → inputs (all randomness here; round any figure a later step quotes, so it matches what's shown),

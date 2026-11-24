@@ -1,6 +1,6 @@
 // Each generator returns { q, o: [correct, wrong1, wrong2, wrong3], why, x: [note1, note2, note3] }.
 
-Bank.gen("val", () => {
+Bank.gen("val", "val-g1", () => {
   const name = R.company(), ev = R.step(600, 2400, 10), debt = R.step(100, Math.round(ev * 0.04) * 10, 10);
   const cash = R.step(20, 150, 5), nci = R.step(10, 80, 5), pref = Math.random() < 0.5 ? R.step(20, 60, 5) : 0;
   const eq = ev - debt + cash - nci - pref;
@@ -12,7 +12,7 @@ Bank.gen("val", () => {
   };
 });
 
-Bank.gen("val", () => {
+Bank.gen("val", "val-g2", () => {
   const name = R.company(), e = R.step(80, 400, 5), m = R.step(6, 14, 0.5);
   const nd = Math.round(e * R.step(0.3, 0.9, 0.1) / 5) * 5, sh = R.step(50, 400, 10);
   const ev = m * e, eq = ev - nd, p = v => "US$" + (v / sh).toFixed(2);
@@ -25,7 +25,7 @@ Bank.gen("val", () => {
 });
 
 // Net new shares from options under the treasury stock method. One definition gives both the multiple-choice and typed versions.
-Bank.calc("val", {
+Bank.calc("val", "val-c1", {
   lv: 2, tolerance: 0.01, dp: 2, prompt: "in millions of shares, as a number only, to 2 decimal places",
   make() {
     let P, K;
@@ -44,7 +44,7 @@ Bank.calc("val", {
 });
 
 // Diluted shares with two option tranches, one out of the money.
-Bank.gen("val", () => {
+Bank.gen("val", "val-g3", () => {
   let P, K1, K2;
   do { P = R.step(20, 80, 1); K1 = R.step(5, P - 3, 1); K2 = R.step(P + 2, P + 30, 1); } while (K1 / P < 0.3);
   const B = R.step(50, 400, 10), N1 = R.step(2, 15, 0.5), N2 = R.step(2, 15, 0.5);
@@ -57,7 +57,7 @@ Bank.gen("val", () => {
   };
 });
 
-Bank.gen("lbo", () => {
+Bank.gen("lbo", "lbo-g1", () => {
   const eq = R.step(100, 800, 10), moic = R.pick([1.5, 1.8, 2.0, 2.2, 2.5, 2.8, 3.0]), n = R.pick([3, 4, 5, 6, 7]);
   const exit = eq * moic, irr = moic ** (1 / n) - 1;
   return { trap: ["wrong-measure", "units", "wrong-measure"],
@@ -68,7 +68,7 @@ Bank.gen("lbo", () => {
   };
 });
 
-Bank.gen("lbo", () => {
+Bank.gen("lbo", "lbo-g2", () => {
   const e = R.step(50, 200, 10), m1 = R.step(7, 11, 0.5), lev = R.step(3, 5, 0.5), n = R.pick([4, 5, 6]);
   const debt = lev * e, eqIn = m1 * e - debt;
   const e2 = Math.round(e * R.step(1.2, 1.6, 0.05) / 5) * 5, m2 = m1 + R.pick([-1, 0, 0, 1]);
@@ -81,7 +81,7 @@ Bank.gen("lbo", () => {
   };
 });
 
-Bank.gen("credit", () => {
+Bank.gen("credit", "credit-g1", () => {
   const name = R.company(), e = R.step(60, 300, 5);
   const d = Math.round(e * R.step(2, 6, 0.25) / 5) * 5, c = Math.round(e * R.step(0.2, 1.2, 0.1) / 5) * 5;
   return { trap: ["missed-step", "sign", "inverted"],
@@ -92,7 +92,7 @@ Bank.gen("credit", () => {
   };
 });
 
-Bank.gen("credit", () => {
+Bank.gen("credit", "credit-g2", () => {
   const e = R.step(80, 400, 5), da = Math.round(e * R.step(0.15, 0.4, 0.05) / 5) * 5;
   const i = Math.max(5, Math.round(e * R.step(0.08, 0.3, 0.02) / 5) * 5), ebit = e - da;
   return { trap: ["wrong-measure", "wrong-measure", "inverted"],
@@ -103,7 +103,7 @@ Bank.gen("credit", () => {
   };
 });
 
-Bank.gen("fig", () => {
+Bank.gen("fig", "fig-g1", () => {
   const name = R.bank(), bv = R.step(4000, 30000, 500), gi = Math.round(bv * R.step(0.08, 0.3, 0.02) / 100) * 100;
   const tbv = bv - gi, mc = Math.round(tbv * R.step(0.6, 1.6, 0.05) / 100) * 100;
   return { trap: ["missed-step", "sign", "inverted"],
@@ -114,7 +114,7 @@ Bank.gen("fig", () => {
   };
 });
 
-Bank.gen("fig", () => {
+Bank.gen("fig", "fig-g2", () => {
   const p = R.step(800, 5000, 50), c = Math.round(p * R.step(0.55, 0.75, 0.01) / 5) * 5;
   const x = Math.round(p * R.step(0.22, 0.35, 0.01) / 5) * 5, inv = Math.round(p * R.step(0.03, 0.08, 0.01) / 5) * 5;
   const cr = (c + x) / p;
@@ -126,7 +126,7 @@ Bank.gen("fig", () => {
   };
 });
 
-Bank.gen("fig", () => {
+Bank.gen("fig", "fig-g3", () => {
   const rwa = R.step(20000, 150000, 1000), k = Math.round(rwa * R.step(0.11, 0.16, 0.005) / 10) * 10;
   const at1 = Math.round(rwa * R.step(0.01, 0.02, 0.005) / 10) * 10, t2 = Math.round(rwa * R.step(0.015, 0.03, 0.005) / 10) * 10;
   const ta = Math.round(rwa * R.step(2.2, 3.2, 0.1) / 1000) * 1000;
@@ -138,7 +138,7 @@ Bank.gen("fig", () => {
   };
 });
 
-Bank.gen("cf", () => {
+Bank.gen("cf", "cf-g1", () => {
   const rf = R.step(0.02, 0.05, 0.0025), b = R.pick([0.7, 0.8, 0.9, 1.1, 1.2, 1.3, 1.4, 1.5]), erp = R.step(0.04, 0.065, 0.005);
   return { trap: ["wrong-measure", "missed-step", "inverted"],
     q: `The risk-free rate is ${R.pct(rf, 2)}, the equity risk premium is ${R.pct(erp)} and a company's levered beta is ${b.toFixed(1)}. What is its cost of equity under CAPM?`,
@@ -149,7 +149,7 @@ Bank.gen("cf", () => {
 });
 
 // WACC: one definition gives both the multiple-choice question and the typed-answer version (see Bank.calc).
-Bank.calc("cf", {
+Bank.calc("cf", "cf-c1", {
   unit: "%", tolerance: 0.05, dp: 2, prompt: "as a percentage, to 2 decimal places",
   make() {
     const E = R.step(400, 2000, 50), D = Math.round(E * R.step(0.2, 0.8, 0.05) / 50) * 50;
@@ -170,7 +170,7 @@ Bank.calc("cf", {
   fmt: v => R.pct(v, 2)
 });
 
-Bank.gen("acc", () => {
+Bank.gen("acc", "acc-g1", () => {
   const ni = R.step(40, 300, 5), da = R.step(10, 80, 5), ar = R.step(5, 40, 5), ap = R.step(5, 40, 5);
   const cfo = ni + da - ar + ap;
   return { trap: ["sign", "sign", "missed-step"],
@@ -182,7 +182,7 @@ Bank.gen("acc", () => {
 });
 
 // Tax losses carried forward (US: NOLs): tax paid once the losses are used.
-Bank.calc("acc", {
+Bank.calc("acc", "acc-c1", {
   lv: 2, unit: "US$m", tolerance: 0.05, dp: 1, prompt: "in US$m, to 1 decimal place",
   make() {
     const t = R.pick([0.21, 0.25, 0.3]);
@@ -202,7 +202,7 @@ Bank.calc("acc", {
 });
 
 // Deferred tax liability from faster tax depreciation, in year 1.
-Bank.calc("acc", {
+Bank.calc("acc", "acc-c2", {
   lv: 2, unit: "US$m", tolerance: 0.005, dp: 2, prompt: "in US$m, to 2 decimal places",
   make() { return { C: R.pick([120, 240, 360, 480, 600]), nb: R.pick([8, 10, 12]), nt: R.pick([3, 4, 5]), t: R.pick([0.21, 0.25, 0.3]) }; },
   solve: ({ C, nb, nt, t }) => (C / nt - C / nb) * t,
@@ -216,7 +216,7 @@ Bank.calc("acc", {
   fmt: v => R.m(v, 2)
 });
 
-Bank.gen("econ", () => {
+Bank.gen("econ", "econ-g1", () => {
   const i = R.step(0.03, 0.09, 0.0025), p = R.step(0.02, 0.06, 0.0025), real = (1 + i) / (1 + p) - 1;
   return { trap: ["wrong-measure", "sign", "sign"],
     q: `A bond yields ${R.pct(i, 2)} a year and inflation is ${R.pct(p, 2)}. What is the exact real return?`,
@@ -226,7 +226,7 @@ Bank.gen("econ", () => {
   };
 });
 
-Bank.gen("econ", () => {
+Bank.gen("econ", "econ-g2", () => {
   const r1 = R.step(1.02, 1.18, 0.01), r2 = +(r1 + R.pick([-1, 1]) * R.step(0.04, 0.12, 0.01)).toFixed(2);
   const eur = r2 / r1 - 1, usd = r1 / r2 - 1;
   return { trap: ["inverted", "sign", "units"],
@@ -238,7 +238,7 @@ Bank.gen("econ", () => {
 });
 
 // CAGR: one definition gives both the multiple-choice question and the typed-answer version (see Bank.calc).
-Bank.calc("maths", {
+Bank.calc("maths", "maths-c1", {
   unit: "%", tolerance: 0.1, dp: 1, prompt: "as a percentage, to 1 decimal place",
   make() {
     const n = R.pick([3, 4, 5, 6, 7, 8]), s = R.step(100, 600, 10), y0 = R.int(2012, 2018);
@@ -256,7 +256,7 @@ Bank.calc("maths", {
   fmt: v => R.pct(v)
 });
 
-Bank.gen("maths", () => {
+Bank.gen("maths", "maths-g1", () => {
   const cf = R.step(100, 1000, 50), r = R.step(0.05, 0.12, 0.01), n = R.int(3, 10), pv = cf / (1 + r) ** n;
   return { trap: ["wrong-measure", "inverted", "units"],
     q: `What is the present value of ${R.m(cf)} received in ${n} years, discounted at ${R.pct(r, 0)} a year?`,
@@ -266,7 +266,7 @@ Bank.gen("maths", () => {
   };
 });
 
-Bank.gen("maths", () => {
+Bank.gen("maths", "maths-g2", () => {
   const cf = R.step(20, 120, 5), r = R.step(0.07, 0.12, 0.005), g = R.step(0.01, 0.04, 0.005);
   return { trap: ["missed-step", "double-count", "sign"],
     q: `A business will generate free cash flow of ${R.m(cf)} next year, growing at ${R.pct(g)} a year forever. At a discount rate of ${R.pct(r)}, what is it worth today?`,
@@ -276,7 +276,7 @@ Bank.gen("maths", () => {
   };
 });
 
-Bank.gen("maths", () => {
+Bank.gen("maths", "maths-g3", () => {
   const f = R.pick([0.1, 0.15, 0.2, 0.25, 0.3, 0.4]);
   return { trap: ["wrong-measure", "wrong-measure", null],
     q: `A share price falls by ${R.pct(f, 0)}. What percentage rise does it need to get back to where it started?`,
@@ -286,7 +286,7 @@ Bank.gen("maths", () => {
   };
 });
 
-Bank.gen("maths", () => {
+Bank.gen("maths", "maths-g4", () => {
   const r = R.pick([3, 4, 6, 8, 9, 12]), yrs = v => v.toFixed(1) + " years";
   return { trap: ["wrong-measure", null, "wrong-measure"],
     q: `Roughly how long does it take an investment to double at ${r}% a year, compounded annually?`,
@@ -296,7 +296,7 @@ Bank.gen("maths", () => {
   };
 });
 
-Bank.gen("maths", () => {
+Bank.gen("maths", "maths-g5", () => {
   const p = R.step(20, 120, 5), v = Math.round(p * R.step(0.3, 0.7, 0.05)), F = R.step(100000, 900000, 50000);
   const units = n => R.num(Math.ceil(n), 0) + " units";
   return { trap: ["missed-step", "wrong-measure", "sign"],
@@ -307,7 +307,7 @@ Bank.gen("maths", () => {
   };
 });
 
-Bank.gen("maths", () => {
+Bank.gen("maths", "maths-g6", () => {
   const a = R.step(0.02, 0.06, 0.0025), b = +(a + R.pick([-1, 1]) * R.step(0.005, 0.02, 0.0025)).toFixed(4);
   const bp = Math.round((b - a) * 10000), rel = b / a - 1;
   const sbp = v => (v >= 0 ? "+" : "−") + Math.abs(v) + "bp";
@@ -319,7 +319,7 @@ Bank.gen("maths", () => {
   };
 });
 
-Bank.gen("rx", () => {
+Bank.gen("rx", "rx-g1", () => {
   const s = R.step(200, 600, 25), u = R.step(200, 500, 25), d = R.step(100, 300, 25);
   const v = Math.round((s + u * R.step(0.2, 0.8, 0.05)) / 5) * 5, rec = (v - s) / u;
   return { trap: ["wrong-measure", "missed-step", "inverted"],
@@ -330,7 +330,7 @@ Bank.gen("rx", () => {
   };
 });
 
-Bank.gen("cm", () => {
+Bank.gen("cm", "cm-g1", () => {
   const p = R.step(4, 20, 0.5), k = R.pick([2, 3, 4, 5]), sub = +(p * (1 - R.step(0.25, 0.45, 0.05))).toFixed(2);
   const terp = (k * p + sub) / (k + 1), f = v => "US$" + v.toFixed(2);
   return { trap: ["wrong-measure", "missed-step", "missed-step"],
@@ -341,7 +341,7 @@ Bank.gen("cm", () => {
   };
 });
 
-Bank.gen("cm", () => {
+Bank.gen("cm", "cm-g2", () => {
   const n = R.pick([2, 3, 4, 5]), c = R.step(0.03, 0.08, 0.005);
   const y = +(c + R.pick([-1, 1]) * R.step(0.005, 0.02, 0.005)).toFixed(4);
   const price = (cp, yl) => { let s = 0; for (let t = 1; t <= n; t++) s += cp * 100 / (1 + yl) ** t; return s + 100 / (1 + yl) ** n; };
@@ -354,7 +354,7 @@ Bank.gen("cm", () => {
   };
 });
 
-Bank.gen("bt", () => {
+Bank.gen("bt", "bt-g1", () => {
   const item = R.pick([["A bat and a ball", "bat", "ball"], ["A pen and a cap", "pen", "cap"], ["A notebook and a pencil", "notebook", "pencil"]]);
   const d = R.step(1, 10, 0.5), small = R.step(0.05, 0.95, 0.05), total = +(d + 2 * small).toFixed(2);
   const f = v => "US$" + v.toFixed(2);
@@ -366,7 +366,7 @@ Bank.gen("bt", () => {
   };
 });
 
-Bank.gen("bt", () => {
+Bank.gen("bt", "bt-g2", () => {
   const h = R.int(1, 11), m = R.pick([5, 10, 15, 20, 25, 35, 40, 45, 50, 55]);
   const small = raw => Math.min(raw, 360 - raw);
   const ang = small(Math.abs(30 * h - 5.5 * m)), naive = small(Math.abs(30 * h - 6 * m));
@@ -379,7 +379,7 @@ Bank.gen("bt", () => {
   };
 });
 
-Bank.gen("bt", () => {
+Bank.gen("bt", "bt-g3", () => {
   const a = R.pick([2, 3, 4, 5, 6]), b = R.pick([3, 4, 6, 8, 10, 12]);
   const hm = v => { const t = Math.round(v * 60); return `${Math.floor(t / 60)}h ${String(t % 60).padStart(2, "0")}m`; };
   return { trap: ["wrong-measure", "wrong-measure", "wrong-measure"],
@@ -394,7 +394,7 @@ Bank.gen("bt", () => {
 // Inputs are redrawn until every known wrong answer is clearly apart from the right one (more than 12% and 0.5 points away),
 // so a typed conceptual mistake is never mistaken for a calculation slip, and the wrong answers stay apart from each other.
 const mnaFar = (a, ws, rel, abs) => ws.every(w => Math.abs(w - a) > Math.max(rel * Math.abs(a), abs)) && ws.every((w, i) => ws.every((u, j) => i === j || Math.abs(w - u) > abs));
-Bank.calc("mna", {
+Bank.calc("mna", "mna-c1", {
   lv: 2, unit: "%", tolerance: 0.1, dp: 1, prompt: "as a percentage, to 1 decimal place",
   make() {
     for (;;) {
@@ -416,7 +416,7 @@ Bank.calc("mna", {
 });
 
 // M&A: exchange ratio implied by the undisturbed price, the premium and the buyer's share price.
-Bank.calc("mna", {
+Bank.calc("mna", "mna-c2", {
   lv: 2, unit: "x", tolerance: 0.002, dp: 3, prompt: "as buyer shares per target share, to 3 decimal places",
   make() {
     for (;;) {
@@ -437,7 +437,7 @@ Bank.calc("mna", {
 });
 
 // M&A: goodwill after the purchase price allocation, including the deferred tax liability on write-ups.
-Bank.calc("mna", {
+Bank.calc("mna", "mna-c3", {
   lv: 3, unit: "US$m", tolerance: 0.05, dp: 1, prompt: "in US$m, to 1 decimal place",
   make() {
     for (;;) {
@@ -460,7 +460,7 @@ Bank.calc("mna", {
 
 // PE fund: carried interest from a whole-fund waterfall (8% compounded preferred return, 20% carry), with or without a full catch-up.
 // Uses the same redraw guard as the M&A calculations (mnaFar).
-Bank.calc("lbo", {
+Bank.calc("lbo", "lbo-c1", {
   lv: 3, unit: "US$m", tolerance: 0.05, dp: 1, prompt: "in US$m, to 1 decimal place",
   make() {
     for (;;) {
@@ -492,7 +492,7 @@ Bank.calc("lbo", {
 });
 
 // PE fund: TVPI from paid-in capital, distributions and the value of remaining investments.
-Bank.calc("lbo", {
+Bank.calc("lbo", "lbo-c2", {
   lv: 2, unit: "x", tolerance: 0.01, dp: 2, prompt: "as a multiple, to 2 decimal places",
   make() {
     for (;;) {
@@ -513,7 +513,7 @@ Bank.calc("lbo", {
 });
 
 // LBO: maximum debt under a leverage cap and an interest-cover test.
-Bank.calc("lbo", {
+Bank.calc("lbo", "lbo-c3", {
   lv: 2, unit: "US$m", tolerance: 0.05, dp: 1, prompt: "in US$m, to 1 decimal place",
   make() {
     for (;;) {
@@ -537,7 +537,7 @@ Bank.calc("lbo", {
 });
 
 // REITs: FFO from net income, real estate D&A and a gain on a property sale. Same redraw guard as above (mnaFar).
-Bank.calc("rev", {
+Bank.calc("rev", "rev-c1", {
   lv: 2, unit: "US$m", tolerance: 0.05, dp: 1, prompt: "in US$m, to 1 decimal place",
   make() {
     for (;;) {
@@ -558,7 +558,7 @@ Bank.calc("rev", {
 });
 
 // REITs: NAV per share from NOI, a market cap rate, cash, debt and the share count.
-Bank.calc("rev", {
+Bank.calc("rev", "rev-c2", {
   lv: 2, tolerance: 0.01, dp: 2, prompt: "in US$ per share, to 2 decimal places",
   make() {
     for (;;) {
@@ -581,7 +581,7 @@ Bank.calc("rev", {
 });
 
 // REITs: the cap rate implied by the share price, excluding non-income assets such as development land.
-Bank.calc("rev", {
+Bank.calc("rev", "rev-c3", {
   lv: 3, unit: "%", tolerance: 0.05, dp: 2, prompt: "as a percentage, to 2 decimal places",
   make() {
     for (;;) {
@@ -604,7 +604,7 @@ Bank.calc("rev", {
 });
 
 // Credit: approximate yield to maturity. Same redraw guard as above (mnaFar); every value stays positive.
-Bank.calc("credit", {
+Bank.calc("credit", "credit-c1", {
   lv: 2, unit: "%", tolerance: 0.05, dp: 2, prompt: "as a percentage, to 2 decimal places",
   make() {
     for (;;) {
@@ -626,7 +626,7 @@ Bank.calc("credit", {
 });
 
 // Credit: annual cost of a revolving credit facility.
-Bank.calc("credit", {
+Bank.calc("credit", "credit-c2", {
   lv: 2, unit: "US$m", tolerance: 0.01, dp: 2, prompt: "in US$m, to 2 decimal places",
   make() {
     for (;;) {
@@ -648,7 +648,7 @@ Bank.calc("credit", {
 });
 
 // Credit: availability under an asset-based loan (ABL).
-Bank.calc("credit", {
+Bank.calc("credit", "credit-c3", {
   lv: 2, unit: "US$m", tolerance: 0.05, dp: 1, prompt: "in US$m, to 1 decimal place",
   make() {
     for (;;) {
@@ -671,7 +671,7 @@ Bank.calc("credit", {
 
 // Valuation: calendarise EBITDA for a company whose financial year ends in March or September.
 // Multiple choice only: the usual mistakes land close to the right answer, so a typed version couldn't tell them from slips.
-Bank.gen("val", () => {
+Bank.gen("val", "val-g4", () => {
   let m, F1, F2, o;
   for (let k = 0; k < 50; k++) {
     m = R.pick([3, 9]); F1 = R.step(100, 800, 10); F2 = Math.round(F1 * (1 + R.step(0.1, 0.35, 0.05)) / 5) * 5;
@@ -688,7 +688,7 @@ Bank.gen("val", () => {
 });
 
 // Valuation: the EV/EBITDA multiple implied by a Gordon growth terminal value.
-Bank.calc("val", {
+Bank.calc("val", "val-c2", {
   lv: 3, unit: "x", tolerance: 0.05, dp: 1, prompt: "as a multiple, to 1 decimal place",
   make() {
     for (;;) {
@@ -709,7 +709,7 @@ Bank.calc("val", {
 });
 
 // Valuation: PEG ratio.
-Bank.calc("val", {
+Bank.calc("val", "val-c3", {
   lv: 1, unit: "x", tolerance: 0.01, dp: 2, prompt: "to 2 decimal places",
   make() {
     for (;;) {
@@ -730,7 +730,7 @@ Bank.calc("val", {
 });
 
 // Valuation (SaaS): net revenue retention. New customers are given but left out.
-Bank.calc("val", {
+Bank.calc("val", "val-c4", {
   lv: 2, unit: "%", tolerance: 0.1, dp: 1, prompt: "as a percentage, to 1 decimal place",
   make() {
     for (;;) {
@@ -753,7 +753,7 @@ Bank.calc("val", {
 });
 
 // Valuation (SaaS): CAC payback in months, on gross profit.
-Bank.calc("val", {
+Bank.calc("val", "val-c5", {
   lv: 2, tolerance: 0.1, dp: 1, prompt: "in months, as a number only, to 1 decimal place",
   make() {
     for (;;) {
@@ -775,7 +775,7 @@ Bank.calc("val", {
 });
 
 // ECM: the new investor's stake after a funding round. Same redraw guard (mnaFar).
-Bank.calc("cm", {
+Bank.calc("cm", "cm-c1", {
   lv: 1, unit: "%", tolerance: 0.1, dp: 1, prompt: "as a percentage, to 1 decimal place",
   make() {
     for (;;) {
@@ -797,7 +797,7 @@ Bank.calc("cm", {
 });
 
 // ECM: what a VC with a 1x non-participating preference receives on a sale.
-Bank.calc("cm", {
+Bank.calc("cm", "cm-c2", {
   lv: 2, unit: "US$m", tolerance: 0.05, dp: 1, prompt: "in US$m, to 1 decimal place",
   make() {
     for (;;) {
@@ -823,7 +823,7 @@ Bank.calc("cm", {
 });
 
 // Restructuring: value available to creditors in a Chapter 7 liquidation analysis. Same redraw guard (mnaFar).
-Bank.calc("rx", {
+Bank.calc("rx", "rx-c1", {
   lv: 2, unit: "US$m", tolerance: 0.05, dp: 1, prompt: "in US$m, to 1 decimal place",
   make() {
     for (;;) {
@@ -846,7 +846,7 @@ Bank.calc("rx", {
 });
 
 // Economics: breakeven inflation from a nominal Treasury yield and a TIPS real yield. Same redraw guard (mnaFar).
-Bank.calc("econ", {
+Bank.calc("econ", "econ-c1", {
   lv: 2, unit: "%", tolerance: 0.01, dp: 2, prompt: "as a percentage, to 2 decimal places",
   make() {
     for (;;) {
@@ -868,7 +868,7 @@ Bank.calc("econ", {
 });
 
 // Accounting: share premium (US: additional paid-in capital) booked on a funding round. Same redraw guard (mnaFar).
-Bank.calc("acc", {
+Bank.calc("acc", "acc-c3", {
   lv: 2, unit: "US$m", tolerance: 0.05, dp: 1, prompt: "in US$m, to 1 decimal place",
   make() {
     for (;;) {
@@ -889,7 +889,7 @@ Bank.calc("acc", {
 });
 
 // Accounting: return on equity from ROCE, the cost of debt and leverage (the leverage effect). Same redraw guard (mnaFar).
-Bank.calc("acc", {
+Bank.calc("acc", "acc-c4", {
   lv: 3, unit: "%", tolerance: 0.1, dp: 1, prompt: "as a percentage, to 1 decimal place",
   make() {
     for (;;) {
@@ -911,7 +911,7 @@ Bank.calc("acc", {
 });
 
 // Valuation: enterprise value from equity value with non-controlling interests, associates and a pension deficit. Same redraw guard (mnaFar).
-Bank.calc("val", {
+Bank.calc("val", "val-c6", {
   lv: 2, unit: "US$m", tolerance: 0.05, dp: 1, prompt: "in US$m, to 1 decimal place",
   make() {
     for (;;) {
@@ -934,7 +934,7 @@ Bank.calc("val", {
 
 // M&A: the buyer's EPS after a deal paid partly in new shares and partly with new debt, as a percentage of its EPS before.
 // Asked as a percentage so the answer is always positive. Same redraw guard (mnaFar).
-Bank.calc("mna", {
+Bank.calc("mna", "mna-c4", {
   lv: 3, unit: "%", tolerance: 0.1, dp: 1, prompt: "as a percentage, to 1 decimal place",
   make() {
     for (;;) {
@@ -959,7 +959,7 @@ Bank.calc("mna", {
 });
 
 // M&A: pre-tax synergies needed for a deal not to dilute the buyer's EPS. Same redraw guard (mnaFar).
-Bank.calc("mna", {
+Bank.calc("mna", "mna-c5", {
   lv: 2, unit: "US$m", tolerance: 0.05, dp: 1, prompt: "in US$m, to 1 decimal place",
   make() {
     for (;;) {
@@ -982,7 +982,7 @@ Bank.calc("mna", {
 });
 
 // M&A: the combined company's net debt after a deal paid partly in cash (borrowed) at a premium. Same redraw guard (mnaFar).
-Bank.calc("mna", {
+Bank.calc("mna", "mna-c6", {
   lv: 2, unit: "US$m", tolerance: 0.05, dp: 1, prompt: "in US$m, to 1 decimal place",
   make() {
     for (;;) {
@@ -1003,7 +1003,7 @@ Bank.calc("mna", {
 });
 
 // Market sizing: a city's yearly hotel room revenue. Same redraw guard (mnaFar).
-Bank.calc("bt", {
+Bank.calc("bt", "bt-c1", {
   lv: 1, unit: "US$m", tolerance: 1, dp: 0, prompt: "in US$m, to the nearest million",
   make() {
     for (;;) {
@@ -1024,7 +1024,7 @@ Bank.calc("bt", {
 });
 
 // Market sizing: a yearly consumer market from population, the share who buy, purchases per week and price. Same redraw guard (mnaFar).
-Bank.calc("bt", {
+Bank.calc("bt", "bt-c2", {
   lv: 1, unit: "US$m", tolerance: 1, dp: 0, prompt: "in US$m, to the nearest million",
   make() {
     const goods = [["a takeaway coffee", 3, 6, [1, 2, 3]], ["a lunchtime sandwich", 5, 10, [1, 2]], ["a fitness class", 15, 30, [0.5, 1, 2]], ["a bunch of flowers", 10, 25, [0.5]]];
@@ -1351,7 +1351,7 @@ Bank.case("rev", {
 });
 
 // FIG: net interest margin. Same redraw guard (mnaFar).
-Bank.calc("fig", {
+Bank.calc("fig", "fig-c1", {
   lv: 1, unit: "%", tolerance: 0.02, dp: 2, prompt: "as a percentage, to 2 decimal places",
   make() {
     for (;;) {
@@ -1372,7 +1372,7 @@ Bank.calc("fig", {
 });
 
 // FIG: the P/TBV justified by returns, growth and the cost of equity. Same redraw guard (mnaFar).
-Bank.calc("fig", {
+Bank.calc("fig", "fig-c2", {
   lv: 2, unit: "x", tolerance: 0.02, dp: 2, prompt: "as a multiple, to 2 decimal places",
   make() {
     for (;;) {
@@ -1393,7 +1393,7 @@ Bank.calc("fig", {
 });
 
 // FIG: CET1 capital above the bank's target, which it could return to shareholders. Same redraw guard (mnaFar).
-Bank.calc("fig", {
+Bank.calc("fig", "fig-c3", {
   lv: 2, unit: "US$m", tolerance: 1, dp: 0, prompt: "in US$m, to the nearest million",
   make() {
     for (;;) {
@@ -1486,7 +1486,7 @@ Bank.case("fig", {
 });
 
 // LBO: the value created by EBITDA growth in a value-creation bridge (at the entry multiple). Same redraw guard (mnaFar).
-Bank.calc("lbo", {
+Bank.calc("lbo", "lbo-c4", {
   lv: 2, unit: "US$m", tolerance: 0.5, dp: 0, prompt: "in US$m, to the nearest million",
   make() {
     for (;;) {
@@ -1508,7 +1508,7 @@ Bank.calc("lbo", {
 });
 
 // LBO: the share of the equity gain that came from paying down debt. Same redraw guard (mnaFar).
-Bank.calc("lbo", {
+Bank.calc("lbo", "lbo-c5", {
   lv: 2, unit: "%", tolerance: 0.5, dp: 0, prompt: "as a percentage, to the nearest whole number",
   make() {
     for (;;) {
@@ -1536,7 +1536,7 @@ const dcfGrid = ({ F, w0, g0 }) => {
   const ws = [-0.01, -0.005, 0, 0.005, 0.01].map(d => +(w0 + d).toFixed(4)), gs = [-0.005, 0, 0.005].map(d => +(g0 + d).toFixed(4));
   return { ws, gs, ev: ws.map(w => gs.map(g => Math.round(F / (w - g)))) };
 };
-Bank.calc("val", {
+Bank.calc("val", "val-c7", {
   lv: 2, unit: "%", tolerance: 0.1, dp: 1, prompt: "as a percentage, to 1 decimal place",
   make() {
     for (;;) {
@@ -1564,7 +1564,7 @@ Bank.calc("val", {
 
 // Sensitivity tables: in an LBO IRR grid (entry multiple down the rows, exit multiple across), find the highest entry
 // multiple that still clears a target IRR. Multiple choice only: the answer is a row of the table.
-Bank.gen("val", () => {
+Bank.gen("val", "val-g5", () => {
   for (;;) {
     const b = R.step(8, 11, 0.5), D0 = R.step(4.5, 6, 0.5) * 100, D1 = D0 - R.step(150, 300, 10), gr = R.step(0.04, 0.08, 0.01), F = (1 + gr) ** 5;
     const mins = [-1, -0.5, 0, 0.5, 1].map(d => b + d), mouts = [-1, 0, 1].map(d => b + d);
@@ -1591,7 +1591,7 @@ Bank.gen("val", () => {
 });
 
 // Hotel valuation: value after the FF&E reserve and the brand's required renovation (PIP). Same redraw guard (mnaFar).
-Bank.calc("rev", {
+Bank.calc("rev", "rev-c4", {
   lv: 2, unit: "US$m", tolerance: 0.1, dp: 1, prompt: "in US$m, to 1 decimal place",
   make() {
     for (;;) {
@@ -1613,7 +1613,7 @@ Bank.calc("rev", {
 });
 
 // Hotel valuation: the cap rate implied by a price per key. Same redraw guard (mnaFar).
-Bank.calc("rev", {
+Bank.calc("rev", "rev-c5", {
   lv: 2, unit: "%", tolerance: 0.02, dp: 2, prompt: "as a percentage, to 2 decimal places",
   make() {
     for (;;) {
