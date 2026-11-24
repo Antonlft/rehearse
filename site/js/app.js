@@ -2105,10 +2105,13 @@ function wireStepper(box) {
 /* Quick check at the end of a lesson section: one question from the bank (multiple choice or answer + reason), answered
    on the page with instant feedback. Practice only: nothing is saved, and it doesn't count towards progress, accuracy
    or spaced repetition. "Try again" reshuffles the options. */
-function mountCheck(el, cat) {
+// opts (all optional): label (default "Quick check"); brief: true shows only whether the pick was right and the
+// right answer, with no explanation or "Try again" (used by the warm-up, before the lesson is read); onDone: called once
+// when the question is answered, with whether it was right.
+function mountCheck(el, cat, opts = {}) {
   const src = [...(Bank.written[cat] || []), ...(Bank.formats[cat] || [])].find(q => q.id === el.dataset.check);
   if (!src || (src.type && src.type !== "mcq" && src.type !== "reason")) { el.remove(); return; }
-  let it, pick;
+  let it, pick, reported = false;
   const fresh = () => { it = materialize(src, cat); pick = it.type === "reason" ? [null, null] : null; };
   const done = () => it.type === "reason" ? pick[0] != null && pick[1] != null : pick != null;
   const group = (label, list, ok, p, part, end) => `
@@ -2118,6 +2121,7 @@ function mountCheck(el, cat) {
       </div>`;
   const feedback = () => {
     const g = grade(it, pick);
+    if (opts.brief) return `<div class="feedback ${g.ok ? "ok" : "no"}" role="status" tabindex="-1"><p class="feedback-title">${g.ok ? "Correct" : `Not quite. The answer is: ${esc(it.o[it.a])}`}</p><p>The lesson below explains why.</p></div>`;
     if (it.type === "reason") {
       const title = g.ok ? "Correct: right answer, right reason" : g.answerOk ? `Right answer, wrong reason. The reason is: ${esc(it.rsn[it.rsnOk])}`
         : `Not quite. The answer is: ${esc(it.ans[it.ansOk])}.${g.reasonOk ? " Your reason is right." : ` The reason: ${esc(it.rsn[it.rsnOk])}.`}`;
@@ -2129,16 +2133,17 @@ function mountCheck(el, cat) {
   };
   const draw = focusFeedback => {
     const end = done();
-    el.innerHTML = `<span class="mb-label">${mbIcon("check")}Quick check</span>
+    el.innerHTML = `<span class="mb-label">${mbIcon("check")}${esc(opts.label || "Quick check")}</span>
       <p class="mb-text check-q">${esc(it.q)}</p>
       ${it.table ? qTable(it.table) : ""}
       ${it.type === "reason" ? group("Answer", it.ans, it.ansOk, pick[0], 0, end) + group("Because", it.rsn, it.rsnOk, pick[1], 1, end) : group("", it.o, it.a, pick, 0, end)}
-      ${end ? `${feedback()}<p class="check-again"><button class="link" type="button" data-again>Try again</button></p>`
+      ${end ? `${feedback()}${opts.brief ? "" : `<p class="check-again"><button class="link" type="button" data-again>Try again</button></p>`}`
         : `<p class="typed-hint">${it.type === "reason" ? "Pick the answer, then the reason. " : ""}Practice only: this isn't saved.</p>`}`;
     el.querySelectorAll("[data-pick]").forEach(b => b.onclick = () => {
       const part = +b.dataset.part, j = +b.dataset.pick;
       if (it.type === "reason") pick[part] = j; else pick = j;
       draw(done());
+      if (done() && opts.onDone && !reported) { reported = true; opts.onDone(grade(it, pick).ok); }
       if (!done()) el.querySelector(`[data-part="${part}"][data-pick="${j}"]`)?.focus();
     });
     const again = el.querySelector("[data-again]");
@@ -2146,6 +2151,41 @@ function mountCheck(el, cat) {
     if (focusFeedback) el.querySelector(".feedback")?.focus({ preventScroll: true });
   };
   fresh(); draw(false);
+}
+
+/* Warm-up before a lesson: answering a few questions on a topic before studying it makes the lesson stick better,
+   even when the guesses are wrong (the pretesting effect: Richland, Kornell & Kao, 2009). 3 multiple-choice questions
+   from the category, never the lesson's own quick checks; ones never answered first, then easier levels. Not saved or
+   scored. Shown as a card on a lesson not started yet, and as a one-line link once it has been. */
+function warmupPicks(cat, l) {
+  const checks = new Set((l.method || []).filter(b => b && b.check).map(b => b.check));
+  const seen = new Set(db.log.filter(e => e.qid).map(e => e.qid));
+  const pool = (Bank.written[cat] || []).filter(q => q.id && (!q.type || q.type === "mcq") && !checks.has(q.id));
+  return shuffle(pool).sort((a, b) => (seen.has(a.id) - seen.has(b.id)) || ((a.lv || 2) - (b.lv || 2))).slice(0, 3).map(q => q.id);
+}
+function mountWarmup(el, cat, ids, started) {
+  const intro = () => {
+    el.className = started ? "warmup warmup-mini" : "warmup";
+    el.innerHTML = started
+      ? `<p><button class="link" type="button" data-warm-go>Warm-up questions</button> · ${ids.length} questions on this topic before you re-read</p>`
+      : `<span class="mb-label">${mbIcon("check")}Warm-up</span>
+        <p class="mb-text">${ids.length} questions before you read, about a minute. Guess if you don't know: trying first makes the lesson stick, even when you're wrong.</p>
+        <p class="warmup-actions"><button class="btn" type="button" data-warm-go>Start warm-up</button><button class="link" type="button" data-warm-skip>Skip</button></p>`;
+    el.querySelector("[data-warm-go]").onclick = run;
+    const skip = el.querySelector("[data-warm-skip]");
+    if (skip) skip.onclick = () => el.remove();
+  };
+  const run = () => {
+    let n = 0, right = 0;
+    el.className = "warmup warmup-on";
+    el.innerHTML = ids.map((id, i) => `<div class="mblock mb-check" data-check="${esc(id)}" data-n="${i + 1}"></div>`).join("") + `<p class="warmup-score" aria-live="polite"></p>`;
+    el.querySelectorAll("[data-check]").forEach(box => mountCheck(box, cat, {
+      label: `Warm-up · ${box.dataset.n} of ${ids.length}`, brief: true,
+      onDone: ok => { n++; if (ok) right++; if (n === ids.length) el.querySelector(".warmup-score").textContent = `${right} of ${ids.length} right. Now read on: the sections below explain each answer.`; }
+    }));
+    el.querySelector("[data-pick]")?.focus();
+  };
+  intro();
 }
 
 /* Lessons page: every lesson as a card, grouped like the home page. */
@@ -2380,6 +2420,10 @@ function renderLesson() {
   // "widget" is the lesson's main "Try it"; an optional "widgets" list adds more below it.
   const tries = [l.widget, ...(Array.isArray(l.widgets) ? l.widgets : [])].filter(w => w && Widgets.registry[w.type]);
   meta.innerHTML = `<button class="link" id="backLink" type="button">Back</button>`;
+  // Warm-up: a full card until the lesson is started (a section ticked as read, or for a lesson without sections, any
+  // answer in its category), then a one-line link.
+  const warmIds = l.method && l.method.length ? warmupPicks(view.cat, l) : [];
+  const started = Object.keys(db.lessonRead[view.cat] || {}).length > 0 || (!secTitles(l).length && db.log.some(e => e.cat === view.cat));
   glOnce = new Set(); // mark each glossary term once on this page
   app.innerHTML = `
     <div class="title-row">
@@ -2387,6 +2431,7 @@ function renderLesson() {
       ${lessonStatusPill(l)}
     </div>
     <section class="card lesson">
+      ${warmIds.length ? `<div id="warmup"></div>` : ""}
       ${Array.isArray(l.summary) && l.summary.length ? `<div class="lesson-summary">
         <span class="mb-label">${mbIcon("summary")}In 30 seconds</span>
         <ul>${l.summary.map(s => `<li>${rich(s)}</li>`).join("")}</ul>
@@ -2419,6 +2464,8 @@ function renderLesson() {
   app.querySelectorAll("[data-glossary]").forEach(b => b.onclick = () => go({ name: "glossary", back: { ...view } }));
   tries.forEach((w, i) => Widgets.mount(document.getElementById("lessonWidget" + i), w.type, w.values || {}));
   app.querySelectorAll("[data-check]").forEach(el => mountCheck(el, view.cat));
+  const warmEl = document.getElementById("warmup");
+  if (warmEl) mountWarmup(warmEl, view.cat, warmIds, started);
   wireStepper(document.getElementById("stepper"));
   wireSections(view.cat);
   // Arriving from "Review the method" for a question that is this lesson's quick check: open its section and show it.
