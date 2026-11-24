@@ -637,17 +637,26 @@ function endVisit(at) {
 }
 
 /* Glossary definition box: shown while pointing at, focusing or after tapping a marked term; hidden on leaving,
-   tapping elsewhere, Escape, scrolling or changing screen. */
+   tapping elsewhere, Escape, scrolling or changing screen. It ends with a link to the lesson that covers the term,
+   except during a live quiz (so it can't pull you out of a round) and inside that lesson itself. Leaving the term
+   waits a moment before hiding, so the pointer can reach the link. */
 const glTip = document.createElement("div");
 glTip.id = "glTip"; glTip.className = "gl-tip"; glTip.setAttribute("role", "tooltip"); glTip.hidden = true;
 document.body.appendChild(glTip);
-let glFor = null;
+let glFor = null, glHideT = null, glPressing = false;
+// A press inside the box (tapping its link) moves focus off the term; that mustn't hide the box before the tap lands.
+glTip.addEventListener("pointerdown", () => { glPressing = true; });
+const glCancelHide = () => { clearTimeout(glHideT); glHideT = null; };
 function glShow(el) {
   const g = GL_RAW.get(el.dataset.gl);
   if (!g) return;
+  glCancelHide();
   if (glFor && glFor !== el) glFor.removeAttribute("aria-describedby");
   glFor = el;
-  glTip.innerHTML = `<span class="gl-tip-head"><b>${esc(g.term)}</b> · ${esc(g.full)}</span><span>${esc(g.def)}</span>`;
+  const c = catById(g.cat), l = Lessons.all[g.cat];
+  const link = c && l && l.status !== "stub" && view.name !== "quiz" && !(view.name === "lesson" && view.cat === g.cat)
+    ? `<button type="button" class="link gl-tip-link" data-gl-lesson="${esc(g.cat)}">Open the ${esc(c.name)} lesson</button>` : "";
+  glTip.innerHTML = `<span class="gl-tip-head"><b>${esc(g.term)}</b> · ${esc(g.full)}</span><span>${esc(g.def)}</span>${link}`;
   glTip.hidden = false;
   el.setAttribute("aria-describedby", "glTip");
   const r = el.getBoundingClientRect(), w = glTip.offsetWidth, h = glTip.offsetHeight;
@@ -656,14 +665,21 @@ function glShow(el) {
   glTip.style.left = Math.max(8, Math.min(r.left + r.width / 2 - w / 2, innerWidth - w - 8)) + "px";
   glTip.style.top = top + "px";
 }
-function glHide() { if (glFor) glFor.removeAttribute("aria-describedby"); glFor = null; glTip.hidden = true; }
+function glHide() { glCancelHide(); glPressing = false; if (glFor) glFor.removeAttribute("aria-describedby"); glFor = null; glTip.hidden = true; }
 document.addEventListener("mouseover", e => {
+  if (e.target.closest && e.target.closest("#glTip")) { glCancelHide(); return; } // pointing at the box keeps it open
   const el = e.target.closest && e.target.closest(".gl");
-  if (el) { if (el !== glFor) glShow(el); } else if (glFor && document.activeElement !== glFor) glHide();
+  if (el) { if (el !== glFor) glShow(el); else glCancelHide(); }
+  else if (glFor && document.activeElement !== glFor && !glHideT) glHideT = setTimeout(glHide, 250);
 });
 document.addEventListener("focusin", e => { if (e.target.classList && e.target.classList.contains("gl")) glShow(e.target); });
-document.addEventListener("focusout", e => { if (e.target === glFor) glHide(); });
-document.addEventListener("click", e => { const el = e.target.closest && e.target.closest(".gl"); if (el) glShow(el); else if (glFor) glHide(); });
+document.addEventListener("focusout", e => { if (e.target === glFor && !glPressing && !glTip.contains(e.relatedTarget)) glHide(); });
+document.addEventListener("click", e => {
+  const go2 = e.target.closest && e.target.closest("[data-gl-lesson]");
+  if (go2) { const cat = go2.dataset.glLesson; glHide(); go({ name: "lesson", cat, back: { ...view } }); return; }
+  if (e.target.closest && e.target.closest("#glTip")) { glPressing = false; return; }
+  const el = e.target.closest && e.target.closest(".gl"); if (el) glShow(el); else if (glFor) glHide();
+});
 document.addEventListener("keydown", e => { if (e.key === "Escape" && glFor) glHide(); });
 window.addEventListener("scroll", () => { if (glFor) glHide(); }, { passive: true });
 

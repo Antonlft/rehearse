@@ -593,7 +593,8 @@ sup { font-size: 0.72em; line-height: 0; vertical-align: super; }
 /* Glossary: marked terms, the definition box and the Glossary page */
 .gl { border-bottom: 1px dotted var(--muted); cursor: help; }
 .gl:focus-visible { outline: 2px solid var(--navy); outline-offset: 1px; border-radius: 2px; }
-.gl-tip { position: fixed; z-index: 60; max-width: min(320px, calc(100vw - 16px)); display: grid; gap: 3px; padding: 9px 12px; border: 1px solid var(--rule-strong); border-radius: 6px; background: var(--page); box-shadow: 0 6px 20px var(--shadow); font-size: 13px; line-height: 1.45; color: var(--ink); pointer-events: none; }
+.gl-tip { position: fixed; z-index: 60; max-width: min(320px, calc(100vw - 16px)); display: grid; gap: 3px; padding: 9px 12px; border: 1px solid var(--rule-strong); border-radius: 6px; background: var(--page); box-shadow: 0 6px 20px var(--shadow); font-size: 13px; line-height: 1.45; color: var(--ink); }
+.gl-tip .gl-tip-link { justify-self: start; margin-top: 3px; font-size: 12.5px; }
 .gl-tip[hidden] { display: none; }
 .gl-tip span { color: var(--muted); }
 .gl-tip .gl-tip-head { color: var(--ink); }
