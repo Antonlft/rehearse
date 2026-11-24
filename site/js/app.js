@@ -30,7 +30,7 @@ const groupLabel = ids => {
   return gs.length === 1 ? GROUPS.find(g => g.id === gs[0]).name : "Finance, real estate & hospitality";
 };
 const RETRY = "retry";
-// "Due for review": a round of only the written questions due for spaced-repetition review, most overdue first, kept
+// "Due for review": a round of only the written questions (new formats included, when on) due for review, most overdue first, kept
 // apart from the main test (its own attempts / history / totals entry, like "retry"). Unlike retry it counts toward
 // category accuracy and the weak-spots report: these are fresh reviews, not a re-ask of a fixed list of misses.
 const DUE = "due", DUE_MAX = 20;
@@ -196,6 +196,11 @@ const selectedCats = () => {
 const selectionLabel = ids => ids.length === CATEGORIES.length ? "all categories" : `${ids.length} of ${CATEGORIES.length} categories`;
 // New-format written questions (e.g. ordering) join a category's pool only when new formats are on.
 const formatQs = cat => db.newFormats ? (Bank.formats[cat] || []) : [];
+// Questions spaced repetition can bring back in a category (the same written pool draw() uses): the classic ones, plus the
+// new-format ones (answer + reason, spot the error, ordering, grids, walk-through cards) when new formats are on
+// (question style Mixed or New formats only).
+const reviewPool = cat => [...written(cat), ...formatQs(cat)];
+const isDue = (q, now = Date.now()) => !!db.schedule[q.id] && db.schedule[q.id].dueAt <= now;
 // Walk-through cards only ever replace a question (at most one per 10 in a round), so they never add to capacity.
 const capacity = cat => gens(cat).length ? Infinity : written(cat).length + formatQs(cat).filter(q => q.type !== "walk").length;
 const WALK_EVERY = 10; // at most one walk-through card per this many questions in a round
@@ -555,10 +560,11 @@ function beginAttempt(mode, items, sub, learning = false, calc = false) {
   go({ name: "quiz", mode });
 }
 
-// Written questions due now, in the selected categories where spaced repetition is on, most overdue first: [question, category].
+// Written questions due now (new formats included when on), in the selected categories where spaced repetition is on,
+// most overdue first: [question, category].
 function dueQuestions() {
   const now = Date.now();
-  return selectedCats().filter(srsOn).flatMap(cat => written(cat).filter(q => db.schedule[q.id] && db.schedule[q.id].dueAt <= now).map(q => [q, cat]))
+  return selectedCats().filter(srsOn).flatMap(cat => reviewPool(cat).filter(q => isDue(q, now)).map(q => [q, cat]))
     .sort((a, b) => db.schedule[a[0].id].dueAt - db.schedule[b[0].id].dueAt);
 }
 // A review round: always timed (1 minute a question, like mistakes practice); calculator as set for category practice.
@@ -1014,7 +1020,7 @@ function wireHome() {
 
 /* Spaced repetition panel (home page) */
 let srsCatsOpen = false;
-const dueCount = cat => written(cat).filter(q => db.schedule[q.id] && db.schedule[q.id].dueAt <= Date.now()).length;
+const dueCount = cat => reviewPool(cat).filter(q => isDue(q)).length;
 function srsPanel() {
   const due = CATEGORIES.filter(c => srsOn(c.id)).reduce((s, c) => s + dueCount(c.id), 0);
   const off = CATEGORIES.filter(c => db.srsExcluded.includes(c.id)).length;
@@ -1638,7 +1644,7 @@ function diagnose() {
 }
 
 // Readiness for every category (Readiness.of in bank.js): its last answers in the whole log, mistakes practice left
-// out, plus its written questions due now when spaced repetition is on for it.
+// out, plus its written questions due now (new formats included when on) when spaced repetition is on for it.
 function readinessByCat() {
   const by = {};
   for (const e of db.log) if (isAnswer(e) && e.mode !== RETRY) (by[e.cat] ||= []).push(e);
