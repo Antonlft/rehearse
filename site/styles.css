@@ -943,3 +943,16 @@ sup { font-size: 0.72em; line-height: 0; vertical-align: super; }
 .iv-chip-w { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.04em; }
 .iv-chip-w:empty { display: none; }
 .iv-sec h2 { font-size: 16px; font-weight: 600; margin: 0; }
+.iv-today-line { margin: 8px 0 0 !important; font-size: 14px; }
+.iv-tasks { list-style: none; padding: 0; margin: 0; display: grid; gap: 0; }
+.iv-tasks li { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: center; gap: 10px 12px; padding: 12px 0; border-top: 1px solid var(--rule); }
+.iv-tasks li:first-child { border-top: 0; padding-top: 4px; }
+.iv-tasks li > div:nth-child(2) { display: flex; flex-direction: column; gap: 2px; font-size: 14px; }
+.iv-tasks li > div:nth-child(2) .muted { font-size: 12.5px; }
+.iv-tasks li.done b { color: var(--muted); }
+.iv-task-act { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; justify-content: flex-end; }
+.iv-task-act .muted { font-size: 12.5px; text-align: right; max-width: 16em; }
+.iv-check { display: inline-flex; align-items: center; justify-content: center; width: 20px; height: 20px; border-radius: 50%; border: 1.5px solid var(--rule-strong); font-size: 12px; font-weight: 700; color: var(--good); flex: none; vertical-align: -4px; }
+.iv-check.on { border-color: var(--good-line); background: var(--good-bg); }
+.iv-alldone { margin: 8px 0 0; font-size: 14px; color: var(--good); }
+@media (max-width: 480px) { .iv-tasks li { grid-template-columns: auto minmax(0, 1fr); } .iv-task-act { grid-column: 2; justify-content: flex-start; } }

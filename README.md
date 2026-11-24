@@ -113,6 +113,12 @@ Text is shown as plain paragraphs and numbered steps (no formatting code needed)
 **Interviews.** The home page's interview card (*Add an interview*, or the next interview with its readiness) leads to *Your interviews* (coming up and past), each interview's page, and an add/edit form. Each interview is a lens on the shared progress: answers count everywhere, and an interview only adds its own focus topics, date and readiness score, so preparing for one never changes another or the overall stats.
 - Form: firm, role (`IV_ROLES`, grouped Investment banking / Private equity and nearby), stage (`IV_STAGES`), date and optional time, format, time per day, job ad or recruiter notes, an optional link (kept for reference only: a static site can't read other pages; only `http(s)` links are shown), and focus topics as chips that cycle off → Useful (1) → Key (2). The role and stage set default topics (`ivDefaultFocus`) until you change them; *Reset to the role's topics* restores them. *Suggest topics from this text* matches topic words in the notes (`IV_WORDS`, plain matching in the page) and adds what it finds, as Key when mentioned twice or more. After the date, the form adds *How it went*.
 - Interview page: phase (*Build* over 14 days out, *Consolidate* 14 to 3, *Final* the last 2, then interview day) with what to focus on, the focus topics with their readiness (key topics first, weakest first) and a *Practise* link each, notes, link, and Edit / Delete.
+- **Today's session** (`ivPlan`, `planCard`), on the interview page and the home card (*Start today's session* opens the next part not done). Sized to the interview's time per day, in up to three parts:
+  - Questions (1.5 minutes each in Learning mode, 1 minute timed): a round of mode `"plan"` (`startPlan`, its own attempts / history / totals entry, counted like any fresh round). Reviews first (`ivReviewList`): questions and calculations from its topics that are due, plus seen ones that would otherwise only come back after the interview (last reviewed at least half the days left ago, at most 7 days). Then new ones (`draw`): each slot goes to a topic at random, weighted by Key 2 / Useful 1 times need (needs work or too few answers 3, nearly ready 2, ready 1), within each topic's capacity. Shuffled together.
+  - Formula recall on its topics (the drill with `"iv:<id>"`), 30 seconds a card.
+  - While building, one lesson (10 minutes): the weakest key topic whose lesson still has unread sections.
+  - By phase (`PLAN_CFG`): *Build* Learning mode, half reviews, 5 formulas, a lesson; *Consolidate* timed, 70% reviews, 6 formulas; *Final* timed, reviews only (at most 15), up to 12 formulas from all its formulas; *interview day* up to 8 formulas only.
+  - A part is ticked off when the round is submitted, the formula set is finished, or the lesson is opened (`today` on the interview, reset each day). Nothing changes the shared schedule beyond the answers themselves.
 - Interview readiness (`ivReadiness`): focus topics weighted by Key 2 / Useful 1, each counting 1 when Ready, 0.5 when Nearly ready and 0 otherwise, from the same per-category readiness as the weak-spots report.
 
 ## Saved data
@@ -137,7 +143,7 @@ All progress lives in one `localStorage` key, `rehearse.v3` (the light/dark choi
 | `lastBackupAt` | When a backup was last downloaded (or `null`) |
 | `backupNudgeDismissedAt` | When the home-page backup reminder was last dismissed (or `null`) |
 | `schedule` | Spaced repetition, per written question ID or `"gen:<key>"` for a calculation: `{ dueAt, intervalDays, lastOk }` (below) |
-| `interviews` | Interviews: `{ id, firm, role, stage, format, date, time, minutes, focus, notes, link, outcome, createdAt, updatedAt }` (`date` is `"YYYY-MM-DD"`, `time` `"HH:MM"` or empty, `focus` maps category to 1 or 2) |
+| `interviews` | Interviews: `{ id, firm, role, stage, format, date, time, minutes, focus, notes, link, outcome, createdAt, updatedAt, today? }` (`date` is `"YYYY-MM-DD"`, `time` `"HH:MM"` or empty, `focus` maps category to 1 or 2) |
 | `formulaSchedule` | The formula recall drill's spaced repetition, per `"<category>\|<formula name>"`: `{ dueAt, intervalDays, lastOk }` |
 | `srsEnabled` | Spaced repetition on or off (default on). Defaulted with `??=`, because `\|\|=` would turn a stored `false` back on |
 | `srsExcluded` | Category IDs where spaced repetition is off |
@@ -211,4 +217,4 @@ When it's on for a category, each written-question slot in a round takes a due q
 | 20 | Learning rounds in progress can hold extra items (missed questions asked again) with `againOf` and `again`; they're removed on submit, and a finished Learning round can have `laterRight` |
 | 21 | Calculation questions join spaced repetition: generated items and their log entries can carry `gkey` (the generator's permanent key), and `schedule` gains `"gen:<key>"` entries |
 | 22 | Added `formulaSchedule` (formula recall drill) |
-| 23 | Added `interviews` |
+| 23 | Added `interviews` (each can have `today`: `{ day, done }` for today's session). Today's session rounds use mode `"plan"`; their round in progress and results carry `ivId` |

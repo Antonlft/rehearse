@@ -34,9 +34,13 @@ const RETRY = "retry";
 // apart from the main test (its own attempts / history / totals entry, like "retry"). Unlike retry it counts toward
 // category accuracy and the weak-spots report: these are fresh reviews, not a re-ask of a fixed list of misses.
 const DUE = "due", DUE_MAX = 20;
+// "Interview plan": today's session for one interview (startPlan), its own attempts / history / totals entry. Its answers
+// count like any fresh round.
+const PLAN = "plan";
 const modeInfo = mode => mode === "mixed" ? { title: "Financial aptitude test", sub: "Finance & accounting", n: 20 }
   : mode === RETRY ? { title: "Mistakes practice", sub: "Questions you got wrong or skipped", n: 0 }
   : mode === DUE ? { title: "Due for review", sub: "Questions due for review", n: DUE_MAX }
+  : mode === PLAN ? { title: "Interview plan", sub: "Today's session", n: 0 }
   : { title: catById(mode).name, sub: "Category practice", n: 10 };
 
 const store = {
@@ -167,8 +171,10 @@ db.lessonRead ||= {};
 //      Keyed by the formula's name (its title, else its section's), so renaming one starts it afresh.
 db.formulaSchedule ||= {};
 //  23: added db.interviews: [{ id, firm, role, stage, format, date ("YYYY-MM-DD"), time ("HH:MM" or ""), minutes (time per
-//      day), focus: { category: 1 (useful) | 2 (key) }, notes, link, outcome, createdAt, updatedAt }]. Interviews only read
-//      the shared progress; nothing else changes.
+//      day), focus: { category: 1 (useful) | 2 (key) }, notes, link, outcome, createdAt, updatedAt, today?: { day
+//      ("YYYY-MM-DD"), done: { questions?, formulas?, read? } } }]. Today's session is a round of mode "plan" (its own
+//      attempts / history / totals entry); its round in progress and results carry ivId. Interviews only read the shared
+//      progress, and plan rounds update it like any other round.
 db.interviews ||= [];
 const SCHEMA_VERSION = 23;
 db.schemaVersion = Math.max(db.schemaVersion || 1, SCHEMA_VERSION);
@@ -638,6 +644,7 @@ function startDue() {
 
 function startRound(mode) {
   if (mode === DUE) return startDue();
+  if (mode === PLAN) { const iv = ivUpcoming()[0]; return iv ? startPlan(iv.id) : undefined; }
   const cats = mode === "mixed" ? selectedCats() : [mode], learning = learningFor(mode);
   const sub = (mode === "mixed" ? `${groupLabel(cats)} · ${selectionLabel(cats)}` : "Category practice") + (learning ? " · Learning mode" : "");
   const items = buildRound(mode, cats);
@@ -1697,7 +1704,8 @@ function submit(timedOut) {
   });
   const pct = Math.round(correct / at.items.length * 100);
   const result = { at: submittedAt, mode, items: at.items, answers: at.answers, marked: at.marked, ...(at.conf ? { conf: at.conf } : {}), correct, total: at.items.length, pct,
-    usedMs: Math.min(Date.now(), at.deadline) - at.start, timedOut, ...(at.learning ? { learning: true } : {}), ...(at.calc ? { calc: true } : {}), ...(laterRight != null ? { laterRight } : {}) };
+    usedMs: Math.min(Date.now(), at.deadline) - at.start, timedOut, ...(at.learning ? { learning: true } : {}), ...(at.calc ? { calc: true } : {}), ...(laterRight != null ? { laterRight } : {}), ...(at.ivId ? { ivId: at.ivId } : {}) };
+  if (mode === PLAN && at.ivId && ivById(at.ivId)) { const iv = ivById(at.ivId); if (!iv.today || iv.today.day !== todayKey()) iv.today = { day: todayKey(), done: {} }; iv.today.done.questions = true; }
   db.history[mode] = [...(db.history[mode] || []), result].slice(-5);
   const t = (db.totals[mode] ||= { rounds: 0, sum: 0, best: 0 });
   t.rounds++; t.sum += pct; t.best = Math.max(t.best, pct);
@@ -2446,9 +2454,11 @@ function splitFormula(line) {
 
 // The drill's queue for one lesson or all: due, then never drilled (alternating lessons, random within one), and with
 // "anyway" the rest, soonest due first. Cards already drilled on this visit are left out.
+// cat: "all", a category id, or "iv:<interview id>" for that interview's topics.
+const drillHas = (cat, fcat) => cat === "all" || fcat === cat || (cat.startsWith("iv:") && !!ivById(cat.slice(3)) && ivCats(ivById(cat.slice(3))).includes(fcat));
 function drillQueue(cat, done, anyway) {
   const now = Date.now(), fs = db.formulaSchedule;
-  const cards = formulaCards().filter(f => (cat === "all" || f.cat === cat) && !done.has(f.key));
+  const cards = formulaCards().filter(f => drillHas(cat, f.cat) && !done.has(f.key));
   const due = cards.filter(f => fs[f.key] && fs[f.key].dueAt <= now).sort((a, b) => fs[a.key].dueAt - fs[b.key].dueAt);
   const by = new Map();
   for (const f of shuffle(cards.filter(f => !fs[f.key]))) { if (!by.has(f.cat)) by.set(f.cat, []); by.get(f.cat).push(f); }
@@ -2457,20 +2467,20 @@ function drillQueue(cat, done, anyway) {
   const later = anyway ? cards.filter(f => fs[f.key] && fs[f.key].dueAt > now).sort((a, b) => fs[a.key].dueAt - fs[b.key].dueAt) : [];
   return [...due, ...fresh, ...later];
 }
-function newDrill(cat, anyway = false, done = new Set()) {
-  return { cat, anyway, set: drillQueue(cat, done, anyway).slice(0, DRILL_SET), i: 0, shown: false, got: 0, missed: 0, done };
+function newDrill(cat, anyway = false, done = new Set(), max = DRILL_SET) {
+  return { cat, anyway, set: drillQueue(cat, done, anyway).slice(0, max), i: 0, shown: false, got: 0, missed: 0, done };
 }
 
 function renderDrill() {
   const back = view.back || { name: "formulas" };
-  drill ||= newDrill(view.cat || "all");
+  drill ||= newDrill(view.cat || "all", !!view.anyway, new Set(), view.max || DRILL_SET);
   const d = drill, fs = db.formulaSchedule, all = formulaCards();
   const cats = CATEGORIES.filter(c => all.some(f => f.cat === c.id));
   const dayName = t => new Date(t).toLocaleDateString("en-GB", { weekday: "long", day: "numeric", month: "long" });
   meta.innerHTML = `<button class="link" id="backLink" type="button">Back</button>`;
   let body;
   if (!d.set.length) {
-    const pool = all.filter(f => d.cat === "all" || f.cat === d.cat), next = pool.map(f => fs[f.key] && fs[f.key].dueAt).filter(Boolean).sort((a, b) => a - b)[0];
+    const pool = all.filter(f => drillHas(d.cat, f.cat)), next = pool.map(f => fs[f.key] && fs[f.key].dueAt).filter(Boolean).sort((a, b) => a - b)[0];
     body = `<section class="card drill-card">
         <h2 class="drill-name">Nothing to recall right now</h2>
         <p class="muted">${d.done.size ? "You've been through every card that was due or new here." : `All ${pool.length} formula${pool.length > 1 ? "s" : ""} here ${pool.length > 1 ? "are" : "is"} scheduled.`}${next ? ` The next one comes back on ${dayName(next)}.` : ""} Recalling before then still helps, but won't push a card further away.</p>
@@ -2511,6 +2521,7 @@ function renderDrill() {
     <div class="drill-pick">
       <label class="style-label" for="drillCat">Lessons</label>
       <select id="drillCat" class="drill-select">
+        ${d.cat.startsWith("iv:") && ivById(d.cat.slice(3)) ? `<option value="${esc(d.cat)}" selected>Topics for ${esc(ivName(ivById(d.cat.slice(3))))}</option>` : ""}
         <option value="all"${d.cat === "all" ? " selected" : ""}>All lessons</option>
         ${cats.map(c => `<option value="${c.id}"${d.cat === c.id ? " selected" : ""}>${esc(c.name)}</option>`).join("")}
       </select>
@@ -2524,6 +2535,7 @@ function renderDrill() {
     scheduleAnswer(db.formulaSchedule, f.key, ok, Date.now(), null);
     persist();
     d.done.add(f.key); ok ? d.got++ : d.missed++; d.i++; d.shown = false;
+    if (d.i === d.set.length && d.cat.startsWith("iv:")) ivMarkDone(ivById(d.cat.slice(3)), "formulas"); // today's plan: formulas done
     render(); focusFirst();
   };
   on("showBtn", () => { d.shown = true; render(); focusFirst(); });
@@ -2637,6 +2649,13 @@ function interviewCard() {
       <div class="tile-actions"><button class="btn" type="button" data-iv-new>Add an interview</button>${db.interviews.length ? `<button class="link" type="button" data-iv-list>Past interviews</button>` : ""}</div></div>
     </section>`;
   const d = ivDaysLeft(next), r = ivReadiness(next), ph = ivPhase(next);
+  const p = ivPlan(next), at = db.attempts[PLAN], mine = !!(at && at.ivId === next.id), left = planLeft(p);
+  const parts = p ? [p.nQ && `${p.nQ} question${p.nQ === 1 ? "" : "s"}`, p.nF && `${p.nF} formula${p.nF === 1 ? "" : "s"}`, p.read && "1 lesson"].filter(Boolean) : [];
+  const today = !p ? "" : mine ? `<p class="iv-today-line">Today's session in progress: <b>${at.answers.filter(a => !isBlank(a)).length}</b> of ${at.items.length} answered.</p>`
+    : !parts.length ? `<p class="iv-today-line">Nothing due today for this interview.</p>`
+    : !left ? `<p class="iv-today-line"><span class="iv-check on" aria-hidden="true">✓</span> Today's session is done.</p>`
+    : `<p class="iv-today-line">Today: ${parts.join(", ")} · about ${p.minutes} minutes</p>`;
+  const go1 = mine || left;
   return `<section class="card iv-home">
       <div class="iv-home-row">
         <div>
@@ -2644,8 +2663,9 @@ function interviewCard() {
           <h2>${esc(ivName(next))}${next.firm ? ` <span class="muted iv-role">· ${esc(ivRole(next.role)[1])}</span>` : ""}</h2>
           <p class="muted">${esc(ivStage(next.stage)[1])} · ${ph === "day" ? "Interview day" : `${(IV_PHASES.find(p => p[0] === ph) || [, ""])[1]} phase`}</p>
           ${r.pct != null ? `<div class="iv-meter" role="img" aria-label="Ready on ${r.pct}% of its topics"><i style="width:${r.pct}%"></i></div><p class="iv-meter-label">Ready on <b>${r.pct}%</b> of its topics</p>` : ""}
+          ${today}
         </div>
-        <div class="tile-actions"><button class="btn primary" type="button" data-iv-open="${next.id}">Open plan</button><button class="link" type="button" data-iv-list>${more > 0 ? `All interviews · ${more + 1}` : "All interviews"}</button></div>
+        <div class="tile-actions">${go1 ? `<button class="btn primary" type="button" data-iv-today="${next.id}">${mine ? "Resume today's session" : "Start today's session"}</button>` : ""}<button class="btn${go1 ? "" : " primary"}" type="button" data-iv-open="${next.id}">Open plan</button><button class="link" type="button" data-iv-list>${more > 0 ? `All interviews · ${more + 1}` : "All interviews"}</button></div>
       </div>
     </section>`;
 }
@@ -2681,7 +2701,7 @@ function renderInterview() {
   const topics = [...r.topics].sort((a, b) => b.w - a.w || order[a.r.level] - order[b.r.level]);
   const link = safeLink(iv.link);
   const guide = ph === "past" ? (iv.outcome ? "" : "How did it go? Note what they asked under Edit: it helps with the next one.")
-    : ph === "day" ? "Interview day. At most a 10-minute warm-up: the formula drill on your key topics. You're ready."
+    : ph === "day" ? "Interview day. At most a 10-minute warm-up: the formula recall below. You're ready."
     : IV_PHASES[phaseIdx][2];
   app.innerHTML = `
     <div class="page-head iv-head">
@@ -2693,6 +2713,7 @@ function renderInterview() {
       <ol class="iv-steps">${IV_PHASES.map(([k, l], i) => `<li class="${i < phaseIdx || ph === "day" ? "done" : i === phaseIdx ? "now" : ""}"${i === phaseIdx ? ` aria-current="step"` : ""}><span>${l}</span><span class="muted">${k === "build" ? "more than 14 days" : k === "consolidate" ? "14 to 3 days" : "last 2 days"}</span></li>`).join("")}</ol>
       <p>${esc(guide)}</p>
     </section>` : guide ? `<section class="card iv-phase"><p>${esc(guide)}</p></section>` : ""}
+    ${planCard(iv)}
     <section class="card">
       <div class="iv-ready-head"><h2>Your topics</h2>${r.pct != null ? `<p><b>${r.pct}%</b> ready <span class="muted">· key topics count double</span></p>` : ""}</div>
       ${topics.length ? `<div class="table-wrap"><table class="report-table iv-table">
@@ -2711,6 +2732,7 @@ function renderInterview() {
     db.interviews = db.interviews.filter(x => x.id !== iv.id); persist(); go(back.name === "interview" ? { name: "interviews" } : back);
   });
   app.querySelectorAll("[data-new]").forEach(b => b.onclick = () => newRound(b.dataset.new));
+  wirePlan(iv, view);
 }
 
 // Add or edit an interview. The form keeps its own draft (ivDraft), so a re-render (e.g. the theme switch) keeps
@@ -2790,8 +2812,150 @@ function renderInterviewEdit() {
 // Interview buttons wherever they appear (home card, list).
 function wireIv(from) {
   app.querySelectorAll("[data-iv-new]").forEach(b => b.onclick = () => go({ name: "interviewEdit", back: { ...from } }));
+  app.querySelectorAll("[data-iv-today]").forEach(b => b.onclick = () => startPlanNext(ivById(b.dataset.ivToday), from));
   app.querySelectorAll("[data-iv-list]").forEach(b => b.onclick = () => go({ name: "interviews", back: { ...from } }));
   app.querySelectorAll("[data-iv-open]").forEach(b => b.onclick = () => go({ name: "interview", id: b.dataset.ivOpen, back: { ...from } }));
+}
+
+/* Today's session for an interview, sized to its time per day. Up to three parts:
+   - Questions (about 1.5 minutes each in Learning mode, 1 minute timed): reviews first, then new questions from the
+     interview's topics, key and weak topics most often. Reviews are the ones due, plus seen ones from its topics that
+     would otherwise only come back after the interview (not reviewed for half the days left, at most 7 days).
+   - Formula cards (about 30 seconds each) from its topics: due and new ones; in the last days, all of them.
+   - While building, one lesson to read: the weakest key topic whose lesson still has unread sections (10 minutes).
+   Build: Learning mode, half the questions reviews. Consolidate: timed, mostly reviews. Final: timed, reviews only.
+   Interview day: formulas only. Nothing here changes the shared schedule; answering updates it as usual.
+   Parts done today are kept on the interview (today: { day, done }), so the plan can tick them off. */
+const PLAN_CFG = {
+  build: { perQ: 1.5, review: 0.5, f: 5, read: true, learning: true },
+  consolidate: { perQ: 1, review: 0.7, f: 6 },
+  final: { perQ: 1, review: 1, f: 12, all: true, maxQ: 15 },
+  day: { perQ: 1, review: 1, f: 8, all: true, maxQ: 0 }
+};
+const PLAN_MAX_Q = 40, READ_MIN = 10;
+const todayKey = (t = Date.now()) => { const d = new Date(t); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`; };
+const ivDone = iv => iv.today && iv.today.day === todayKey() ? iv.today.done : {};
+function ivMarkDone(iv, part) {
+  if (!iv) return;
+  if (!iv.today || iv.today.day !== todayKey()) iv.today = { day: todayKey(), done: {} };
+  iv.today.done[part] = true;
+  persist();
+}
+const ivById = id => db.interviews.find(x => x.id === id);
+const ivCats = iv => Object.keys(iv.focus || {}).filter(c => iv.focus[c] > 0 && catById(c));
+
+// Reviews for this interview, due ones first (most overdue first), then ones pulled forward (least recently seen first).
+function ivReviewList(iv, now = Date.now()) {
+  const ivAt = startOfDay(ivDate(iv).getTime()), gap = Math.max(1, Math.min(7, Math.floor(Math.max(0, ivDaysLeft(iv, now)) / 2))) * 864e5;
+  const when = s => !s ? null : s.dueAt <= now ? s.dueAt : s.dueAt > ivAt && now - (s.dueAt - s.intervalDays * 864e5) >= gap ? 1e15 + s.dueAt - s.intervalDays * 864e5 : null;
+  const out = [];
+  for (const cat of ivCats(iv)) {
+    for (const q of reviewPool(cat)) { const t = when(db.schedule[q.id]); if (t != null) out.push({ t, cat, q }); }
+    for (const fn of gens(cat)) { const t = fn.key ? when(db.schedule["gen:" + fn.key]) : null; if (t != null) out.push({ t, cat, fn }); }
+  }
+  return out.sort((a, b) => a.t - b.t);
+}
+// The lesson to read while building: key topics before useful ones, weakest first, with unread sections left.
+function ivLessonToRead(iv, ready = readinessByCat()) {
+  const need = { work: 0, none: 1, nearly: 2, ready: 3 };
+  const cats = ivCats(iv).sort((a, b) => iv.focus[b] - iv.focus[a] || need[ready[a].level] - need[ready[b].level]);
+  for (const cat of cats) {
+    const l = Lessons.all[cat], titles = secTitles(l);
+    if (!l || l.status === "stub" || !titles.length) continue;
+    const read = titles.filter(t => isRead(cat, t)).length;
+    if (read < titles.length) return { cat, read, total: titles.length };
+  }
+  return null;
+}
+function ivPlan(iv) {
+  const ph = ivPhase(iv);
+  if (ph === "past") return null;
+  const cfg = PLAN_CFG[ph], done = ivDone(iv);
+  const read = cfg.read ? ivLessonToRead(iv) : null;
+  const nF = Math.min(cfg.f, drillQueue("iv:" + iv.id, new Set(), !!cfg.all).length);
+  const reviews = ivReviewList(iv);
+  const spare = Math.max(0, (iv.minutes || 30) - nF * 0.5 - (read ? READ_MIN : 0));
+  let nQ = Math.min(PLAN_MAX_Q, cfg.maxQ ?? PLAN_MAX_Q, Math.floor(spare / cfg.perQ));
+  if (cfg.review === 1) nQ = Math.min(nQ, reviews.length); // final days: nothing new
+  const nReview = Math.min(reviews.length, Math.round(nQ * cfg.review), nQ);
+  return { ph, nQ, nReview, nNew: nQ - nReview, nF, read, all: !!cfg.all, learning: !!cfg.learning, done,
+    minutes: Math.round(nQ * cfg.perQ + nF * 0.5 + (read ? READ_MIN : 0)) };
+}
+
+// Build and start the questions part. New questions: each slot goes to a topic picked at random, weighted by
+// key (2) or useful (1) times how much it needs work (needs work or too few answers 3, nearly ready 2, ready 1),
+// never asking a topic for more distinct questions than it has.
+function startPlan(ivId) {
+  const iv = ivById(ivId), p = iv && ivPlan(iv);
+  if (!p || !p.nQ) return confirmModal("No questions today", "There's nothing to review for this interview right now, and its last days are for review only. Do the formula recall instead.", "OK", () => {}, null);
+  const used = new Set(), count = {};
+  used.walkLeft = Math.floor(p.nQ / WALK_EVERY); used.caseLeft = Math.floor(p.nQ / CASE_EVERY);
+  const items = [];
+  for (const r of ivReviewList(iv).slice(0, p.nReview)) {
+    count[r.cat] = (count[r.cat] || 0) + 1;
+    if (r.q) { used.add(r.q.id); if (r.q.type === "walk") used.walkLeft--; items.push(materialize(r.q, r.cat)); }
+    else { used.add(r.fn); const t = typedTwin(r.cat, r.fn); if (t) used.add(t); items.push(dueGenItem(r.fn, r.cat)); }
+  }
+  const ready = readinessByCat(), need = { work: 3, none: 3, nearly: 2, ready: 1 };
+  for (let k = 0; k < p.nNew; k++) {
+    const open = ivCats(iv).filter(c => (count[c] || 0) < capacity(c)).map(c => [c, iv.focus[c] * need[ready[c].level]]);
+    if (!open.length) break;
+    let r = Math.random() * open.reduce((s, [, w]) => s + w, 0), cat = open[open.length - 1][0];
+    for (const [c, w] of open) if ((r -= w) < 0) { cat = c; break; }
+    count[cat] = (count[cat] || 0) + 1;
+    items.push(draw(cat, used));
+  }
+  const phase = (IV_PHASES.find(x => x[0] === p.ph) || [, "Interview day"])[1];
+  beginAttempt(PLAN, shuffle(items), `${ivName(iv)} · ${phase} · ${p.nReview} review${p.nReview === 1 ? "" : "s"}, ${items.length - p.nReview} new` + (p.learning ? " · Learning mode" : ""), p.learning, calcPref("practice", p.learning));
+  db.attempts[PLAN].ivId = iv.id;
+  persist();
+}
+// Open the formula part: a recall drill on the interview's topics, as many cards as the plan says.
+const startPlanFormulas = (iv, p, from) => go({ name: "drill", cat: "iv:" + iv.id, anyway: p.all, max: p.nF, back: { ...from } });
+// The next part not done yet (questions, then formulas, then reading), for the home card's one button.
+function startPlanNext(iv, from) {
+  const p = ivPlan(iv), at = db.attempts[PLAN];
+  if (!p) return;
+  if (at && at.ivId === iv.id) return go({ name: "quiz", mode: PLAN });
+  if (p.nQ && !p.done.questions) return startPlan(iv.id);
+  if (p.nF && !p.done.formulas) return startPlanFormulas(iv, p, from);
+  if (p.read && !p.done.read) { ivMarkDone(iv, "read"); return go({ name: "lesson", cat: p.read.cat, back: { ...from } }); }
+  go({ name: "interview", id: iv.id, back: { ...from } });
+}
+const planLeft = p => p ? [p.nQ && !p.done.questions, p.nF && !p.done.formulas, p.read && !p.done.read].filter(Boolean).length : 0;
+
+// The "Today's session" card on an interview's page.
+function planCard(iv) {
+  const p = ivPlan(iv);
+  if (!p) return "";
+  const at = db.attempts[PLAN], mine = at && at.ivId === iv.id, other = at && !mine ? ivById(at.ivId) : null;
+  const tick = d => `<span class="iv-check${d ? " on" : ""}" aria-hidden="true">${d ? "✓" : ""}</span>`;
+  const task = (done, title, sub, action) => `<li class="${done ? "done" : ""}">${tick(done)}<div><b>${title}</b><span class="muted">${sub}</span></div><div class="iv-task-act">${done ? `<span class="muted">Done</span>` : action}</div></li>`;
+  const rows = [];
+  if (p.nQ || mine) {
+    const qDone = !!p.done.questions && !mine;
+    const sub = `${p.nReview} review${p.nReview === 1 ? "" : "s"}${p.nNew ? `, ${p.nNew} new from your weakest topics` : ""} · ${p.learning ? "Learning mode" : "timed"}`;
+    const action = mine ? `<button class="btn primary" type="button" data-resume="${PLAN}">Resume · ${at.answers.filter(a => !isBlank(a)).length}/${at.items.length}</button><button class="link" type="button" data-plan-discard>Discard</button>`
+      : other ? `<span class="muted">Finish or discard your session for ${esc(ivName(other))} first.</span>`
+      : `<button class="btn primary" type="button" data-plan-q>Start</button>`;
+    rows.push(task(qDone, `${mine ? at.items.length : p.nQ} questions`, sub, action));
+  }
+  if (p.nF) rows.push(task(!!p.done.formulas, `${p.nF} formula${p.nF === 1 ? "" : "s"}`, p.all ? "Recall every formula from your topics" : "Formula recall from your topics", `<button class="btn" type="button" data-plan-f>Start</button>`));
+  if (p.read) rows.push(task(!!p.done.read, `Read: ${esc(catById(p.read.cat).name)}`, `${p.read.read} of ${p.read.total} sections read · about ${READ_MIN} minutes`, `<button class="btn" type="button" data-plan-read>Open</button>`));
+  const allDone = rows.length && !planLeft(p) && !mine;
+  return `<section class="card iv-today">
+      <div class="iv-ready-head"><h2>Today's session</h2>${rows.length ? `<p class="muted">about ${p.minutes} minutes</p>` : ""}</div>
+      ${rows.length ? `<ul class="iv-tasks">${rows.join("")}</ul>` : `<p class="muted">Nothing to do today: no reviews are due and every formula is recalled. Rest, or practise a topic below.</p>`}
+      ${allDone ? `<p class="iv-alldone">Today's session is done. The next one is ready tomorrow.</p>` : ""}
+    </section>`;
+}
+function wirePlan(iv, from) {
+  const p = ivPlan(iv);
+  app.querySelectorAll("[data-plan-q]").forEach(b => b.onclick = () => startPlan(iv.id));
+  app.querySelectorAll("[data-plan-f]").forEach(b => b.onclick = () => startPlanFormulas(iv, p, from));
+  app.querySelectorAll("[data-plan-read]").forEach(b => b.onclick = () => { ivMarkDone(iv, "read"); go({ name: "lesson", cat: p.read.cat, back: { ...from } }); });
+  app.querySelectorAll("[data-plan-discard]").forEach(b => b.onclick = () => confirmModal("Discard today's session?", "Your session in progress will be deleted. You can start a new one.", "Discard", () => { delete db.attempts[PLAN]; persist(); render(); }));
+  app.querySelectorAll("[data-resume]").forEach(b => b.onclick = () => go({ name: "quiz", mode: b.dataset.resume }));
 }
 
 /* Glossary page: every term A–Z, searchable, each linked to its lesson. */
@@ -3049,7 +3213,8 @@ function renderResults() {
         </div>
       </div>
       <div class="result-actions">
-        ${view.mode === DUE ? (() => { const n = Math.min(dueQuestions().length, DUE_MAX); return n ? `<button class="btn primary lg" id="againBtn" type="button">Start another review · ${n}</button>` : ""; })()
+        ${view.mode === PLAN ? (view.result.ivId && ivById(view.result.ivId) ? `<button class="btn primary lg" id="planBtn" type="button">Back to your plan</button>` : "")
+          : view.mode === DUE ? (() => { const n = Math.min(dueQuestions().length, DUE_MAX); return n ? `<button class="btn primary lg" id="againBtn" type="button">Start another review · ${n}</button>` : ""; })()
           : view.mode !== RETRY ? `<button class="btn primary lg" id="againBtn" type="button">Generate another round</button>` : ""}
         ${wrongN + skipN ? `<button class="btn ${view.mode === RETRY ? "primary " : ""}lg" id="retryBtn" type="button">Practise these again · ${wrongN + skipN}</button>` : ""}
         <button class="btn lg" id="homeBtn" type="button">All assessments</button>
@@ -3075,6 +3240,8 @@ function renderResults() {
 
   const againBtn = document.getElementById("againBtn"), retryBtn = document.getElementById("retryBtn");
   if (againBtn) againBtn.onclick = () => newRound(view.mode);
+  const planBtn = document.getElementById("planBtn");
+  if (planBtn) planBtn.onclick = () => go({ name: "interview", id: view.result.ivId, back: { name: "home" } });
   if (retryBtn) retryBtn.onclick = () => startRetry(r.items.filter((_, i) => status(i) !== "ok"));
   document.getElementById("homeBtn").onclick = () => go({ name: "home" });
   document.getElementById("backHome").onclick = () => go({ name: "home" });
