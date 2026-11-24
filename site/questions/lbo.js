@@ -130,7 +130,23 @@ Bank.add("lbo", [
   { id: "lbo-33", lv: 2, trap: ["concept", "concept", "concept"], q: "Looking at a private equity firm's past deals, which part of the value-creation bridge do investors (LPs) usually credit most to the firm's own skill?",
     o: ["EBITDA growth from operational improvements", "Multiple expansion between entry and exit", "Debt paydown from the company's cash flows", "The size of the management fees charged"],
     why: "Operational EBITDA growth is the part the firm controls and can repeat. Multiple expansion often reflects rising markets, and debt paydown mostly reflects how much leverage the deal started with, so investors look through both.",
-    x: ["Multiple expansion often comes from the market rerating the sector, which the firm doesn't control.", "Debt paydown is real cash, but its size mainly reflects the starting leverage.", "Fees are a cost to investors, not value created."] }
+    x: ["Multiple expansion often comes from the market rerating the sector, which the firm doesn't control.", "Debt paydown is real cash, but its size mainly reflects the starting leverage.", "Fees are a cost to investors, not value created."] },
+  { id: "lbo-34", lv: 2, trap: ["concept", "missed-step", "wrong-measure"], q: "How do you work out the internal rate of return (IRR) for the lenders of a term loan in an LBO?",
+    o: ["From the cash lent net of fees and discount, then the interest, repayments and payoff", "From the sponsor's equity at entry and exit, since lenders share the same cash flows", "From the coupon alone, since the loan is repaid at par and the fees cancel out", "From the loan's face value at entry and the company's enterprise value at exit"],
+    why: "Treat the loan like any investment. The lender pays out the face value less any original issue discount and upfront fees, which it keeps; it then receives interest, scheduled repayments and the final repayment. Because of the fees and discount, its IRR is usually a little above the margin plus the base rate, and higher still if the loan is repaid early, since the discount is then earned over fewer years.",
+    x: ["Lenders receive interest and principal, not a share of the equity gain. Their return is capped.", "The lender keeps the fees and the discount, so they add to its return rather than cancelling out.", "Lenders are owed the face value of the loan, whatever the company sells for, as long as it can pay."] },
+  { id: "lbo-35", lv: 1, trap: ["concept", "concept", "concept"], q: "What is the difference between a management buyout (MBO) and a management buy-in (MBI)?",
+    o: ["An MBO is led by the existing managers; an MBI brings in an outside team", "An MBO is funded only by managers; an MBI is funded only by a sponsor", "An MBO buys a listed company; an MBI buys a privately owned business", "An MBO uses no debt at all; an MBI is funded mainly with borrowing"],
+    why: "Both are buyouts, usually backed by a private equity sponsor and debt. In an MBO the current managers buy in: they know the business well, but as employees of the seller they can be conflicted. In an MBI an outside team takes over, bringing fresh skills but less knowledge of the business, so it's seen as riskier. A mix of the two is called a buy-in management buyout (BIMBO).",
+    x: ["Both are usually funded by a sponsor and lenders, with the managers investing a smaller amount.", "Either can be used to buy a listed or a private company.", "Both normally use debt. The difference is where the managers come from."] },
+  { id: "lbo-36", lv: 2, trap: ["concept", "concept", "concept"], q: "Why is an IPO often a slower way for a private equity sponsor to exit than a sale to a trade buyer?",
+    o: ["The sponsor usually sells only part at listing, and the rest later after a lock-up", "Listing rules make the sponsor keep its whole stake for at least five years", "IPO investors pay for their shares in instalments over the following years", "A trade buyer pays the full price at signing, while an IPO settles after a year"],
+    why: "The market can only absorb so many shares at once, and new investors want the sponsor to keep a stake. So the sponsor typically sells a minority at the IPO, agrees a lock-up (often around six months), then sells the rest in later placings. Its final return depends on the share price over that time. A trade sale pays all the proceeds at completion.",
+    x: ["Lock-ups usually last months, not years, and they're agreed with the banks running the IPO.", "IPO investors pay in full when their shares are allotted.", "Trade sales are usually paid at completion rather than signing, and IPO shares settle within days."] },
+  { id: "lbo-37", lv: 2, trap: ["sign", "concept", "concept"], q: "In an LBO, how does the tax deductibility of interest affect the sponsor's returns, and what limits it?",
+    o: ["It cuts tax, leaving more cash to repay debt, but many countries cap the deduction", "It raises the company's tax bill, as the lenders are taxed on the interest it pays", "It has no effect on cash, because tax is only an accounting entry until the exit", "It lets the company deduct the whole purchase price from its taxable profit"],
+    why: "Interest is deducted before tax, so each dollar of interest saves tax at the company's rate. That leaves more cash to repay debt, which lifts the equity return: the 'tax shield'. It's limited, though: many countries cap net interest deductions, often at 30% of taxable EBITDA (the EU's rule, for example), so very high leverage can leave some interest that isn't deductible.",
+    x: ["The lenders' tax is their own affair. The company's tax bill falls.", "Tax is paid in cash, so a lower tax bill means more cash every year.", "The purchase price isn't deductible. Interest is, and in some deals so is depreciation on assets written up for tax."] }
 ]);
 
 // New-format questions (shown only when "new formats" is on).
@@ -191,7 +207,18 @@ Bank.addFormat("lbo", [
       { text: "Using free cash flow to repay the term loan", answer: 2, note: "Net debt falls, so more of the enterprise value belongs to equity." },
       { text: "Skipping a dividend to build up cash", answer: 2, note: "Cash reduces net debt just like a repayment does." }
     ],
-    why: "Operations drive EBITDA growth, the market (and the buyer) drives the multiple, and cash flow drives the fall in net debt." }
+    why: "Operations drive EBITDA growth, the market (and the buyer) drives the multiple, and cash flow drives the fall in net debt." },
+  { id: "lbo-grid-04", lv: 1, type: "grid", q: "What kind of buyout is each of these?",
+    columns: ["Management buyout", "Management buy-in", "Secondary buyout", "Public-to-private"],
+    rows: [
+      { text: "The company's own executives buy it from its founder, backed by a sponsor", answer: 0, note: "The existing managers are the buyers: a management buyout (MBO)." },
+      { text: "A sponsor backs an experienced outside executive to run the business it buys", answer: 1, note: "The new managers come from outside: a management buy-in (MBI)." },
+      { text: "One private equity fund sells a portfolio company to another fund", answer: 2, note: "The seller is another sponsor: a secondary buyout." },
+      { text: "A sponsor takes a listed company private through a takeover offer", answer: 3, note: "The sellers are public shareholders, and the company is delisted." },
+      { text: "A sponsor buys a business from another sponsor and keeps its managers", answer: 2, note: "Keeping the managers doesn't change the label: the seller is a sponsor, so it's a secondary buyout." },
+      { text: "A team of outside managers leads the purchase of a division sold by a large group", answer: 1, note: "The managers come from outside the division, so it's a buy-in." }
+    ],
+    why: "The labels describe who's buying and who's selling: the existing managers (a buyout) or an outside team (a buy-in); another sponsor (a secondary buyout); or public shareholders (a public-to-private)." }
 ]);
 
 // More new formats: answer + reason and spot the error.
@@ -254,5 +281,22 @@ Bank.addFormat("lbo", [
       "Multiples of EBITDA give enterprise value. Debt is then taken off to reach the equity.",
       "Paying down debt isn't a cost to the equity: it's cash from the business that leaves less debt ahead of the sponsor at exit.",
       "The sponsor invested US$400m of equity, so its return is measured on that, not on the whole price."],
-    why: "Exit equity = exit enterprise value − net debt at exit: US$1,500m − US$400m = US$1,100m. That's 2.75x the US$400m invested, about 22% a year over 5 years. Using the entry debt ignores the US$200m paid down, one of the three main sources of buyout returns, alongside EBITDA growth and any change in the multiple." }
+    why: "Exit equity = exit enterprise value − net debt at exit: US$1,500m − US$400m = US$1,100m. That's 2.75x the US$400m invested, about 22% a year over 5 years. Using the entry debt ignores the US$200m paid down, one of the three main sources of buyout returns, alongside EBITDA growth and any change in the multiple." },
+
+  { id: "lbo-why-03", lv: 3, type: "reason",
+    q: "A sponsor buys a company with US$200m of equity. Its managers pay US$2m for 10% of the ordinary shares. The sponsor pays US$18m for the other 90%, and puts US$180m into loan notes earning 12% a year, added to the notes until exit. Five years later all the equity is sold for US$400m. Who earns the higher multiple on their money?",
+    answers: ["The managers", "The sponsor", "Both the same"],
+    answerNotes: [
+      "Most of the sponsor's money sits in loan notes capped at 12% a year, so it makes about 2.0x overall, against about 4.1x for the managers.",
+      "They pay the same price per ordinary share, but most of the sponsor's money is in the loan notes, which earn less than the shares here."],
+    reasons: [
+      "The loan notes take a fixed return, leaving the rest of the gain to the ordinary shares",
+      "Both pay the same price per ordinary share, so their money grows at the same rate",
+      "The loan notes earn 12% a year, more than the ordinary shares can earn here",
+      "The managers bought their shares at a discount to the sponsor's price per share"],
+    reasonNotes: [
+      "The price per share is the same, but the sponsor also holds loan notes, so its money as a whole grows more slowly.",
+      "Here the ordinary shares do far better: they grow from US$20m to about US$83m, roughly 33% a year.",
+      "They pay the same price per share. The 'sweet' part comes from the structure, not from a discount."],
+    why: "This is 'sweet equity'. Managers and sponsor buy ordinary shares at the same price, but the sponsor puts most of its money into loan notes (or preference shares) with a fixed return. The notes grow to 180 × 1.12⁵ = US$317m, leaving US$83m for the ordinary shares. The managers' 10% is worth US$8.3m, about 4.1x their US$2m; the sponsor gets 317 + 74.5 = US$392m on US$198m, about 2.0x. That gearing gives managers a strong reason to grow the value." }
 ]);

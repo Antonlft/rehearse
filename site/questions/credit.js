@@ -110,7 +110,27 @@ Bank.add("credit", [
   { id: "cr-28", lv: 2, trap: ["inverted", "concept", "concept"], q: "Compared with high-yield bonds, leveraged loans typically:",
     o: ["Pay a floating rate, are secured and can be repaid early at or near par", "Pay a fixed coupon and have long non-call periods that protect investors", "Are unsecured and rank behind the bonds, so they pay a higher margin", "Can't be traded once they're issued, so lenders hold them to maturity"],
     why: "Leveraged loans (TLBs) are usually senior secured, float at SOFR plus a margin and can be repaid at par after a short soft-call period. High-yield bonds are usually fixed-rate, often unsecured, with non-call periods and call premiums, and they carry incurrence covenants.",
-    x: ["That describes high-yield bonds.", "Loans are usually senior secured and rank ahead of unsecured bonds.", "Loans trade actively in the secondary market, though they settle more slowly than bonds."] }
+    x: ["That describes high-yield bonds.", "Loans are usually senior secured and rank ahead of unsecured bonds.", "Loans trade actively in the secondary market, though they settle more slowly than bonds."] },
+  { id: "cr-29", lv: 2, trap: ["inverted", "concept", "concept"], q: "In a sell-side auction, what is 'staple financing'?",
+    o: ["A debt package arranged on the seller's side and offered to every bidder", "A loan the seller makes to the winning bidder to fund part of the price", "A bridge loan the winning bidder has to take from the target's own banks", "Debt the target has to repay in full at completion, before the sale closes"],
+    why: "The seller's adviser (or its lending arm) arranges a financing package in advance, 'stapled' to the sale documents. It sets a floor for leverage, speeds up the process and helps smaller bidders, which supports the price. Bidders can use it or bring their own. The catch: the adviser earns fees on both sides, a conflict the seller has to manage.",
+    x: ["That's a vendor loan (seller note): the seller itself lends.", "Bidders aren't obliged to use it. They can bring their own financing.", "That describes existing debt being repaid at completion."] },
+  { id: "cr-30", lv: 2, trap: ["wrong-measure", "concept", "inverted"], q: "How does a fixed charge cover ratio usually differ from interest cover?",
+    o: ["It adds scheduled debt repayments (and often rent) to the interest it must cover", "It uses net income instead of EBITDA, so tax and depreciation come off first", "It counts only fixed-rate debt, leaving floating-rate loans out of the test", "It divides interest by EBITDA, so a lower figure means the company is safer"],
+    why: "Interest cover asks whether earnings cover the interest. Fixed charge cover asks whether cash flow covers all the payments the company can't avoid: interest plus scheduled principal repayments, and often lease or rent costs, usually after capex and cash taxes. Definitions vary from one loan agreement to another, so read the definition before comparing.",
+    x: ["The top of the ratio is usually a cash measure, such as EBITDA less capex and tax, not net income.", "'Fixed charges' are payments the company has to make, whatever the type of interest rate.", "It's cash flow ÷ charges, so a higher figure is safer."] },
+  { id: "cr-31", lv: 2, trap: ["concept", "concept", "concept"], q: "What does a PIK toggle note let the issuer do?",
+    o: ["Choose each period to pay interest in cash or add it to the debt, at a higher rate", "Switch the interest between fixed and floating rates whenever market rates fall", "Convert the notes into shares if its share price rises above a set level", "Delay repaying the principal at maturity by up to five more years"],
+    why: "Payment-in-kind (PIK) interest is added to the amount owed instead of being paid in cash. A toggle lets the issuer choose each period, and the PIK option usually carries a higher rate. It protects cash in a tight year, but the debt keeps growing, so lenders read a switch to PIK as a warning sign.",
+    x: ["That would be done with an interest rate swap, not a toggle.", "That's a convertible bond.", "That's an extension option. A toggle is about how interest is paid."] },
+  { id: "cr-32", lv: 2, trap: ["concept", "concept", "inverted"], q: "Why might a private equity sponsor choose a direct lender (a private credit fund) over a syndicated leveraged loan?",
+    o: ["More certainty and speed, private terms and fewer lenders, at a higher margin", "Direct loans are always cheaper, as credit funds have lower costs than banks", "Direct lenders never ask for financial covenants of any kind in their loans", "Direct loans trade freely in the market, so they're easier to refinance later"],
+    why: "A direct lender (or a small club of them) holds the loan itself, so the terms are agreed privately and quickly, with no risk of a failed syndication. It can also offer flexible features, such as delayed-draw tranches or part of the interest paid in kind. The price is usually a higher margin, and often a maintenance covenant. Syndicated loans are cheaper and can be larger, but depend on market conditions when they launch.",
+    x: ["They usually cost more: the higher margin pays for certainty and flexibility.", "Direct loans often keep a maintenance covenant, unlike most covenant-lite syndicated loans.", "Direct loans are usually held to maturity. It's syndicated loans that trade."] },
+  { id: "cr-33", lv: 2, trap: ["concept", "concept", "concept"], q: "In a buy-and-build strategy, why might a sponsor's financing include a delayed draw term loan?",
+    o: ["It commits funding now for bolt-on deals, to be drawn as they're done", "It lets the company postpone its first interest payment by a year", "It's drawn on day one but repaid once all the bolt-on deals are done", "It replaces the revolver, so no working capital line is needed"],
+    why: "A delayed draw term loan is a committed facility the borrower can draw over a set period (often one to two years), typically for acquisitions or capex. The sponsor knows the money is there for bolt-ons without paying interest on it upfront. Lenders usually charge a ticking fee on the undrawn amount and set conditions for each draw, such as a leverage test.",
+    x: ["Interest starts when the money is drawn. It doesn't delay interest on debt already drawn.", "It's drawn later, as deals happen, not on day one.", "The revolver still funds day-to-day working capital. A delayed draw term loan funds specific uses."] }
 ]);
 
 // New-format questions (shown only when "new formats" is on).
@@ -199,5 +219,29 @@ Bank.addFormat("credit", [
       "That's the leverage ratio again. Interest cover compares profit with the interest bill.",
       "Debt isn't part of interest cover: it compares EBITDA with interest.",
       "Interest cover measures how many times profit covers interest, not cash."],
-    why: "Interest cover = EBITDA ÷ interest: how many times profit covers the interest bill. Here 200 ÷ 60 = 3.3x, above the 3.0x minimum, so both covenants pass. Flipping a ratio upside down is easy under time pressure. A quick sense check helps: a healthy company's profit should be several times its interest." }
+    why: "Interest cover = EBITDA ÷ interest: how many times profit covers the interest bill. Here 200 ÷ 60 = 3.3x, above the 3.0x minimum, so both covenants pass. Flipping a ratio upside down is easy under time pressure. A quick sense check helps: a healthy company's profit should be several times its interest." },
+
+  { id: "cr-spot-02", lv: 2, type: "spot",
+    q: "A loan agreement defines fixed charge cover as (EBITDA − capex − cash taxes) ÷ (cash interest + scheduled debt repayments), with a minimum of 1.2x. The borrower has EBITDA of US$100m, capex of US$20m, cash taxes of US$10m, cash interest of US$30m and scheduled repayments of US$25m. A candidate tests the covenant. Which line contains the mistake?",
+    lines: [
+      "Cash flow available: 100 − 20 − 10 = US$70m",
+      "Fixed charges: cash interest of US$30m",
+      "Fixed charge cover: 70 ÷ 30 = 2.33x",
+      "Against the 1.2x minimum: the covenant is met with plenty of room to spare"],
+    wrong: 1,
+    lineNotes: [
+      "Right: EBITDA less capex and cash taxes, as the agreement defines it.",
+      null,
+      "The division is right, but it uses the charges from line 2.",
+      "The conclusion follows from line 3, which carries the mistake: the headroom is much smaller."],
+    fixes: [
+      "Add the US$25m of repayments: 70 ÷ 55 = 1.27x, so the test is only just met",
+      "Use EBITDA alone as cash flow: 100 ÷ 30 = 3.33x, comfortably above the minimum",
+      "Deduct the repayments from cash flow: 45 ÷ 30 = 1.50x, still above the minimum",
+      "Add repayments and capex to the charges: 70 ÷ 75 = 0.93x, so the test is breached"],
+    fixNotes: [
+      "The agreement deducts capex and cash taxes first, and line 1 does that correctly.",
+      "Repayments belong with the charges being covered, not taken off the cash flow.",
+      "Capex is already deducted in line 1, so adding it to the charges counts it twice."],
+    why: "Fixed charge cover tests whether cash flow covers every fixed payment, so scheduled repayments count alongside interest: (100 − 20 − 10) ÷ (30 + 25) = 70 ÷ 55 = 1.27x. The covenant is met, but with little headroom: a fall of about US$4m in cash flow would breach it." }
 ]);
