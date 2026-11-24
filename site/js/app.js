@@ -162,7 +162,11 @@ db.lessonRead ||= {};
 //  21: calculation questions join spaced repetition. Generated items in rounds (in progress and finished) can carry
 //      gkey, their generator's permanent key; their answer log entries carry gkey too, and db.schedule gains entries
 //      keyed "gen:<key>". Calculation answers logged before this have no gkey and stay unscheduled. No new top-level fields.
-const SCHEMA_VERSION = 21;
+//  22: added db.formulaSchedule: the formula recall drill's spaced repetition, { "<category>|<formula name>": { dueAt,
+//      intervalDays, lastOk } }, updated by the same rule as db.schedule (Not yet = wrong, Got it = right, no confidence).
+//      Keyed by the formula's name (its title, else its section's), so renaming one starts it afresh.
+db.formulaSchedule ||= {};
+const SCHEMA_VERSION = 22;
 db.schemaVersion = Math.max(db.schemaVersion || 1, SCHEMA_VERSION);
 let saveWarned = false;
 const persist = () => {
@@ -209,10 +213,11 @@ const glossify = h => {
 // Escaped text with powers shown as superscripts: "2.73^(1/5)" → 2.73<sup>1/5</sup>, "1.08^5" → 1.08<sup>5</sup>.
 // Content keeps plain "^" text; only the display changes. Used for explanations and lessons.
 // In formulas, {{a // b}} is shown as a stacked fraction (a over b).
-const rich = s => glossify(esc(s))
+const mathify = h => h
   .replace(/\{\{(.+?)\s\/\/\s(.+?)\}\}/g, '<span class="frac"><span class="frac-n">$1</span><span class="frac-d">$2</span></span>')
   .replace(/\((<span class="frac">.*?<\/span><\/span>)\)/g, '<span class="big-paren">(</span>$1<span class="big-paren">)</span>') // brackets as tall as the fraction
   .replace(/\^\(([^()]+)\)/g, "<sup>$1</sup>").replace(/\^(\d+(?:\.\d+)?|[A-Za-z]\w*)/g, "<sup>$1</sup>");
+const rich = s => mathify(glossify(esc(s)));
 const fmt = ms => { const t = Math.max(0, Math.ceil(ms / 1000)); return String(Math.floor(t / 60)).padStart(2, "0") + ":" + String(t % 60).padStart(2, "0"); };
 const shuffle = arr => { const a = [...arr]; for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; };
 const pick = arr => arr[Math.floor(Math.random() * arr.length)];
@@ -742,6 +747,7 @@ function go(v) {
   glHide();
   if (v.name !== "quiz") CalcUI.hide(); // the calculator only lives on the quiz screen
   if (v.name !== "sprint") sprint = null; // leaving a sprint abandons it; only finished sprints are saved
+  if (v.name !== "drill") drill = null; // leaving a recall drill drops the set; cards already marked stay scheduled
   // Leaving a live round (Save & exit, logo, etc.): stop its clock so time away isn't counted.
   if (view.name === "quiz" && view.live && db.attempts[view.mode]) { endVisit(db.attempts[view.mode]); pauseRound(db.attempts[view.mode]); persist(); }
   view = v;
@@ -775,6 +781,7 @@ function render() {
   else if (view.name === "lessons") renderLessons();
   else if (view.name === "glossary") renderGlossary();
   else if (view.name === "formulas") renderFormulas();
+  else if (view.name === "drill") renderDrill();
   else if (view.name === "search") renderSearch();
   else renderHome();
 }
@@ -970,14 +977,18 @@ function dueTile() {
     : !Object.keys(db.schedule).length ? "Questions you answer are scheduled to come back: wrong ones the next day, right ones later."
     : due ? `<b>${due}</b> question${due > 1 ? "s" : ""} due in your selected categories${due > DUE_MAX ? `. A review takes the ${DUE_MAX} most overdue` : ", most overdue first"}.`
     : "Nothing due in your selected categories right now.";
+  // Formulas due in the recall drill (all lessons), when spaced repetition is on.
+  const fDue = db.srsEnabled ? formulaDue().length : 0;
+  const fText = fDue ? ` And <b>${fDue}</b> formula${fDue > 1 ? "s" : ""} to recall.` : "";
+  const fLink = fDue ? `<button class="link" type="button" data-drill>Recall formulas · ${fDue}</button>` : "";
   const action = at ? `<button class="btn primary" type="button" data-resume="${DUE}">Resume · ${done}/${at.items.length}</button><button class="btn" type="button" data-discard="${DUE}">Discard</button>`
     : !db.srsEnabled ? `<button class="link" type="button" data-goto-tab="progress">Turn it on in Progress &amp; settings</button>`
     : due ? `<button class="btn" type="button" data-new="${DUE}">Start review · ${Math.min(due, DUE_MAX)} question${due > 1 ? "s" : ""}</button>`
     : "";
   return `<section class="card home-tile">
         <h2>Due for review</h2>
-        <p>${text}</p>
-        ${action ? `<div class="tile-actions">${action}</div>` : ""}
+        <p>${text}${fText}</p>
+        ${action || fLink ? `<div class="tile-actions">${action}${fLink}</div>` : ""}
       </section>`;
 }
 
@@ -1056,6 +1067,7 @@ function wireHome() {
   });
   app.querySelectorAll("[data-lessons]").forEach(b => b.onclick = () => go({ name: "lessons" }));
   app.querySelectorAll("[data-glossary]").forEach(b => b.onclick = () => go({ name: "glossary", back: { name: "home" } }));
+  app.querySelectorAll("[data-drill]").forEach(b => b.onclick = () => go({ name: "drill", back: { name: "home" } }));
   if (document.getElementById("srs")) wireSrsPanel();
   app.querySelectorAll("[data-new]").forEach(b => b.onclick = () => b.dataset.new === "mixed" ? go({ name: "setup" }) : newRound(b.dataset.new));
   app.querySelectorAll("[data-setup]").forEach(b => b.onclick = () => go({ name: "setup" }));
@@ -2337,12 +2349,142 @@ function renderFormulas() {
       <div class="page-head fs-head">
         <h1>Formula sheet</h1>
         <p>${count} formulas from the lessons. <a class="link no-print" href="formula-sheet.pdf" target="_blank" rel="noopener">Open as PDF</a></p>
+        <div class="tile-actions no-print"><button class="btn primary" id="drillBtn" type="button">Recall drill${(() => { const n = formulaDue().length; return n ? ` · ${n} due` : ""; })()}</button></div>
       </div>
       <div class="formula-sheet">${groups}</div>
     </div>`;
   document.getElementById("backLink").onclick = () => go(back);
+  document.getElementById("drillBtn").onclick = () => go({ name: "drill", back: { name: "formulas", back } });
   app.querySelectorAll("[data-lesson]").forEach(b => b.onclick = () => go({ name: "lesson", cat: b.dataset.lesson, back: { name: "formulas", back } }));
 }
+
+/* Formula recall drill, from the formula sheet and the home page's Due for review tile. Each card shows a formula's
+   name, its lesson and the left-hand side of each line; you say the rest from memory, tap Show, then mark it Got it
+   or Not yet (self-graded, like walk-through cards). Retrieval with spaced repetition: scheduled by the same rule as
+   questions (Not yet: tomorrow; Got it: 2 days, then doubling up to 60 once it's due) in db.formulaSchedule.
+   Order: due cards first (most overdue), then ones never drilled, alternating between lessons; 10 at a time.
+   The set in progress isn't saved, but every card already marked is scheduled. */
+const DRILL_SET = 10;
+let drill = null; // { cat: "all" | category id, anyway, set: [cards], i, shown, got, missed, done: Set of keys drilled this visit }
+
+// Every formula block in the lessons, in lesson order: { key, cat, catName, name, lines }.
+function formulaCards() {
+  const out = [];
+  for (const c of CATEGORIES) {
+    const l = Lessons.all[c.id];
+    if (!l || !Array.isArray(l.method)) continue;
+    let sec = "";
+    for (const b of l.method) {
+      if (b && b.section) sec = b.section.replace(/^\d+\.\s*/, "");
+      else if (b && b.kind === "formula") { const name = b.title || sec; out.push({ key: `${c.id}|${name}`, cat: c.id, catName: c.name, name, lines: b.text.split("\n") }); }
+    }
+  }
+  return out;
+}
+const formulaDue = (now = Date.now()) => formulaCards().filter(f => db.formulaSchedule[f.key] && db.formulaSchedule[f.key].dueAt <= now);
+
+// What a line shows before Show: up to its first " = ", " ≈ ", " ≥ " or " ≤ " outside a {{fraction}}, else up to its
+// first ": ". [left, sign, rest]; a line with neither is hidden whole (left "").
+function splitFormula(line) {
+  for (const m of line.matchAll(/ ([=≈≥≤]) /g)) {
+    const before = line.slice(0, m.index);
+    if ((before.match(/\{\{/g) || []).length === (before.match(/\}\}/g) || []).length) return [before, m[1], line.slice(m.index + m[0].length)];
+  }
+  const c = line.indexOf(": ");
+  return c > 0 ? [line.slice(0, c), ":", line.slice(c + 2)] : ["", "", line];
+}
+
+// The drill's queue for one lesson or all: due, then never drilled (alternating lessons, random within one), and with
+// "anyway" the rest, soonest due first. Cards already drilled on this visit are left out.
+function drillQueue(cat, done, anyway) {
+  const now = Date.now(), fs = db.formulaSchedule;
+  const cards = formulaCards().filter(f => (cat === "all" || f.cat === cat) && !done.has(f.key));
+  const due = cards.filter(f => fs[f.key] && fs[f.key].dueAt <= now).sort((a, b) => fs[a.key].dueAt - fs[b.key].dueAt);
+  const by = new Map();
+  for (const f of shuffle(cards.filter(f => !fs[f.key]))) { if (!by.has(f.cat)) by.set(f.cat, []); by.get(f.cat).push(f); }
+  const lists = shuffle([...by.values()]), fresh = [];
+  while (lists.some(l => l.length)) for (const l of lists) if (l.length) fresh.push(l.shift());
+  const later = anyway ? cards.filter(f => fs[f.key] && fs[f.key].dueAt > now).sort((a, b) => fs[a.key].dueAt - fs[b.key].dueAt) : [];
+  return [...due, ...fresh, ...later];
+}
+function newDrill(cat, anyway = false, done = new Set()) {
+  return { cat, anyway, set: drillQueue(cat, done, anyway).slice(0, DRILL_SET), i: 0, shown: false, got: 0, missed: 0, done };
+}
+
+function renderDrill() {
+  const back = view.back || { name: "formulas" };
+  drill ||= newDrill(view.cat || "all");
+  const d = drill, fs = db.formulaSchedule, all = formulaCards();
+  const cats = CATEGORIES.filter(c => all.some(f => f.cat === c.id));
+  const dayName = t => new Date(t).toLocaleDateString("en-GB", { weekday: "long", day: "numeric", month: "long" });
+  meta.innerHTML = `<button class="link" id="backLink" type="button">Back</button>`;
+  let body;
+  if (!d.set.length) {
+    const pool = all.filter(f => d.cat === "all" || f.cat === d.cat), next = pool.map(f => fs[f.key] && fs[f.key].dueAt).filter(Boolean).sort((a, b) => a - b)[0];
+    body = `<section class="card drill-card">
+        <h2 class="drill-name">Nothing to recall right now</h2>
+        <p class="muted">${d.done.size ? "You've been through every card that was due or new here." : `All ${pool.length} formula${pool.length > 1 ? "s" : ""} here ${pool.length > 1 ? "are" : "is"} scheduled.`}${next ? ` The next one comes back on ${dayName(next)}.` : ""} Recalling before then still helps, but won't push a card further away.</p>
+        <div class="tile-actions"><button class="btn" id="anywayBtn" type="button">Drill anyway</button></div>
+      </section>`;
+  } else if (d.i < d.set.length) {
+    const f = d.set[d.i], st = fs[f.key], tag = !st ? "New" : st.dueAt <= Date.now() ? "Due" : "Early";
+    glOnce = new Set();
+    const lines = f.lines.map(line => {
+      if (d.shown) return `<span class="fs-line">${rich(line)}</span>`;
+      const [left, sign, rest] = splitFormula(line);
+      return `<span class="fs-line">${left ? mathify(esc(left)) + (sign === ":" ? ":" : ` ${sign}`) + " " : ""}<span class="drill-blank" aria-label="hidden">?</span></span>`;
+    }).join("");
+    glOnce = null;
+    body = `<section class="card drill-card" aria-live="polite">
+        <div class="drill-top"><span>Card ${d.i + 1} of ${d.set.length}</span><span class="drill-tag drill-${tag.toLowerCase()}">${tag}</span></div>
+        <p class="drill-cat">${esc(f.catName)}</p>
+        <h2 class="drill-name">${esc(f.name || "Formula")}</h2>
+        <p class="fs-eq drill-eq">${lines}</p>
+        <div class="tile-actions drill-actions">${d.shown
+          ? `<button class="btn primary" id="gotBtn" type="button">Got it</button><button class="btn" id="notBtn" type="button">Not yet</button>`
+          : `<button class="btn primary" id="showBtn" type="button">Show</button>`}</div>
+        ${d.shown ? "" : `<p class="muted drill-hint">Say the hidden part out loud or write it down first, then check.</p>`}
+      </section>`;
+  } else {
+    const more = drillQueue(d.cat, d.done, d.anyway).length;
+    body = `<section class="card drill-card">
+        <h2 class="drill-name">Set done: ${d.got} of ${d.set.length}</h2>
+        <p class="muted">${d.missed ? (d.missed === 1 ? "The one you didn't have comes back tomorrow. " : `The ${d.missed} you didn't have come back tomorrow. `) : ""}${d.got ? (d.got === 1 ? "The one you had comes back in a few days, then less and less often." : "The ones you had come back in a few days, then less and less often.") : ""}</p>
+        <div class="tile-actions">${more ? `<button class="btn primary" id="moreBtn" type="button">${Math.min(more, DRILL_SET)} more</button>` : ""}<button class="btn" id="sheetBtn" type="button">Formula sheet</button></div>
+      </section>`;
+  }
+  app.innerHTML = `
+    <div class="page-head">
+      <h1>Formula recall</h1>
+      <p>Recall each formula from memory before you check it. Ones you don't have come back tomorrow; ones you do come back after a few days, then less and less often.</p>
+    </div>
+    <div class="drill-pick">
+      <label class="style-label" for="drillCat">Lessons</label>
+      <select id="drillCat" class="drill-select">
+        <option value="all"${d.cat === "all" ? " selected" : ""}>All lessons</option>
+        ${cats.map(c => `<option value="${c.id}"${d.cat === c.id ? " selected" : ""}>${esc(c.name)}</option>`).join("")}
+      </select>
+    </div>
+    ${body}`;
+  document.getElementById("backLink").onclick = () => go(back);
+  document.getElementById("drillCat").onchange = e => { drill = newDrill(e.target.value); render(); };
+  const on = (id, fn) => { const b = document.getElementById(id); if (b) b.onclick = fn; };
+  const mark = ok => {
+    const f = d.set[d.i];
+    scheduleAnswer(db.formulaSchedule, f.key, ok, Date.now(), null);
+    persist();
+    d.done.add(f.key); ok ? d.got++ : d.missed++; d.i++; d.shown = false;
+    render(); focusFirst();
+  };
+  on("showBtn", () => { d.shown = true; render(); focusFirst(); });
+  on("gotBtn", () => mark(true));
+  on("notBtn", () => mark(false));
+  on("anywayBtn", () => { drill = newDrill(d.cat, true, d.done); render(); focusFirst(); });
+  on("moreBtn", () => { drill = newDrill(d.cat, d.anyway, d.done); render(); focusFirst(); });
+  on("sheetBtn", () => go(back.name === "formulas" ? back : { name: "formulas", back }));
+}
+// Keyboard: after each step the main button has focus, so Enter/Space works through a set.
+const focusFirst = () => { const b = app.querySelector(".drill-card .btn"); if (b) b.focus({ preventScroll: true }); };
 
 /* Glossary page: every term A–Z, searchable, each linked to its lesson. */
 function renderGlossary() {

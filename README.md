@@ -108,6 +108,8 @@ Text is shown as plain paragraphs and numbered steps (no formatting code needed)
 
 **Widgets.** `site/js/widgets.js` defines 23 interactive "Try it" widgets (sliders that recalculate live, with a small chart), at least one per category: `evBridge`, `dilutedShares` (Valuation's second widget), `goodwill` (M&A's second widget), `fundWaterfall` (LBO's second widget), `reitNav` (Real estate valuation's second widget), `yieldToWorst` (Credit & debt's second widget), `wacc`, `compound`, `lboReturns`, `recovery`, `depreciation`, `bondPrice`, `ptbv`, `terp`, `yieldCurve`, `accretion`, `montyHall`, `revpar`, `hotelModels`, `yieldValue`, `rentRoll`, `maxLoan`, `capitalStack`. Each has a pure `compute()` for the maths and a `render()` for the picture. `node scripts/test-widgets.mjs` checks the maths against hand-worked answers (it also runs before every deploy), and the question check rejects a lesson that names a widget that doesn't exist or gives it starting values outside its sliders.
 
+**Formula recall drill.** The formula sheet's *Recall drill* button (and *Recall formulas* on the home page's Due for review tile, when any are due) opens a card drill over every `formula` block in the lessons. Each card shows the formula's name (its title, else its section's), its lesson, and each line up to its first ` = `, ` ≈ `, ` ≥ ` or ` ≤ ` outside a `{{fraction}}` (else up to its first `: `; a line with neither is hidden whole). *Show* reveals the lines; *Got it* / *Not yet* schedules the card in `formulaSchedule` with the same rule as questions (Not yet: tomorrow; Got it: 2 days, then doubling up to 60 once due). Order: due cards (most overdue first), then never-drilled ones alternating between lessons; 10 per set, *10 more* continues; one lesson or all. With nothing due or new, *Drill anyway* takes the rest, soonest due first. A set in progress isn't saved; every marked card is. Renaming a formula's title or section starts it afresh.
+
 ## Saved data
 
 All progress lives in one `localStorage` key, `rehearse.v3` (the light/dark choice is kept separately under `rehearse.theme`). In `app.js` it's loaded into the global `db` object and written back with `persist()`.
@@ -130,6 +132,7 @@ All progress lives in one `localStorage` key, `rehearse.v3` (the light/dark choi
 | `lastBackupAt` | When a backup was last downloaded (or `null`) |
 | `backupNudgeDismissedAt` | When the home-page backup reminder was last dismissed (or `null`) |
 | `schedule` | Spaced repetition, per written question ID or `"gen:<key>"` for a calculation: `{ dueAt, intervalDays, lastOk }` (below) |
+| `formulaSchedule` | The formula recall drill's spaced repetition, per `"<category>\|<formula name>"`: `{ dueAt, intervalDays, lastOk }` |
 | `srsEnabled` | Spaced repetition on or off (default on). Defaulted with `??=`, because `\|\|=` would turn a stored `false` back on |
 | `srsExcluded` | Category IDs where spaced repetition is off |
 | `roundModes` | `{ test, practice }`: `"timed"` (default) or `"learning"`, remembered separately for the main test and one-category practice |
@@ -199,3 +202,4 @@ When it's on for a category, each written-question slot in a round takes a due q
 | 19 | Added `lessonRead`: `{ category: { "section title": when first opened } }`, for the read ticks on lesson sections |
 | 20 | Learning rounds in progress can hold extra items (missed questions asked again) with `againOf` and `again`; they're removed on submit, and a finished Learning round can have `laterRight` |
 | 21 | Calculation questions join spaced repetition: generated items and their log entries can carry `gkey` (the generator's permanent key), and `schedule` gains `"gen:<key>"` entries |
+| 22 | Added `formulaSchedule` (formula recall drill) |
