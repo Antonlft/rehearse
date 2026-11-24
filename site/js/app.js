@@ -2236,6 +2236,25 @@ function renderLesson() {
   app.querySelectorAll("[data-check]").forEach(el => mountCheck(el, view.cat));
   wireStepper(document.getElementById("stepper"));
   wireSections();
+  // Arriving from "Review the method" for a question that is this lesson's quick check: open its section and show it.
+  if (view.openSec != null) {
+    const d = app.querySelectorAll("details.mb-sec")[view.openSec];
+    delete view.openSec;
+    if (d) { d.open = true; d.dispatchEvent(new Event("toggle")); d.scrollIntoView({ block: "start" }); d.querySelector("summary")?.focus({ preventScroll: true }); }
+  }
+}
+
+/* The lesson section whose quick check is this question, as { n (its number from 0), title }, or null. Only lessons
+   with two or more sections (shown as an accordion) count. */
+function checkSection(cat, id) {
+  const method = (Lessons.all[cat] && Lessons.all[cat].method) || [];
+  if (!id || method.filter(b => b && b.section).length < 2) return null;
+  let n = -1, title = "";
+  for (const b of method) {
+    if (b && b.section) { n++; title = b.section.replace(/^\d+\.\s*/, ""); }
+    else if (b && b.check === id) return n < 0 ? null : { n, title };
+  }
+  return null;
 }
 
 /* Results */
@@ -2297,7 +2316,7 @@ function renderResults() {
   document.getElementById("backHome").onclick = () => go({ name: "home" });
   app.querySelectorAll("[data-filter]").forEach(b => b.onclick = () => { reviewFilter = b.dataset.filter; renderResults(); });
   app.querySelectorAll("[data-learn]").forEach(b => b.onclick = () =>
-    go({ name: "lesson", cat: b.dataset.learn, back: { ...view, scrollTo: "r-" + b.dataset.from } }));
+    go({ name: "lesson", cat: b.dataset.learn, ...(b.dataset.sec ? { openSec: +b.dataset.sec } : {}), back: { ...view, scrollTo: "r-" + b.dataset.from } }));
   if (view.scrollTo) { // back from a lesson: return to the question you came from
     const target = document.getElementById(view.scrollTo);
     delete view.scrollTo;
@@ -2323,7 +2342,8 @@ function renderResults() {
 
 // misread: true/false when the "I read it wrong" button applies (logged wrong answer), null otherwise.
 function reviewItem(it, i, ans, marked, misread, conf = null) {
-  const learnLink = () => `<p class="review-learn"><button class="link" type="button" data-learn="${it.cat}" data-from="${i}">Review the method: ${esc(catById(it.cat).name)}</button></p>`;
+  const learnLink = () => { const s = checkSection(it.cat, it.id);
+    return `<p class="review-learn"><button class="link" type="button" data-learn="${it.cat}" data-from="${i}"${s ? ` data-sec="${s.n}"` : ""}>Review the method: ${esc(catById(it.cat).name)}${s ? ` · ${esc(s.title)}` : ""}</button></p>`; };
   const g = grade(it, ans);
   const st = isBlank(ans) ? ["skip", "Unanswered"] : it.type === "walk" ? [g.ok ? "ok" : "no", walkLabel(ans)] : g.ok ? ["ok", "Correct"] : it.type === "reason" && g.answerOk ? ["no", "Wrong reason"] : it.type === "spot" && g.lineOk ? ["no", "Wrong fix"] : ["no", "Incorrect"];
   const misreadBtn = st[0] === "no" && misread !== null && it.type !== "walk"
