@@ -145,7 +145,7 @@ h1, h2, h3, p { margin: 0; }
 .link { background: none; border: 0; padding: 0; color: var(--ink); font-size: 12px; text-decoration: underline; text-underline-offset: 3px; cursor: pointer; }
 
 main { padding-block: 30px 48px; }
-.foot { border-top: 1px solid var(--rule); padding-block: 16px 28px; font-size: 11px; color: var(--muted); text-align: center; }
+.foot { border-top: 1px solid var(--rule); padding-block: 16px 28px; font-size: 12px; color: var(--muted); text-align: center; }
 .foot .link { font-size: inherit; color: inherit; }
 
 /* Shared */
@@ -514,9 +514,10 @@ sup { font-size: 0.72em; line-height: 0; vertical-align: super; }
 /* Lesson method blocks: neutral blocks in one column, each label with an icon. Only Formula (blue) and Watch out (red)
    carry a colour, and the Key idea opens its section as a lead line without a box. The same in every lesson. */
 .mblock { --mb: var(--muted); --mb-bg: transparent; --mb-line: var(--rule-strong); margin: 0 0 10px; padding: 9px 14px; border-left: 3px solid var(--mb-line); border-radius: 0; background: var(--mb-bg); }
-.mb-label { display: flex; align-items: center; gap: 6px; font-size: 11px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: var(--mb); margin-bottom: 4px; }
+.mb-label { display: flex; align-items: center; gap: 6px; font-size: 12px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: var(--mb); margin-bottom: 4px; }
 .mb-icon { width: 14px; height: 14px; flex: none; }
-.lesson .mblock p { max-width: none; margin: 0; }
+.lesson .mblock p { max-width: 52ch; margin: 0; } /* about 70 characters a line, easy to read; formulas keep the full width */
+.lesson .mblock .mb-eq { max-width: none; }
 .mb-text { font-size: 14px; line-height: 1.55; }
 .mb-eq { font-size: 16px; font-weight: 500; line-height: 1.5; display: grid; gap: 8px; }
 .mb-line { display: block; }
@@ -557,12 +558,12 @@ sup { font-size: 0.72em; line-height: 0; vertical-align: super; }
 /* "In 30 seconds": the lesson's 3–4 takeaways, at the top, before the method. */
 .lesson-summary { --mb: var(--navy); margin: 0 0 20px; padding: 12px 16px 12px 14px; border: 1px solid var(--navy-line); border-radius: 6px; background: var(--navy-bg); }
 .lesson .lesson-summary ul { margin: 2px 0 0; padding-left: 20px; display: grid; gap: 6px; }
-.lesson .lesson-summary li { font-size: 14.5px; line-height: 1.55; max-width: none; }
+.lesson .lesson-summary li { font-size: 14.5px; line-height: 1.55; max-width: 52ch; }
 /* Quick check: the last block of a section, one bank question answered on the page. */
 .mb-check { --mb: var(--navy); --mb-bg: var(--tray); --mb-line: var(--navy); padding: 12px 14px; }
 .lesson .mb-check .check-q { font-size: 14.5px; margin-bottom: 12px; }
 .mb-check .options { margin-bottom: 10px; }
-.lesson .mb-check .part-label { margin: 6px 0 6px; font-weight: 600; color: var(--ink); text-transform: uppercase; letter-spacing: .06em; font-size: 11px; }
+.lesson .mb-check .part-label { margin: 6px 0 6px; font-weight: 600; color: var(--ink); text-transform: uppercase; letter-spacing: .06em; font-size: 12px; }
 .mb-check .feedback { margin-top: 4px; }
 .lesson .mb-check .check-again { margin-top: 8px; font-size: 13px; }
 .lesson .mb-check .typed-hint { margin-top: 2px; }
@@ -649,7 +650,7 @@ sup { font-size: 0.72em; line-height: 0; vertical-align: super; }
 .lesson-card:focus-visible { outline: 2px solid var(--navy); outline-offset: 2px; }
 .lesson-card-name { font-size: 15px; font-weight: 600; line-height: 1.3; }
 .lesson-card-desc { font-size: 12.5px; color: var(--muted); line-height: 1.45; flex: 1; }
-.lesson-card-foot { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-top: 6px; font-size: 11.5px; color: var(--muted); }
+.lesson-card-foot { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-top: 6px; font-size: 12px; color: var(--muted); }
 @media (max-width: 900px) { .lesson-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
 @media (max-width: 520px) { .lesson-grid { grid-template-columns: minmax(0, 1fr); } }
 
@@ -779,12 +780,12 @@ sup { font-size: 0.72em; line-height: 0; vertical-align: super; }
 .w-3s { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
 @media (max-width: 620px) { .w-3s { grid-template-columns: minmax(0, 1fr); } }
 .w-3s > div { padding: 10px; border: 1px solid var(--rule); border-radius: 5px; background: var(--page); display: grid; gap: 3px; font-size: 12.5px; font-variant-numeric: tabular-nums; }
-.w-3s p { font-size: 11px; font-weight: 600; letter-spacing: 0.05em; text-transform: uppercase; color: var(--muted); }
+.w-3s p { font-size: 12px; font-weight: 600; letter-spacing: 0.05em; text-transform: uppercase; color: var(--muted); }
 .w-table { overflow-x: auto; }
 .w-table table { width: 100%; border-collapse: collapse; font-size: 12.5px; font-variant-numeric: tabular-nums; background: var(--page); }
 .w-table th, .w-table td { padding: 6px 8px; border-bottom: 1px solid var(--rule); text-align: right; }
 .w-table th[scope=row], .w-table thead th:first-child { text-align: left; }
-.w-table thead th { font-size: 11px; color: var(--muted); font-weight: 500; }
+.w-table thead th { font-size: 12px; color: var(--muted); font-weight: 500; }
 .w-in span { grid-row: 1; grid-column: 1; }
 .w-in output { grid-row: 1; grid-column: 2; }
 .w-in input[type=range] { grid-row: 2; }
