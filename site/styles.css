@@ -791,11 +791,21 @@ sup { font-size: 0.72em; line-height: 0; vertical-align: super; }
 @media (max-width: 620px) { .w-chart .w-lbl, .w-chart .w-val { font-size: 12px; } }
 @media (max-width: 620px) { .w-table th, .w-table td { padding: 6px 4px; } .w-table { font-size: 12px; } }
 
-/* Formula sheet: every lesson formula on one page, by category. */
-.fs-cat { margin-bottom: 18px; }
-.fs-cat-head { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; font-size: 15px; font-weight: 600; margin: 14px 0 8px; padding-bottom: 6px; border-bottom: 1px solid var(--rule); }
-.fs-cat-head .link { font-size: 13px; font-weight: 400; flex: none; }
-.formula-sheet .fs-item { break-inside: avoid; }
+/* Formula sheet: every lesson formula on one page, formulas only, flowing down columns like a printed cheat sheet
+   (1 column on a phone, 2 on a tablet, 3 on a computer, 4 on paper). */
+.fs-group { margin: 22px 0 8px; }
+.fs-cols { column-gap: 28px; column-rule: 1px solid var(--rule); }
+@media (min-width: 640px) { .fs-cols { column-count: 2; } }
+@media (min-width: 960px) { .fs-cols { column-count: 3; } }
+.fs-cat { margin: 0 0 16px; }
+.fs-cat-head { margin: 0 0 8px; padding-bottom: 4px; border-bottom: 2px solid var(--navy); break-after: avoid; }
+.fs-cat-link { all: unset; cursor: pointer; font-size: 15px; font-weight: 700; color: var(--ink); }
+.fs-cat-link:hover { color: var(--navy); text-decoration: underline; text-underline-offset: 3px; }
+.fs-cat-link:focus-visible { outline: 2px solid var(--navy); outline-offset: 2px; border-radius: 2px; }
+.fs-item { break-inside: avoid; margin: 0 0 12px; }
+.fs-name { font-size: 12.5px; font-weight: 600; color: var(--navy); margin: 0 0 3px; line-height: 1.35; }
+.fs-eq { margin: 0; font-size: 14px; line-height: 1.45; display: grid; gap: 6px; }
+.fs-line { display: block; }
 
 /* Printing (used by the formula sheet's "Print or save as PDF"): no header, buttons or pop-ups, and light colours
    whatever the screen theme, so it reads on paper. */
@@ -806,8 +816,22 @@ sup { font-size: 0.72em; line-height: 0; vertical-align: super; }
     --navy: #1f2b46; --navy-bg: #f3f6fc; --navy-line: #cdd8ee;
   }
   body { background: #fff; }
-  .formula-sheet .mblock { margin-bottom: 8px; }
+  /* The formula sheet prints in landscape, 4 columns, small type. */
+  .fs-page { page: formulas; }
+  .fs-head { margin-bottom: 6px; }
+  .fs-head h1 { font-size: 15px; }
+  .fs-head p { display: none; }
+  .fs-group { margin: 8px 0 4px; font-size: 9px; }
+  .fs-cols { column-count: 4; column-gap: 16px; }
+  .fs-cat { margin-bottom: 8px; }
+  .fs-cat-head { margin-bottom: 4px; padding-bottom: 2px; border-bottom-width: 1.5px; }
+  .fs-cat-link { font-size: 11px; }
+  .fs-item { margin-bottom: 6px; }
+  .fs-name { font-size: 8.5px; margin-bottom: 1px; }
+  .fs-eq { font-size: 9.5px; gap: 3px; }
+  .fs-page .gl { border-bottom: 0; }
 }
+@page formulas { size: landscape; margin: 10mm; }
 
 /* Read tick on a lesson section's header (opened before). */
 .mb-sec-read { flex: none; display: inline-flex; align-items: center; color: var(--good); }

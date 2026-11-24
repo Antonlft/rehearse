@@ -713,7 +713,7 @@ document.addEventListener("visibilitychange", () => {
 });
 window.addEventListener("pagehide", pageAway);
 function render() {
-  app.classList.toggle("wide", view.name === "lessons" || view.name === "home"); // the lessons grid and the home page use the full header width
+  app.classList.toggle("wide", view.name === "lessons" || view.name === "home" || view.name === "formulas"); // the lessons grid, the home page and the formula sheet use the full header width
   if (view.name === "quiz") renderQuiz();
   else if (view.name === "results") renderResults();
   else if (view.name === "setup") renderSetup();
@@ -2172,7 +2172,9 @@ function renderLessons() {
    Prints cleanly (styles.css hides the header and buttons, and prints in light colours). */
 function renderFormulas() {
   const back = view.back || { name: "lessons" };
-  const lines = s => s.split("\n").map(line => `<span class="mb-line">${rich(line)}</span>`).join("");
+  const lines = s => s.split("\n").map(line => `<span class="fs-line">${rich(line)}</span>`).join("");
+  // Formulas only, like a printed cheat sheet: each one under a short name (its own title, else its section's),
+  // with no notes. The meaning of each term is one tap away on screen (glossary pop-ups, lesson links).
   const catHtml = c => {
     const l = Lessons.all[c.id];
     if (!l || !Array.isArray(l.method)) return "";
@@ -2180,14 +2182,13 @@ function renderFormulas() {
     const items = [];
     for (const b of l.method) {
       if (b && b.section) sec = b.section.replace(/^\d+\.\s*/, "");
-      else if (b && b.kind === "formula") items.push(`<div class="mblock mb-formula fs-item">
-          <span class="mb-label">${mbIcon("formula")}${esc([sec, b.title].filter(Boolean).join(" · ") || "Formula")}</span>
-          <p class="mb-eq">${lines(b.text)}</p>
-          ${b.note ? `<p class="mb-note">${lines(b.note)}</p>` : ""}
-        </div>`);
+      else if (b && b.kind === "formula") {
+        const name = b.title || sec;
+        items.push(`<div class="fs-item">${name ? `<h4 class="fs-name">${esc(name)}</h4>` : ""}<p class="fs-eq">${lines(b.text)}</p></div>`);
+      }
     }
     return items.length ? `<section class="fs-cat">
-        <h3 class="fs-cat-head">${esc(c.name)} <button class="link no-print" type="button" data-lesson="${c.id}">Open lesson</button></h3>
+        <h3 class="fs-cat-head"><button class="fs-cat-link" type="button" data-lesson="${c.id}" title="Open the ${esc(c.name)} lesson">${esc(c.name)}</button></h3>
         ${items.join("")}
       </section>` : "";
   };
@@ -2195,16 +2196,18 @@ function renderFormulas() {
   glOnce = new Set(); // mark each glossary term once on the page, as in a lesson
   const groups = GROUPS.map(g => {
     const body = CATEGORIES.filter(c => c.group === g.id).map(catHtml).join("");
-    return body ? `<h2 class="lesson-group">${esc(g.name)}</h2>${body}` : "";
+    return body ? `<h2 class="lesson-group fs-group">${esc(g.name)}</h2><div class="fs-cols">${body}</div>` : "";
   }).join("");
   glOnce = null;
-  const count = (groups.match(/class="mblock mb-formula fs-item"/g) || []).length;
+  const count = (groups.match(/class="fs-item"/g) || []).length;
   app.innerHTML = `
-    <div class="page-head">
-      <h1>Formula sheet</h1>
-      <p>All ${count} formulas from the lessons in one place, for a last look before an interview. <button class="link no-print" type="button" id="fsPrint">Print or save as PDF</button></p>
-    </div>
-    <div class="lesson formula-sheet">${groups}</div>`;
+    <div class="fs-page">
+      <div class="page-head fs-head">
+        <h1>Formula sheet</h1>
+        <p>${count} formulas from the lessons. <button class="link no-print" type="button" id="fsPrint">Print or save as PDF</button></p>
+      </div>
+      <div class="formula-sheet">${groups}</div>
+    </div>`;
   document.getElementById("backLink").onclick = () => go(back);
   document.getElementById("fsPrint").onclick = () => window.print();
   app.querySelectorAll("[data-lesson]").forEach(b => b.onclick = () => go({ name: "lesson", cat: b.dataset.lesson, back: { name: "formulas", back } }));
