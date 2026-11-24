@@ -5,6 +5,8 @@ window.Bank = {
   formats: {}, // written questions in new formats (e.g. ordering), only used when "new formats" is switched on
   cases: {},   // multi-step case studies (linked typed steps), only used when "new formats" is switched on
   add(cat, list) { (this.written[cat] ||= []).push(...list); },
+  outLoud: [], // extra out-loud prompts (questions/outloud.js); the out-loud page also uses every walk-through card
+  addOutLoud(list) { this.outLoud.push(...list); },
   addFormat(cat, list) { (this.formats[cat] ||= []).push(...list); },
   /* Calculation questions are registered with a permanent name (key), e.g. Bank.gen("val", "val-g3", fn) or
      Bank.calc("val", "val-c2", spec). It is what spaced repetition schedules them by ("gen:val-c2"), so a key must

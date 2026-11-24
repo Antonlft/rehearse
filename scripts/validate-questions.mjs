@@ -317,6 +317,26 @@ for (const [cat, list] of Object.entries(Bank.cases || {})) {
   });
 }
 
+// Out-loud prompts (questions/outloud.js): ids unique across the whole bank and starting "ol-", a group that is "fit" or a
+// category, 3–8 unique key points, a tip, a length to aim for and a status. Acronyms are left to the glossary check.
+let outLoud = 0;
+for (const p of Bank.outLoud || []) {
+  outLoud++;
+  const where = `out-loud ${p.id ?? "(no id)"}`;
+  if (!/^ol-[a-z]+-\d{2}$/.test(p.id || "")) fail(`${where}: id must look like ol-fit-01`);
+  else if (ids.has(p.id)) fail(`${where}: duplicate id (also in ${ids.get(p.id)})`);
+  else ids.set(p.id, "out-loud");
+  if (p.group !== "fit" && !categoryIds.includes(p.group)) fail(`${where}: group must be "fit" or a category id, got ${JSON.stringify(p.group)}`);
+  if (typeof p.q !== "string" || !p.q.trim()) fail(`${where}: missing question text`);
+  if (typeof p.tip !== "string" || !p.tip.trim()) fail(`${where}: missing tip`);
+  if (![1, 2, 3].includes(p.lv)) fail(`${where}: lv must be 1, 2 or 3`);
+  if (!(Number.isInteger(p.secs) && p.secs >= 30 && p.secs <= 180)) fail(`${where}: secs must be a whole number of seconds from 30 to 180`);
+  if (!["draft", "reviewed"].includes(p.status)) fail(`${where}: status must be "draft" or "reviewed"`);
+  if (!Array.isArray(p.points) || p.points.length < 3 || p.points.length > 8) fail(`${where}: points must list 3–8 key points`);
+  else if (p.points.some(x => typeof x !== "string" || !x.trim()) || new Set(p.points).size !== p.points.length) fail(`${where}: points must be unique, non-empty text`);
+  if (BAD_TEXT.test(JSON.stringify(p))) fail(`${where}: text contains NaN/Infinity/undefined`);
+}
+
 // Paper LBOs (the timed trainer): sampled like case studies, plus a unique permanent id, a name, a short description,
 // a time limit and an assumption sheet. Up to 8 steps, like a case.
 let papers = 0;
@@ -575,7 +595,7 @@ if (errors.length) {
   for (const e of errors) console.error("  - " + e);
   process.exit(1);
 }
-console.log(`✓ ${written - formatQuestions} written questions, ${formatQuestions} new-format questions, ${gens} generators, ${typed} typed-answer generators, ${cases} case stud${cases === 1 ? "y" : "ies"} and ${papers} paper LBO${papers === 1 ? "" : "s"} (${RUNS} samples each) passed.`);
+console.log(`✓ ${written - formatQuestions} written questions, ${formatQuestions} new-format questions, ${gens} generators, ${typed} typed-answer generators, ${cases} case stud${cases === 1 ? "y" : "ies"} and ${papers} paper LBO${papers === 1 ? "" : "s"} (${RUNS} samples each), and ${outLoud} out-loud prompts passed.`);
 console.log(`✓ ${askChecked} "Ask Claude" messages built (wrong, right and skipped versions of every question and case step), with nothing missing.`);
 console.log(`✓ The mistake detective flagged ${(alarmHits / Math.max(1, alarmTried) * 100).toFixed(1)}% of ${alarmTried} ordinary wrong typed answers as a slip (5% at most).`);
 console.log(`✓ ${Object.keys(Lessons).length} lessons for ${categoryIds.length} categories (${Object.entries(lessonCounts).map(([k, v]) => `${v} ${k}`).join(", ")}).`);

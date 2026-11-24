@@ -180,7 +180,14 @@ db.interviews ||= [];
 //      taken), right (steps right), n (steps) }. Like sprints, they don't touch the answer log, spaced repetition or
 //      accuracy. An interview's today.done can also hold paper (a paper LBO finished from its plan).
 db.paperLbos ||= [];
-const SCHEMA_VERSION = 24;
+//  25: out-loud answers. Added db.outLoudLog: the last 300 self-checks, each { pid (the prompt's id), at, got (key points
+//      covered), n (key points), ms (time taken), rec (recorded or not), iv? (the interview whose plan it was done from) },
+//      and db.outLoudSchedule: their spaced repetition, { "<prompt id>": { dueAt, intervalDays, lastOk } }, by the same
+//      rule as db.schedule (right = at least 80% of the key points). Recordings aren't in here: they're kept in IndexedDB
+//      ("rehearse-audio"). An interview's today.done can also hold vocal.
+db.outLoudLog ||= [];
+db.outLoudSchedule ||= {};
+const SCHEMA_VERSION = 25;
 db.schemaVersion = Math.max(db.schemaVersion || 1, SCHEMA_VERSION);
 let saveWarned = false;
 const persist = () => {
@@ -762,6 +769,7 @@ function go(v) {
   glHide();
   if (v.name !== "quiz") CalcUI.hide(); // the calculator only lives on the quiz screen
   if (v.name !== "sprint") sprint = null; // leaving a sprint abandons it; only finished sprints are saved
+  if (!(v.name === "vocal" && vocal && v.pid === vocal.pid)) olCleanup(); // leaving a question stops any recording
   if (!(v.name === "paper" && v.run)) paper = null; // leaving a paper LBO drops it; only finished ones are saved
   if (v.name !== "drill") drill = null; // leaving a recall drill drops the set; cards already marked stay scheduled
   if (v.name !== "interviewEdit") ivDraft = null; // leaving the interview form drops what wasn't saved
@@ -800,6 +808,7 @@ function render() {
   else if (view.name === "formulas") renderFormulas();
   else if (view.name === "drill") renderDrill();
   else if (view.name === "paper") renderPaper();
+  else if (view.name === "vocal") renderVocal();
   else if (view.name === "interviews") renderInterviews();
   else if (view.name === "interview") renderInterview();
   else if (view.name === "interviewEdit") renderInterviewEdit();
@@ -987,7 +996,12 @@ function renderPracticeTab() {
         <p>A whole buyout in about 10 minutes, on paper, against the clock.${l ? ` Last: <b>${l.right} of ${l.n}</b> right in ${paperTime(l.ms)}.` : ""}</p>
         <div class="tile-actions"><button class="btn" type="button" data-paper-open>Start a paper LBO</button></div>
       </section>`; })()}
-      <section class="card home-tile">
+      ${(() => { const all = olPrompts(), due = all.filter(p => db.outLoudSchedule[p.id] && db.outLoudSchedule[p.id].dueAt <= Date.now()).length; return `<section class="card home-tile">
+        <h2>Out loud</h2>
+        <p>Answer interview questions aloud, record yourself, then check the key points.${due ? ` <b>${due}</b> due for another go.` : ` ${all.length} questions, from fit to technical.`}</p>
+        <div class="tile-actions"><button class="btn" type="button" data-vocal-open>Practise out loud</button></div>
+      </section>`; })()}
+      <section class="card home-tile home-tile-wide">
         <h2>Lessons</h2>
         <p>A method, a worked example and a source for every category.</p>
         <div class="tile-actions"><button class="btn" type="button" data-lessons>Open lessons</button><button class="link" type="button" data-glossary>Glossary</button></div>
@@ -1096,6 +1110,7 @@ function wireHome() {
   app.querySelectorAll("[data-lessons]").forEach(b => b.onclick = () => go({ name: "lessons" }));
   app.querySelectorAll("[data-glossary]").forEach(b => b.onclick = () => go({ name: "glossary", back: { name: "home" } }));
   app.querySelectorAll("[data-drill]").forEach(b => b.onclick = () => go({ name: "drill", back: { name: "home" } }));
+  app.querySelectorAll("[data-vocal-open]").forEach(b => b.onclick = () => go({ name: "vocal", back: { name: "home" } }));
   app.querySelectorAll("[data-paper-open]").forEach(b => b.onclick = () => go({ name: "paper", back: { name: "home" } }));
   wireIv({ name: "home" });
   if (document.getElementById("srs")) wireSrsPanel();
@@ -2592,6 +2607,224 @@ function renderPaperResult() {
   document.querySelector(".page-head h1").focus({ preventScroll: true });
 }
 
+/* Out loud: open interview questions answered aloud, optionally recorded, then checked against their key points. The
+   prompts are the walk-through cards from the question bank plus questions/outloud.js (mostly fit and motivation).
+   Self-checks go to db.outLoudLog and their own spaced repetition, db.outLoudSchedule (right = at least 80% of the key
+   points), apart from rounds: they don't touch the answer log or accuracy. Recordings never leave the device: they're
+   kept in this browser's IndexedDB (database "rehearse-audio"), the last 3 per prompt, and aren't in backups. */
+const AUDIO_DB = "rehearse-audio", OL_KEEP = 3, OL_LOG_KEEP = 300, OL_MIN = 3, OL_OK = 0.8, OL_SET = 5;
+let vocal = null; // { pid, phase: "ready" | "rec" | "review" | "saved", start, ms, rec, stream, chunks, blob, url, checks, takes, err, result }
+const olGroupName = g => g === "fit" ? "Fit and motivation" : (catById(g) || {}).name || g;
+function olPrompts() {
+  const walks = [];
+  for (const src of [Bank.written, Bank.formats || {}]) for (const [cat, list] of Object.entries(src)) for (const q of list)
+    if (q.type === "walk") walks.push({ id: q.id, group: cat, lv: q.lv || 1, q: q.q, points: q.points, tip: q.why, secs: 90, walk: true });
+  const order = g => g === "fit" ? -1 : CATEGORIES.findIndex(c => c.id === g);
+  return [...Bank.outLoud, ...walks].sort((a, b) => order(a.group) - order(b.group));
+}
+const olById = id => olPrompts().find(p => p.id === id);
+// Due ones (most overdue first), then new ones (fit first when preferFit), then the rest (soonest due first). New ones
+// are mixed in an order that stays the same all day (a hash of the id and the date), so a plan shows what it opens.
+const olMix = id => [...id + todayKey()].reduce((h, c) => (Math.imul(h, 31) + c.charCodeAt(0)) >>> 0, 7);
+function olQueue(list, preferFit = false, now = Date.now()) {
+  const s = db.outLoudSchedule;
+  const due = list.filter(p => s[p.id] && s[p.id].dueAt <= now).sort((a, b) => s[a.id].dueAt - s[b.id].dueAt);
+  const fresh = list.filter(p => !s[p.id]).sort((a, b) => (preferFit ? (b.group === "fit") - (a.group === "fit") : 0) || olMix(a.id) - olMix(b.id));
+  const later = list.filter(p => s[p.id] && s[p.id].dueAt > now).sort((a, b) => s[a.id].dueAt - s[b.id].dueAt);
+  return [...due, ...fresh, ...later];
+}
+const olIvPool = iv => olPrompts().filter(p => p.group === "fit" || ivCats(iv).includes(p.group));
+const olWhen = id => { const s = db.outLoudSchedule[id]; if (!s) return ""; const d = Math.round((s.dueAt - startOfDay(Date.now())) / 864e5); return d <= 0 ? "due now" : d === 1 ? "tomorrow" : `in ${d} days`; };
+const olLast = id => { for (let k = db.outLoudLog.length - 1; k >= 0; k--) if (db.outLoudLog[k].pid === id) return db.outLoudLog[k]; return null; };
+
+// Recordings, in IndexedDB: { key, pid, at, ms, type, blob }.
+let audioDb = null;
+const idbDone = r => new Promise((res, rej) => { r.onsuccess = () => res(r.result); r.onerror = () => rej(r.error); });
+function audioOpen() {
+  if (audioDb) return Promise.resolve(audioDb);
+  return new Promise((res, rej) => {
+    if (!window.indexedDB) return rej(new Error("no IndexedDB"));
+    const r = indexedDB.open(AUDIO_DB, 1);
+    r.onupgradeneeded = () => r.result.createObjectStore("takes", { keyPath: "key", autoIncrement: true }).createIndex("pid", "pid");
+    r.onsuccess = () => { audioDb = r.result; res(audioDb); };
+    r.onerror = () => rej(r.error);
+  });
+}
+const takesStore = (mode = "readonly") => audioOpen().then(d => d.transaction("takes", mode).objectStore("takes"));
+const takesOf = pid => takesStore().then(st => idbDone(st.index("pid").getAll(pid))).then(list => list.sort((a, b) => b.at - a.at));
+async function saveTake(pid, blob, ms) {
+  await idbDone((await takesStore("readwrite")).add({ pid, at: Date.now(), ms, type: blob.type, blob }));
+  for (const t of (await takesOf(pid)).slice(OL_KEEP)) await idbDone((await takesStore("readwrite")).delete(t.key));
+}
+const deleteTake = async key => idbDone((await takesStore("readwrite")).delete(key));
+
+// Stop recording and free the microphone and any players' memory (leaving the page, or moving to another prompt).
+function olCleanup() {
+  if (!vocal) return;
+  try { if (vocal.rec && vocal.rec.state !== "inactive") { vocal.rec.onstop = null; vocal.rec.stop(); } } catch {}
+  if (vocal.stream) vocal.stream.getTracks().forEach(t => t.stop());
+  if (vocal.url) URL.revokeObjectURL(vocal.url);
+  (vocal.takeUrls || []).forEach(u => URL.revokeObjectURL(u));
+  vocal = null;
+}
+async function olRecord() {
+  const v = vocal;
+  if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia || !window.MediaRecorder) { v.err = "This browser can't record. You can still answer out loud without recording."; return renderVocal(); }
+  try { v.stream = await navigator.mediaDevices.getUserMedia({ audio: true }); }
+  catch (e) { v.err = e && e.name === "NotAllowedError" ? "Microphone access is blocked. Allow it for this site in your browser's settings, or answer without recording." : "The microphone couldn't be opened. You can still answer without recording."; return renderVocal(); }
+  if (vocal !== v) { v.stream.getTracks().forEach(t => t.stop()); return; } // left the page while the browser was asking
+  const type = ["audio/webm;codecs=opus", "audio/mp4", "audio/webm"].find(t => MediaRecorder.isTypeSupported && MediaRecorder.isTypeSupported(t));
+  const rec = new MediaRecorder(v.stream, type ? { mimeType: type } : undefined);
+  v.chunks = [];
+  rec.ondataavailable = e => { if (e.data && e.data.size) v.chunks.push(e.data); };
+  rec.onstop = () => {
+    if (vocal !== v) return;
+    v.blob = new Blob(v.chunks, { type: rec.mimeType || type || "audio/webm" });
+    v.url = URL.createObjectURL(v.blob);
+    v.stream.getTracks().forEach(t => t.stop()); v.stream = null;
+    v.phase = "review"; renderVocal();
+  };
+  v.rec = rec; v.err = null; v.phase = "rec"; v.start = Date.now();
+  rec.start();
+  renderVocal();
+}
+function olStop() {
+  vocal.ms = Date.now() - vocal.start;
+  if (vocal.rec && vocal.rec.state !== "inactive") vocal.rec.stop(); // onstop moves on to the review
+  else { vocal.phase = "review"; renderVocal(); }
+}
+function olSave() {
+  const p = olById(vocal.pid), got = vocal.checks.filter(Boolean).length, n = p.points.length, at = Date.now();
+  scheduleAnswer(db.outLoudSchedule, p.id, got / n >= OL_OK, at);
+  db.outLoudLog = [...db.outLoudLog, { pid: p.id, at, got, n, ms: vocal.ms || 0, rec: !!vocal.blob, ...(view.ivId ? { iv: view.ivId } : {}) }].slice(-OL_LOG_KEEP);
+  const queue = view.queue || [], last = !queue.length || queue.indexOf(p.id) === queue.length - 1, iv = view.ivId && ivById(view.ivId);
+  if (iv && last) ivMarkDone(iv, "vocal"); else persist();
+  vocal.result = { got, n };
+  vocal.phase = "saved";
+  if (vocal.blob) saveTake(p.id, vocal.blob, vocal.ms || 0).then(() => olTakes(p.id)).catch(() => { if (vocal && vocal.pid === p.id) { vocal.saveErr = true; renderVocal(); } });
+  renderVocal();
+}
+// Load this prompt's saved recordings, then redraw.
+function olTakes(pid) {
+  takesOf(pid).then(list => {
+    if (!vocal || vocal.pid !== pid) return;
+    (vocal.takeUrls || []).forEach(u => URL.revokeObjectURL(u));
+    vocal.takes = list; vocal.takeUrls = list.map(t => URL.createObjectURL(t.blob));
+    if (vocal.phase !== "rec") renderVocal(); // not while the clock is running: it would restart the screen
+  }).catch(() => { if (vocal && vocal.pid === pid) { vocal.takes = []; vocal.noStore = true; } });
+}
+
+function renderVocal() {
+  if (!view.pid) return renderVocalList();
+  const p = olById(view.pid);
+  if (!p) return go({ name: "vocal" });
+  if (!vocal || vocal.pid !== p.id) { olCleanup(); vocal = { pid: p.id, phase: "ready", checks: [], takes: null }; olTakes(p.id); }
+  const v = vocal, back = view.back || { name: "vocal" }, queue = view.queue || [], qi = queue.indexOf(p.id);
+  const aim = `${Math.floor(p.secs / 60)}:${String(p.secs % 60).padStart(2, "0")}`;
+  meta.innerHTML = `<button class="link" id="backLink" type="button">${v.phase === "rec" ? "Stop and leave" : "Back"}</button>`;
+  clearInterval(tick);
+  let box;
+  if (v.phase === "ready") box = `
+      <div class="tile-actions"><button class="btn primary" type="button" id="olRec">Record my answer</button><button class="btn" type="button" id="olNoRec">Answer without recording</button></div>
+      ${v.err ? `<p class="ol-err" role="alert">${esc(v.err)}</p>` : ""}
+      <p class="muted ol-note">Recordings stay in this browser only, the last ${OL_KEEP} for each question. They aren't sent anywhere or included in backups.</p>`;
+  else if (v.phase === "rec") box = `
+      <div class="ol-live"><span class="ol-dot${v.rec ? "" : " off"}" aria-hidden="true"></span><span>${v.rec ? "Recording" : "Answering"}</span><strong id="olClock" class="ol-clock">0:00</strong><span class="muted">aim for ${aim}</span></div>
+      <div class="tile-actions"><button class="btn primary" type="button" id="olStop">${v.rec ? "Stop" : "Done"}</button></div>`;
+  else {
+    const n = p.points.length, got = v.checks.filter(Boolean).length, saved = v.phase === "saved";
+    box = `${v.url ? `<div class="ol-take"><p class="label">Your answer · ${paperTime(v.ms || 0)}</p><audio controls preload="metadata" src="${v.url}"></audio></div>` : v.ms ? `<p class="muted">You took ${paperTime(v.ms)} (aim for ${aim}).</p>` : ""}
+      <fieldset class="ol-points"${saved ? " disabled" : ""}>
+        <legend>Which key points did you cover?</legend>
+        ${p.points.map((t, k) => `<label class="ol-point"><input type="checkbox" data-ol-pt="${k}"${v.checks[k] ? " checked" : ""}><span>${rich(t)}</span></label>`).join("")}
+      </fieldset>
+      <div class="mblock mb-how"><span class="mb-label">How to shape it</span><p class="mb-text">${rich(p.tip)}</p></div>
+      ${saved ? `<div class="feedback ${v.result.got / v.result.n >= OL_OK ? "ok" : "no"}" role="status" id="olResult" tabindex="-1">
+          <p class="feedback-title">You covered ${v.result.got} of ${v.result.n}</p>
+          <p>${v.result.got / v.result.n >= OL_OK ? "Good. It" : "It"} comes back ${olWhen(p.id)}.${v.saveErr ? " The recording couldn't be saved in this browser." : ""}${(v.ms || 0) > p.secs * 1000 * 1.25 ? ` You took ${paperTime(v.ms)}; aim for about ${aim}.` : ""}</p>
+        </div>
+        <div class="tile-actions">${qi >= 0 && qi < queue.length - 1 ? `<button class="btn primary" type="button" id="olNext">Next question · ${qi + 2} of ${queue.length}</button>` : view.ivId ? `<button class="btn primary" type="button" id="olPlan">Back to your plan</button>` : `<button class="btn primary" type="button" id="olAnother">Next question</button>`}<button class="btn" type="button" id="olAgain">Try again</button></div>`
+      : `<div class="tile-actions"><button class="btn primary" type="button" id="olSave">Save · ${got} of ${n}</button><button class="link" type="button" id="olRedo">Answer again</button></div>`}`;
+  }
+  const takes = (v.takes || []).map((t, k) => `<li><span class="muted">${new Date(t.at).toLocaleString("en-GB", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })} · ${paperTime(t.ms)}</span><audio controls preload="metadata" src="${v.takeUrls[k]}"></audio><button class="link danger-link" type="button" data-ol-del="${t.key}">Delete</button></li>`).join("");
+  app.innerHTML = `
+    <div class="page-head ol-head">
+      <p class="label">${esc(olGroupName(p.group))}${qi >= 0 ? ` · ${qi + 1} of ${queue.length}` : ""}${p.status === "draft" ? ` · <span class="ol-draft">Draft</span>` : ""}</p>
+      <h1>${esc(p.q)}</h1>
+      <p>Answer out loud as you would in the interview, in about ${aim}. Then check yourself against the key points.</p>
+    </div>
+    <section class="card ol-box">${box}</section>
+    ${takes ? `<section class="card iv-sec"><h2>Your last recordings</h2><ul class="ol-takes">${takes}</ul></section>` : ""}`;
+  document.getElementById("backLink").onclick = () => go(back);
+  const on = (id, f) => { const b = document.getElementById(id); if (b) b.onclick = f; };
+  on("olRec", () => { const b = document.getElementById("olRec"); b.disabled = true; b.textContent = "Opening the microphone…"; olRecord(); });
+  on("olNoRec", () => { v.phase = "rec"; v.rec = null; v.start = Date.now(); renderVocal(); });
+  on("olStop", olStop);
+  on("olSave", olSave);
+  on("olRedo", () => { if (v.url) URL.revokeObjectURL(v.url); Object.assign(v, { phase: "ready", url: null, blob: null, ms: 0, checks: [] }); renderVocal(); });
+  on("olAgain", () => { olCleanup(); renderVocal(); });
+  on("olNext", () => go({ ...view, pid: queue[qi + 1] }));
+  on("olPlan", () => go({ name: "interview", id: view.ivId, back: { name: "home" } }));
+  on("olAnother", () => { const next = olQueue(olPrompts().filter(x => x.id !== p.id))[0]; go({ ...view, pid: next.id }); });
+  app.querySelectorAll("[data-ol-pt]").forEach(c => c.onchange = () => {
+    v.checks[+c.dataset.olPt] = c.checked;
+    const b = document.getElementById("olSave");
+    if (b) b.textContent = `Save · ${v.checks.filter(Boolean).length} of ${p.points.length}`;
+  });
+  app.querySelectorAll("[data-ol-del]").forEach(b => b.onclick = () => confirmModal("Delete this recording?", "It can't be recovered.", "Delete", () => deleteTake(+b.dataset.olDel).then(() => olTakes(p.id))));
+  if (v.phase === "rec") {
+    const clock = document.getElementById("olClock"), upd = () => {
+      if (!vocal || vocal.phase !== "rec" || !document.body.contains(clock)) return clearInterval(tick);
+      const ms = Date.now() - v.start;
+      clock.textContent = paperTime(ms);
+      clock.classList.toggle("over", ms > p.secs * 1000);
+    };
+    upd(); tick = setInterval(upd, 250);
+    document.getElementById("olStop").focus({ preventScroll: true });
+  }
+  if (v.phase === "saved") document.getElementById("olResult")?.focus({ preventScroll: true });
+}
+
+function renderVocalList() {
+  const back = view.back || { name: "home" }, all = olPrompts(), iv = view.ivId && ivById(view.ivId);
+  const filter = view.filter || (iv ? "iv" : "all");
+  const groups = ["fit", ...CATEGORIES.map(c => c.id)].filter(g => all.some(p => p.group === g));
+  const list = filter === "all" ? all : filter === "iv" && iv ? olIvPool(iv) : filter === "due" ? olQueue(all).filter(p => !db.outLoudSchedule[p.id] || db.outLoudSchedule[p.id].dueAt <= Date.now()) : all.filter(p => p.group === filter);
+  const s = db.outLoudSchedule, now = Date.now();
+  const tag = p => !s[p.id] ? "New" : s[p.id].dueAt <= now ? "Due" : null;
+  const row = p => { const l = olLast(p.id), t = tag(p); return `<button class="iv-row" type="button" data-ol-open="${p.id}">
+      <span class="iv-row-main"><b>${esc(p.q)}</b><span class="muted">${esc(olGroupName(p.group))}${p.status === "draft" ? " · draft" : ""}</span></span>
+      <span class="iv-row-side">${t ? `<span class="drill-tag drill-${t.toLowerCase()}">${t}</span>` : ""}${l ? `<span class="muted">${l.got} of ${l.n}${s[p.id] && s[p.id].dueAt > now ? ` · ${olWhen(p.id)}` : ""}</span>` : ""}</span>
+    </button>`; };
+  const nDue = all.filter(p => s[p.id] && s[p.id].dueAt <= now).length;
+  meta.innerHTML = `<button class="link" id="backLink" type="button">Back</button>`;
+  app.innerHTML = `
+    <div class="page-head">
+      <h1>Out loud</h1>
+      <p>Interviews are spoken. Answer each question aloud, as you would on the day, record yourself if you like, then tick the key points you covered. Questions where you miss points come back sooner.</p>
+    </div>
+    <section class="card">
+      <div class="drill-pick ol-pick">
+        <label class="style-label" for="olFilter">Show</label>
+        <select id="olFilter" class="drill-select">
+          ${iv ? `<option value="iv"${filter === "iv" ? " selected" : ""}>Topics for ${esc(ivName(iv))}</option>` : ""}
+          <option value="all"${filter === "all" ? " selected" : ""}>All questions · ${all.length}</option>
+          <option value="due"${filter === "due" ? " selected" : ""}>Due and new</option>
+          ${groups.map(g => `<option value="${g}"${filter === g ? " selected" : ""}>${esc(olGroupName(g))}</option>`).join("")}
+        </select>
+        ${list.length ? `<button class="btn primary" type="button" id="olGo">Start · ${Math.min(OL_SET, list.length)} question${Math.min(OL_SET, list.length) === 1 ? "" : "s"}</button>` : ""}
+      </div>
+      <p class="muted ol-sub">${nDue ? `${nDue} due for another go. ` : ""}Start takes due ones first, then ones you haven't tried.</p>
+      ${list.length ? `<div class="iv-list">${list.map(row).join("")}</div>` : `<p class="muted">Nothing here yet.</p>`}
+    </section>`;
+  document.getElementById("backLink").onclick = () => go(back);
+  document.getElementById("olFilter").onchange = e => go({ ...view, filter: e.target.value });
+  const start = (pid, queue) => go({ name: "vocal", pid, queue, ivId: view.ivId, back: { ...view } });
+  const gb = document.getElementById("olGo");
+  if (gb) gb.onclick = () => { const q = olQueue(list, iv && iv.stage === "fit").slice(0, OL_SET).map(p => p.id); start(q[0], q); };
+  app.querySelectorAll("[data-ol-open]").forEach(b => b.onclick = () => start(b.dataset.olOpen, null));
+}
+
 let drill = null; // { cat: "all" | category id, anyway, set: [cards], i, shown, got, missed, done: Set of keys drilled this visit }
 
 // Every formula block in the lessons, in lesson order: { key, cat, catName, name, lines }.
@@ -2992,13 +3225,15 @@ function wireIv(from) {
      would otherwise only come back after the interview (not reviewed for half the days left, at most 7 days).
    - Formula cards (about 30 seconds each) from its topics: due and new ones; in the last days, all of them.
    - While building, one lesson to read: the weakest key topic whose lesson still has unread sections (10 minutes).
+   - Out loud (3 minutes each): one question answered aloud (two in the final days), from its topics and fit questions,
+     due ones first. It counts as done once that many out-loud answers from its pool were checked today.
    - A paper LBO (15 minutes): for a paper LBO round in every phase but the day itself, and for buyout and sponsor
      coverage roles once past building, if there are at least 30 minutes a day. Any paper LBO finished today counts.
      Under 45 minutes a day, days with a paper LBO have no reading and the other way round.
    Build: Learning mode, half the questions reviews. Consolidate: timed, mostly reviews. Final: timed, reviews only.
    Interview day: formulas only. Nothing here changes the shared schedule; answering updates it as usual.
    Parts done today are kept on the interview (today: { day, done }), so the plan can tick them off. With four parts the
-   home card's button goes through them in this order: questions, formulas, paper LBO, reading. */
+   home card's button goes through them in this order: questions, formulas, out loud, paper LBO, reading. */
 const PLAN_CFG = {
   build: { perQ: 1.5, review: 0.5, f: 5, read: true, learning: true },
   consolidate: { perQ: 1, review: 0.7, f: 6 },
@@ -3051,12 +3286,15 @@ function ivPlan(iv) {
   // Under 45 minutes a day, a paper LBO and a lesson to read would leave almost no time for questions: one each day, in turn.
   if (paperLbo && read && (iv.minutes || 30) < 45) { if (Math.round(startOfDay(Date.now()) / 864e5) % 2) read = null; else paperLbo = false; }
   if (paperLbo && paperToday()) done.paper = true;
-  const spare = Math.max(0, (iv.minutes || 30) - nF * 0.5 - (read ? READ_MIN : 0) - (paperLbo ? PAPER_MIN : 0));
+  const pool = olIvPool(iv), nV = Math.min(ph === "final" ? 2 : 1, pool.length), today = todayKey();
+  const olIds = olQueue(pool, iv.stage === "fit").slice(0, nV).map(x => x.id);
+  if (nV && db.outLoudLog.filter(e => todayKey(e.at) === today && pool.some(x => x.id === e.pid)).length >= nV) done.vocal = true;
+  const spare = Math.max(0, (iv.minutes || 30) - nF * 0.5 - (read ? READ_MIN : 0) - (paperLbo ? PAPER_MIN : 0) - nV * OL_MIN);
   let nQ = Math.min(PLAN_MAX_Q, cfg.maxQ ?? PLAN_MAX_Q, Math.floor(spare / cfg.perQ));
   if (cfg.review === 1) nQ = Math.min(nQ, reviews.length); // final days: nothing new
   const nReview = Math.min(reviews.length, Math.round(nQ * cfg.review), nQ);
-  return { ph, nQ, nReview, nNew: nQ - nReview, nF, read, paper: paperLbo, all: !!cfg.all, learning: !!cfg.learning, done,
-    minutes: Math.round(nQ * cfg.perQ + nF * 0.5 + (read ? READ_MIN : 0) + (paperLbo ? PAPER_MIN : 0)) };
+  return { ph, nQ, nReview, nNew: nQ - nReview, nF, read, paper: paperLbo, nV, vocal: olIds, all: !!cfg.all, learning: !!cfg.learning, done,
+    minutes: Math.round(nQ * cfg.perQ + nF * 0.5 + (read ? READ_MIN : 0) + (paperLbo ? PAPER_MIN : 0) + nV * OL_MIN) };
 }
 
 // Build and start the questions part. New questions: each slot goes to a topic picked at random, weighted by
@@ -3096,11 +3334,13 @@ function startPlanNext(iv, from) {
   if (at && at.ivId === iv.id) return go({ name: "quiz", mode: PLAN });
   if (p.nQ && !p.done.questions) return startPlan(iv.id);
   if (p.nF && !p.done.formulas) return startPlanFormulas(iv, p, from);
+  if (p.nV && !p.done.vocal) return startPlanVocal(iv, p, from);
   if (p.paper && !p.done.paper) return go({ name: "paper", ivId: iv.id, back: { ...from } });
   if (p.read && !p.done.read) { ivMarkDone(iv, "read"); return go({ name: "lesson", cat: p.read.cat, back: { ...from } }); }
   go({ name: "interview", id: iv.id, back: { ...from } });
 }
-const planLeft = p => p ? [p.nQ && !p.done.questions, p.nF && !p.done.formulas, p.paper && !p.done.paper, p.read && !p.done.read].filter(Boolean).length : 0;
+const planLeft = p => p ? [p.nQ && !p.done.questions, p.nF && !p.done.formulas, p.nV && !p.done.vocal, p.paper && !p.done.paper, p.read && !p.done.read].filter(Boolean).length : 0;
+const startPlanVocal = (iv, p, from) => go({ name: "vocal", pid: p.vocal[0], queue: p.vocal, ivId: iv.id, back: { ...from } });
 
 // The "Today's session" card on an interview's page.
 function planCard(iv) {
@@ -3120,6 +3360,7 @@ function planCard(iv) {
     rows.push(task(qDone, `${nQ} question${nQ === 1 ? "" : "s"}`, sub, action));
   }
   if (p.nF) rows.push(task(!!p.done.formulas, `${p.nF} formula${p.nF === 1 ? "" : "s"}`, p.all ? "Recall every formula from your topics" : "Formula recall from your topics", `<button class="btn" type="button" data-plan-f>Start</button>`));
+  if (p.nV) rows.push(task(!!p.done.vocal, p.nV === 1 ? "1 answer out loud" : `${p.nV} answers out loud`, p.done.vocal ? "Answered and checked today" : `${p.nV > 1 ? "Starting with " : ""}“${esc(olById(p.vocal[0]).q)}” · about ${p.nV * OL_MIN} minutes`, `<button class="btn" type="button" data-plan-vocal>Start</button>`));
   if (p.paper) rows.push(task(!!p.done.paper, "Paper LBO", `One timed case on paper, no calculator · about ${PAPER_MIN} minutes`, `<button class="btn" type="button" data-plan-paper>Start</button>`));
   if (p.read) rows.push(task(!!p.done.read, `Read: ${esc(catById(p.read.cat).name)}`, `${p.read.read} of ${p.read.total} sections read · about ${READ_MIN} minutes`, `<button class="btn" type="button" data-plan-read>Open</button>`));
   const allDone = rows.length && !planLeft(p) && !mine;
@@ -3133,6 +3374,7 @@ function wirePlan(iv, from) {
   const p = ivPlan(iv);
   app.querySelectorAll("[data-plan-q]").forEach(b => b.onclick = () => startPlan(iv.id));
   app.querySelectorAll("[data-plan-f]").forEach(b => b.onclick = () => startPlanFormulas(iv, p, from));
+  app.querySelectorAll("[data-plan-vocal]").forEach(b => b.onclick = () => startPlanVocal(iv, p, from));
   app.querySelectorAll("[data-plan-paper]").forEach(b => b.onclick = () => go({ name: "paper", ivId: iv.id, back: { ...from } }));
   app.querySelectorAll("[data-plan-read]").forEach(b => b.onclick = () => { ivMarkDone(iv, "read"); go({ name: "lesson", cat: p.read.cat, back: { ...from } }); });
   app.querySelectorAll("[data-plan-discard]").forEach(b => b.onclick = () => confirmModal("Discard today's session?", "Your session in progress will be deleted. You can start a new one.", "Discard", () => { delete db.attempts[PLAN]; persist(); render(); }));
@@ -3658,10 +3900,12 @@ if (importBtn && importFile) {
 
 const resetBtn = document.getElementById("resetBtn");
 if (resetBtn) resetBtn.onclick = () => confirmModal("Reset your progress?",
-  "This deletes your scores, history, rounds in progress and category choices in this browser. It can't be undone.", "Reset progress", () => {
+  "This deletes your scores, history, rounds in progress, category choices and out-loud recordings in this browser. It can't be undone.", "Reset progress", () => {
     clearInterval(tick);
+    olCleanup();
     try { localStorage.removeItem(STORE_KEY); } catch {}
-    location.reload();
+    try { if (audioDb) audioDb.close(); const r = indexedDB.deleteDatabase(AUDIO_DB); r.onsuccess = r.onerror = r.onblocked = () => location.reload(); }
+    catch { location.reload(); }
   });
 CalcUI.onClose(() => document.getElementById("calcBtn")?.setAttribute("aria-expanded", "false"));
 render();
