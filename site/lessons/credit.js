@@ -12,6 +12,7 @@ Lessons.add("credit", {
   "method": [
     {"section": "Bond prices"},
     {"kind": "idea", "text": "A bond's price is the present value of its coupons and principal, discounted at the market yield. When yields rise, prices fall, and vice versa."},
+    {"kind": "formula", "title": "Bond price", "text": "Price = {{coupon // 1 + y}} + {{coupon // (1 + y)^2}} + … + {{coupon + 100 // (1 + y)^n}}", "note": "Per 100 of face value. y = the market yield; n = years to maturity."},
     {"kind": "read", "text": "A bond trades at par when its yield equals its coupon, below par (at a discount) when the yield is higher than the coupon, and above par (at a premium) when it's lower."},
     {"kind": "example", "text": "A 5-year bond with a 5% coupon is worth 100 (par) when yields are 5%.\nIf yields rise to 6%, its price falls to about 95.8: its coupons are now below what investors require, so it sells at a discount."},
     {"check": "cr-05"},

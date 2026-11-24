@@ -17,7 +17,7 @@ Lessons.add("econ", {
     {"kind": "practice", "text": "Central banks steer short-term rates day to day through repo operations: short-term loans to banks against government bonds.\nThe VIX (the Chicago Board Options Exchange's Volatility Index) shows how much volatility the options market expects for US shares over the next 30 days (the 'fear gauge')."},
     {"check": "econ-why-01"},
     {"section": "Inflation and real rates"},
-    {"kind": "formula", "title": "Real rate", "text": "Real rate = {{1 + nominal rate // 1 + inflation}} − 1", "note": "Roughly the nominal rate minus inflation."},
+    {"kind": "formula", "title": "Real rate", "text": "Real rate = {{1 + nominal rate // 1 + inflation}} − 1\nReal rate ≈ nominal rate − inflation"},
     {"kind": "formula", "title": "Breakeven inflation, from Treasury Inflation-Protected Securities (TIPS)", "text": "Breakeven inflation = nominal Treasury yield − TIPS real yield", "note": "TIPS are US Treasuries whose principal rises with inflation, so they pay a real yield. A 4.3% Treasury and a 1.9% TIPS imply expected inflation of about 2.4% a year."},
     {"kind": "read", "text": "Headline consumer price index (CPI) inflation covers everything; core strips out food and energy to show the trend."},
     {"kind": "example", "text": "A deposit pays 5% while inflation is 3%: the real rate is about 5% − 3% = 2%, or exactly 1.05 ÷ 1.03 − 1 = 1.94%."},

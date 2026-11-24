@@ -12,6 +12,7 @@ Lessons.add("acc", {
   "method": [
     {"section": "How the statements link"},
     {"kind": "idea", "text": "The three statements are linked: net income from the income statement starts the cash flow statement, and closing cash and retained earnings carry into the balance sheet."},
+    {"kind": "formula", "title": "Operating cash flow (indirect method)", "text": "Operating cash flow = net income + depreciation and other non-cash costs − increase in working capital"},
     {"kind": "how", "text": "Non-cash items such as depreciation are added back and working capital changes adjusted to reach operating cash flow. Closing cash goes to the balance sheet, and net income flows into retained earnings within equity."},
     {"kind": "example", "text": "Net income of US$50m, depreciation of US$20m and US$10m more inventory: operating cash flow = 50 + 20 − 10 = US$60m.\nRetained earnings rise by the US$50m of net income (less any dividend), and closing cash carries to the balance sheet."},
     {"check": "acc-03"},
@@ -28,7 +29,7 @@ Lessons.add("acc", {
     {"check": "acc-18"},
     {"section": "Groups and returns"},
     {"kind": "idea", "text": "How a stake is accounted for depends on control, not on the share of profits.\nControl: full consolidation. Significant influence or joint control: the equity method.\nReturns tell a second story: debt can lift the return on equity (ROE) above the return on capital employed (ROCE) without the business creating any value.\nValue is created only when ROCE beats the weighted average cost of capital (WACC), the return lenders and shareholders require together."},
-    {"kind": "formula", "title": "Return on equity and leverage", "text": "ROE = ROCE + (ROCE − after-tax cost of debt) × {{net debt // book equity}}", "note": "ROE (return on equity) = net income ÷ book equity.\nROCE (return on capital employed) = after-tax operating profit ÷ (book equity + net debt).\nAfter-tax cost of debt = interest rate × (1 − tax rate)."},
+    {"kind": "formula", "title": "Return on equity and leverage", "text": "ROE = ROCE + (ROCE − after-tax cost of debt) × {{net debt // book equity}}\nROE = {{net income // book equity}}\nROCE = {{after-tax operating profit // book equity + net debt}}\nAfter-tax cost of debt = interest rate × (1 − tax rate)", "note": "ROE = return on equity; ROCE = return on capital employed."},
     {"kind": "formula", "title": "Economic value added (EVA)", "text": "EVA = capital employed × (ROCE − WACC)", "note": "A positive EVA means the business earns more than its capital costs."},
     {"kind": "how", "text": "Full consolidation: add 100% of the subsidiary's revenue, costs, assets and debt, then show the part owned by outside shareholders as a non-controlling interest (NCI).\nEquity method: one line for the stake in non-current assets, and one line for the share of net income, usually below operating profit.\nShare issue: the nominal value goes to share capital, the rest of the price to share premium (US: additional paid-in capital)."},
     {"kind": "read", "text": "ROE above ROCE: debt is lifting returns, because ROCE beats the after-tax cost of debt.\nPositive EVA: the business earns more than its capital costs, so it creates value.\nNegative working capital in a subscription business: customers pay upfront and fund growth."},

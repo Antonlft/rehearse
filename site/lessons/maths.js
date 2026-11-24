@@ -11,7 +11,11 @@ Lessons.add("maths", {
   "method": [
     {"kind": "idea", "text": "Most interview maths is compounding: growing at a rate r for n years multiplies a value by (1 + r)^n. For example, 100 growing at 10% a year for 2 years becomes 100 × 1.1^2 = 121."},
     {"kind": "formula", "title": "Compound annual growth rate (CAGR)", "text": "CAGR = ({{end value // start value}})^(1/n) − 1", "note": "n = number of years of growth."},
-    {"kind": "formula", "title": "Discounting", "text": "Present value = {{future value // (1 + r)^n}}", "note": "r = discount rate per year; n = number of years until the money arrives."},
+    {"kind": "formula", "title": "Compounding and discounting", "text": "Present value = {{future value // (1 + r)^n}}\nFuture value = present value × (1 + r)^n", "note": "r = discount rate per year; n = number of years until the money arrives."},
+    {"kind": "formula", "title": "Perpetuities", "text": "Perpetuity = {{annual cash flow // r}}\nGrowing perpetuity = {{next year's cash flow // r − g}}", "note": "g = annual growth, below r."},
+    {"kind": "formula", "title": "Recovering from a fall", "text": "Rise needed = {{x // 1 − x}}", "note": "x = the fall, as a decimal."},
+    {"kind": "formula", "title": "Rule of 72", "text": "Years to double ≈ {{72 // annual rate in %}}"},
+    {"kind": "formula", "title": "Basis points", "text": "1 basis point (bp) = 0.01%\n100 bp = 1 percentage point"},
     {"kind": "read", "text": "A fall of x needs a bigger rise to get back: rise needed = {{x // 1 − x}}.\nA 20% fall needs a 25% rise: 0.2 ÷ 0.8 = 0.25. A 50% fall needs a 100% rise."},
     {"kind": "example", "text": "Revenue grows from US$100m in 2020 to US$161m in 2025. That's 5 years of growth, so CAGR = (161 ÷ 100)^(1/5) − 1 ≈ 10% a year."},
     {"kind": "watch", "text": "n is the number of years of growth, not the number of years listed. Revenue measured in 2020 (start) and in 2025 (end) has grown in 2021, 2022, 2023, 2024 and 2025: that's 5 years, so n = 5, not 6.\nQuick check: n = end year − start year = 2025 − 2020 = 5."},

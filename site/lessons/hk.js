@@ -12,6 +12,7 @@ Lessons.add("hk", {
     {"kind": "idea", "text": "Hotel performance starts with three rooms metrics: occupancy, average daily rate (ADR) and revenue per available room (RevPAR). Total revenue per available room (TRevPAR) adds food and beverage (F&B) and other revenue."},
     {"kind": "formula", "title": "Rooms metrics", "text": "Occupancy = {{rooms sold // rooms available}}\nADR = {{rooms revenue // rooms sold}}\nRevPAR = {{rooms revenue // rooms available}} = occupancy × ADR"},
     {"kind": "formula", "title": "Splitting growth, and flow-through to gross operating profit (GOP)", "text": "RevPAR growth = (1 + ADR growth) × (1 + occupancy growth) − 1\nFlow-through = {{change in GOP // change in revenue}}"},
+    {"kind": "formula", "title": "Gross operating profit (GOP)", "text": "GOP = total revenue − departmental costs − undistributed costs"},
     {"kind": "how", "text": "GOP = total revenue − departmental costs (rooms, F&B…) − undistributed costs (admin, sales, maintenance, utilities), before management fees and fixed charges such as rent, insurance and property tax. This follows USALI, the Uniform System of Accounts for the Lodging Industry."},
     {"kind": "read", "text": "Growth from rate is worth more than growth from occupancy: a higher ADR mostly drops to profit, while extra occupied rooms bring cleaning, laundry and commission costs."},
     {"kind": "example", "text": "A 200-room hotel sells 150 rooms a night at an average of US$180.\nOccupancy = 150 ÷ 200 = 75%, ADR = US$180, and RevPAR = 75% × US$180 = US$135."},

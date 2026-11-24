@@ -12,7 +12,7 @@ Lessons.add("lbo", {
   "method": [
     {"section": "The deal"},
     {"kind": "idea", "text": "In a leveraged buyout (LBO), a private equity sponsor buys a company mostly with debt, repays that debt from the company's own cash flow, and sells after three to seven years."},
-    {"kind": "formula", "title": "Multiple on invested capital (MOIC) and internal rate of return (IRR)", "text": "MOIC = {{exit equity // entry equity}}\nIRR = MOIC^(1/n) − 1", "note": "Equity = enterprise value − net debt, at entry and at exit. n = years held; the IRR formula assumes no cash flows in between."},
+    {"kind": "formula", "title": "Multiple on invested capital (MOIC) and internal rate of return (IRR)", "text": "MOIC = {{exit equity // entry equity}}\nIRR = MOIC^(1/n) − 1\nEquity = EBITDA × multiple − net debt", "note": "Use EBITDA, the multiple and net debt at entry, then at exit. n = years held; the IRR formula assumes no cash flows in between."},
     {"kind": "how", "text": "Equity returns come from three sources: growing EBITDA (earnings before interest, tax, depreciation and amortisation), selling at a higher multiple than was paid, and paying down debt so that more of the exit value belongs to the equity."},
     {"kind": "read", "text": "Debt magnifies returns because the sponsor puts in less equity for the same business, and it magnifies losses too. The same MOIC over more years means a lower IRR."},
     {"kind": "example", "text": "A sponsor buys a company for US$500m, with US$200m of equity and US$300m of debt. Five years later it sells for US$700m, with US$100m of debt left.\nExit equity = US$600m, so MOIC = 600 ÷ 200 = 3.0x, and IRR = 3.0^(1/5) − 1 ≈ 25%."},

@@ -10,7 +10,7 @@ Lessons.add("liv", {
   ],
   "method": [
     {"kind": "idea", "text": "The living sectors are operational real estate let to individuals."},
-    {"kind": "formula", "text": "Gross income = beds × weekly rent × weeks × occupancy", "note": "NOI (net operating income) = gross income − operating costs; value = NOI ÷ yield, compared per bed or per unit."},
+    {"kind": "formula", "title": "Rental income and value", "text": "Gross income = beds × weekly rent × weeks × occupancy\nNOI = gross income − operating costs\nValue = {{NOI // yield}}", "note": "NOI = net operating income. Compare values per bed or per unit."},
     {"kind": "how", "title": "Purpose-built student accommodation (PBSA)", "text": "Let per bed on academic-year tenancies (often 44–51 weeks), sometimes backed by university nomination agreements."},
     {"kind": "how", "title": "Build-to-rent (BTR) and co-living", "text": "BTR is single-owner rental housing with on-site management; co-living offers small private rooms with shared spaces and all-inclusive rents."},
     {"kind": "read", "text": "Schemes in strong university cities with limited new supply, and stabilised assets, trade at lower yields than developments still letting up."},

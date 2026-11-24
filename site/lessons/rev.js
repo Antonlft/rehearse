@@ -11,7 +11,7 @@ Lessons.add("rev", {
   "method": [
     {"section": "Valuing a property"},
     {"kind": "idea", "text": "Income-producing property is valued on its net operating income (NOI): rent less the owner's non-recoverable operating costs, before financing."},
-    {"kind": "formula", "text": "Value = {{NOI // yield}}", "note": "A 5% yield is a 20x multiple."},
+    {"kind": "formula", "text": "Value = {{NOI // yield}}\nExit value = {{next year's NOI // exit yield}}\nChange in value = {{old yield // new yield}} − 1", "note": "A 5% yield is a 20x multiple."},
     {"kind": "how", "text": "A discounted cash flow (DCF) valuation projects about 10 years of NOI and adds an exit value: the next year's NOI ÷ an exit yield."},
     {"kind": "read", "text": "Small yield moves cause big value changes, especially at low yields: value changes by old yield ÷ new yield − 1."},
     {"kind": "example", "text": "NOI of US$5m at a 5% yield is worth US$100m.\nIf the yield rises to 5.5%, value falls to US$5m ÷ 5.5% ≈ US$90.9m: about 9% less for a half-point move."},
@@ -26,7 +26,7 @@ Lessons.add("rev", {
     {"check": "rev-22"},
     {"section": "Valuing a hotel"},
     {"kind": "idea", "text": "A hotel is an operating business in a building: its value rests on the profit it earns from guests each night, not on a fixed rent.\nSo buyers value it on earnings after the costs an owner can't avoid, and cross-check the result per room."},
-    {"kind": "formula", "title": "Income approach", "text": "Value = {{EBITDA after fees − FF&E reserve // cap rate}} − cost of the brand's required renovation", "note": "EBITDA after fees = earnings after the operator's base and incentive fees and fixed charges such as insurance and property tax.\nFF&E reserve = usually about 4% of total revenue, set aside to replace furniture, fixtures and equipment.\nThe renovation a brand requires on a sale is a property improvement plan (PIP); the buyer pays for it, so it comes off the price."},
+    {"kind": "formula", "title": "Income approach", "text": "Value = {{EBITDA after fees − FF&E reserve // cap rate}} − cost of the brand's required renovation\nPrice per key = {{value // rooms}}", "note": "EBITDA after fees = earnings after the operator's base and incentive fees and fixed charges such as insurance and property tax.\nFF&E reserve = usually about 4% of total revenue, set aside to replace furniture, fixtures and equipment.\nThe renovation a brand requires on a sale is a property improvement plan (PIP); the buyer pays for it, so it comes off the price."},
     {"kind": "how", "text": "Stabilise first: use the earnings the hotel makes when trading normally, not a year hit by renovation works or a recent opening.\nA 10-year discounted cash flow projects revenue per available room (RevPAR), costs and fees year by year, then adds an exit value: year-11 net earnings ÷ an exit cap rate.\nCross-check with price per key (value ÷ rooms) against recent sales of similar hotels."},
     {"kind": "read", "text": "The contract changes what's being valued.\nA hotel let on a long lease is valued on its rent: bond-like income, a lower cap rate.\nA managed or franchised hotel is valued on its trading profit: more volatile, so a higher cap rate, often 1–3 points above offices or logistics."},
     {"kind": "example", "text": "A 200-room hotel worth US$110m is US$550,000 per key.\nIf similar hotels have sold for US$350,000–400,000 a key, question the cap rate or the earnings before trusting the number."},

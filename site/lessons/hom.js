@@ -10,6 +10,7 @@ Lessons.add("hom", {
   ],
   "method": [
     {"kind": "idea", "text": "Who owns a hotel and who runs it are often different. The structure decides who keeps the profit and who bears the risk."},
+    {"kind": "formula", "title": "Management contract fees", "text": "Fees = base fee % × total revenue + incentive fee % × GOP\nOwner's profit = GOP − fees", "note": "Before fixed charges such as insurance and property tax."},
     {"kind": "how", "title": "Lease", "text": "The operator pays the owner rent and keeps the trading profit and the risk."},
     {"kind": "how", "title": "Management contract", "text": "The owner keeps the profit and risk and pays the operator fees: a base fee (often 2–4% of revenue) plus an incentive fee linked to profit."},
     {"kind": "how", "title": "Franchise", "text": "The owner, or a manager it hires, runs the hotel and pays a brand for its name, standards and distribution."},
