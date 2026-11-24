@@ -718,6 +718,7 @@ function render() {
   else if (view.name === "sprint") renderSprint();
   else if (view.name === "lessons") renderLessons();
   else if (view.name === "glossary") renderGlossary();
+  else if (view.name === "formulas") renderFormulas();
   else renderHome();
 }
 
@@ -2127,7 +2128,7 @@ function renderLessons() {
   app.innerHTML = `
     <div class="page-head">
       <h1>Lessons</h1>
-      <p>A short method, a worked example and interactive "Try it" tools for every category. Open one before practising, or after a round to go deeper. Unsure of a term? <button class="link" type="button" data-glossary>Open the glossary</button>.</p>
+      <p>A short method, a worked example and interactive "Try it" tools for every category. Open one before practising, or after a round to go deeper. Unsure of a term? <button class="link" type="button" data-glossary>Open the glossary</button>. Revising? <button class="link" type="button" data-formulas>Open the formula sheet</button>.</p>
     </div>
     ${GROUPS.map(g => `
     <h2 class="lesson-group">${esc(g.name)}</h2>
@@ -2143,7 +2144,51 @@ function renderLessons() {
     </div>`).join("")}`;
   document.getElementById("lessonsHome").onclick = () => go({ name: "home" });
   app.querySelectorAll("[data-glossary]").forEach(b => b.onclick = () => go({ name: "glossary", back: { name: "lessons" } }));
+  app.querySelectorAll("[data-formulas]").forEach(b => b.onclick = () => go({ name: "formulas", back: { name: "lessons" } }));
   app.querySelectorAll("[data-lesson]").forEach(b => b.onclick = () => go({ name: "lesson", cat: b.dataset.lesson, back: { name: "lessons" } }));
+}
+
+/* Formula sheet: every Formula block from every lesson on one page, grouped like the Lessons page, each labelled with
+   its section (and title, if it has one), with its note. Built from the lessons, so it never needs updating by hand.
+   Prints cleanly (styles.css hides the header and buttons, and prints in light colours). */
+function renderFormulas() {
+  const back = view.back || { name: "lessons" };
+  const lines = s => s.split("\n").map(line => `<span class="mb-line">${rich(line)}</span>`).join("");
+  const catHtml = c => {
+    const l = Lessons.all[c.id];
+    if (!l || !Array.isArray(l.method)) return "";
+    let sec = "";
+    const items = [];
+    for (const b of l.method) {
+      if (b && b.section) sec = b.section.replace(/^\d+\.\s*/, "");
+      else if (b && b.kind === "formula") items.push(`<div class="mblock mb-formula fs-item">
+          <span class="mb-label">${mbIcon("formula")}${esc([sec, b.title].filter(Boolean).join(" · ") || "Formula")}</span>
+          <p class="mb-eq">${lines(b.text)}</p>
+          ${b.note ? `<p class="mb-note">${lines(b.note)}</p>` : ""}
+        </div>`);
+    }
+    return items.length ? `<section class="fs-cat">
+        <h3 class="fs-cat-head">${esc(c.name)} <button class="link no-print" type="button" data-lesson="${c.id}">Open lesson</button></h3>
+        ${items.join("")}
+      </section>` : "";
+  };
+  meta.innerHTML = `<button class="link" id="backLink" type="button">Back</button>`;
+  glOnce = new Set(); // mark each glossary term once on the page, as in a lesson
+  const groups = GROUPS.map(g => {
+    const body = CATEGORIES.filter(c => c.group === g.id).map(catHtml).join("");
+    return body ? `<h2 class="lesson-group">${esc(g.name)}</h2>${body}` : "";
+  }).join("");
+  glOnce = null;
+  const count = (groups.match(/class="mblock mb-formula fs-item"/g) || []).length;
+  app.innerHTML = `
+    <div class="page-head">
+      <h1>Formula sheet</h1>
+      <p>All ${count} formulas from the lessons in one place, for a last look before an interview. <button class="link no-print" type="button" id="fsPrint">Print or save as PDF</button></p>
+    </div>
+    <div class="lesson formula-sheet">${groups}</div>`;
+  document.getElementById("backLink").onclick = () => go(back);
+  document.getElementById("fsPrint").onclick = () => window.print();
+  app.querySelectorAll("[data-lesson]").forEach(b => b.onclick = () => go({ name: "lesson", cat: b.dataset.lesson, back: { name: "formulas", back } }));
 }
 
 /* Glossary page: every term A–Z, searchable, each linked to its lesson. */
