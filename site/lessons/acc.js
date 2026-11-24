@@ -12,7 +12,7 @@ Lessons.add("acc", {
   "method": [
     {"section": "How the statements link"},
     {"kind": "idea", "text": "The three statements are linked: net income from the income statement starts the cash flow statement, and closing cash and retained earnings carry into the balance sheet."},
-    {"kind": "formula", "title": "Operating cash flow (indirect method)", "text": "Operating cash flow = net income + depreciation and other non-cash costs − increase in working capital"},
+    {"kind": "formula", "title": "Operating cash flow (indirect method)", "text": "Operating cash flow = net income + depreciation and other non-cash costs − increase in working capital\nWorking capital = receivables + inventory − payables"},
     {"kind": "how", "text": "Non-cash items such as depreciation are added back and working capital changes adjusted to reach operating cash flow. Closing cash goes to the balance sheet, and net income flows into retained earnings within equity."},
     {"kind": "example", "text": "Net income of US$50m, depreciation of US$20m and US$10m more inventory: operating cash flow = 50 + 20 − 10 = US$60m.\nRetained earnings rise by the US$50m of net income (less any dividend), and closing cash carries to the balance sheet."},
     {"check": "acc-03"},

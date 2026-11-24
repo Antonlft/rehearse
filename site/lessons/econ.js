@@ -11,6 +11,7 @@ Lessons.add("econ", {
   "method": [
     {"section": "Interest rates"},
     {"kind": "idea", "text": "Central banks set short-term interest rates (in the US, the Federal Reserve's federal funds rate) to keep inflation near target: they raise rates to cool demand and cut them to support it."},
+    {"kind": "formula", "title": "Yield curve slope", "text": "Slope = 10-year yield − 2-year yield", "note": "Below zero, the curve is inverted."},
     {"kind": "how", "text": "Longer-term yields reflect the short rates markets expect over the bond's life, plus a term premium: extra yield for tying money up for longer."},
     {"kind": "read", "text": "The yield curve plots yields by maturity and normally slopes up. When short rates rise above long rates it's inverted, usually because markets expect rate cuts; in the US an inversion has often come before a recession."},
     {"kind": "example", "text": "The 2-year Treasury yields 4.8% and the 10-year yields 4.2%: the curve is inverted by 0.6 points.\nMarkets expect the central bank to cut rates over the next few years, often because they expect the economy to slow."},
