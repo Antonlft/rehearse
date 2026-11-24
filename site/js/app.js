@@ -2738,4 +2738,9 @@ if (resetBtn) resetBtn.onclick = () => confirmModal("Reset your progress?",
   });
 CalcUI.onClose(() => document.getElementById("calcBtn")?.setAttribute("aria-expanded", "false"));
 render();
+// Offline support (sw.js): saves a copy of the site on this device once the page has loaded. Only on https or the
+// local preview, where browsers allow it.
+if ("serviceWorker" in navigator && (location.protocol === "https:" || location.hostname === "localhost")) {
+  addEventListener("load", () => navigator.serviceWorker.register("sw.js").catch(() => {}));
+}
 })();
