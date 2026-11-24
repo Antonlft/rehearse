@@ -92,6 +92,7 @@ function checkTable(where, t) {
   });
   if (t.base !== undefined && !(Array.isArray(t.base) && t.base[0] >= 0 && t.base[0] < t.rows.length && t.base[1] >= 0 && t.base[1] < t.cols.length)) fail(`${where}: table base must be [row, column] inside the table`);
 }
+const text0 = v => typeof v === "string" && v.trim().length > 0;
 const checkShape = (where, q) => {
   if (q.table !== undefined) { const type = q.type ?? "mcq"; if (type === "mcq" || type === "numeric") checkTable(where, q.table); else fail(`${where}: "table" isn't allowed on a ${type} question`); }
   if (typeof q.q !== "string" || !q.q.trim()) fail(`${where}: missing question text`);
@@ -316,6 +317,30 @@ for (const [cat, list] of Object.entries(Bank.cases || {})) {
   });
 }
 
+// Paper LBOs (the timed trainer): sampled like case studies, plus a unique permanent id, a name, a short description,
+// a time limit and an assumption sheet. Up to 8 steps, like a case.
+let papers = 0;
+const paperIds = new Set();
+for (const [k, p] of (Bank.papers || []).entries()) {
+  papers++;
+  const where = `paper LBO #${k + 1} (${p.id})`;
+  if (!/^[a-z][a-z0-9-]*$/.test(p.id || "")) fail(`${where}: id must be lowercase letters, digits and dashes`);
+  if (paperIds.has(p.id)) fail(`${where}: duplicate id`);
+  paperIds.add(p.id);
+  if (!text0(p.name) || !text0(p.blurb)) fail(`${where}: needs a name and a blurb`);
+  if (!(Number.isInteger(p.minutes) && p.minutes >= 5 && p.minutes <= 20)) fail(`${where}: minutes must be a whole number from 5 to 20`);
+  for (let run = 0; run < RUNS; run++) {
+    let g;
+    try { g = p.make(); } catch (e) { fail(`${where}: threw: ${e.message}`); break; }
+    const before = errors.length;
+    if (g.type !== "case" || g.paper !== p.id) fail(`${where}: must have type "case" and paper "${p.id}"`);
+    if (!Array.isArray(g.sheet) || !g.sheet.length || g.sheet.some(r => !Array.isArray(r) || r.length !== 2 || !text0(r[0]) || !text0(r[1]) || BAD_TEXT.test(r.join(" ")))) fail(`${where}: sheet must list [label, value] pairs of text`);
+    checkShape(where, g);
+    if (BAD_TEXT.test(g.q + " " + g.why)) fail(`${where}: scenario or explanation contains NaN/Infinity/undefined: ${g.q}`);
+    if (errors.length > before) break;
+  }
+}
+
 // The mistake detective (Typed.diagnose) mustn't cry wolf: ordinary wrong answers, 10% to 100% away from the right one,
 // should rarely be read as a slip (rounding and one-year-out guesses aside). Fails above 5% of them.
 // Case-study steps are graded with their case's figures, as in the app. The wrong answers come from a fixed-seed
@@ -324,7 +349,7 @@ let alarmTried = 0, alarmHits = 0, alarmSeed = 7;
 const alarmRandom = () => (alarmSeed = (alarmSeed * 16807) % 2147483647) / 2147483647;
 for (let run = 0; run < 10; run++) {
   const alarmItems = [...Object.values(Bank.numeric || {}).flat().map(fn => [fn(), null]),
-    ...Object.values(Bank.cases || {}).flat().flatMap(fn => { const c = fn(); return c.steps.map((s, k) => [s, ctx.Typed.caseContext(c, k)]); })];
+    ...[...Object.values(Bank.cases || {}).flat(), ...(Bank.papers || []).map(p => p.make)].flatMap(fn => { const c = fn(); return c.steps.map((s, k) => [s, ctx.Typed.caseContext(c, k)]); })];
   for (const [it, cx] of alarmItems) {
     if (!isNum(it.answer) || !it.answer) continue;
     for (let j = 0; j < 30; j++) {
@@ -550,7 +575,7 @@ if (errors.length) {
   for (const e of errors) console.error("  - " + e);
   process.exit(1);
 }
-console.log(`✓ ${written - formatQuestions} written questions, ${formatQuestions} new-format questions, ${gens} generators, ${typed} typed-answer generators and ${cases} case stud${cases === 1 ? "y" : "ies"} (${RUNS} samples each) passed.`);
+console.log(`✓ ${written - formatQuestions} written questions, ${formatQuestions} new-format questions, ${gens} generators, ${typed} typed-answer generators, ${cases} case stud${cases === 1 ? "y" : "ies"} and ${papers} paper LBO${papers === 1 ? "" : "s"} (${RUNS} samples each) passed.`);
 console.log(`✓ ${askChecked} "Ask Claude" messages built (wrong, right and skipped versions of every question and case step), with nothing missing.`);
 console.log(`✓ The mistake detective flagged ${(alarmHits / Math.max(1, alarmTried) * 100).toFixed(1)}% of ${alarmTried} ordinary wrong typed answers as a slip (5% at most).`);
 console.log(`✓ ${Object.keys(Lessons).length} lessons for ${categoryIds.length} categories (${Object.entries(lessonCounts).map(([k, v]) => `${v} ${k}`).join(", ")}).`);

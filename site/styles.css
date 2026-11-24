@@ -643,7 +643,7 @@ sup { font-size: 0.72em; line-height: 0; vertical-align: super; }
 .sr-more { font-size: 13px; margin: 6px 0 0; }
 
 /* Home: compact tiles under the main test */
-.home-tiles { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; margin-top: 14px; }
+.home-tiles { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; margin-top: 14px; }
 .home-tile { display: flex; flex-direction: column; gap: 6px; padding: 16px 18px; }
 .home-tiles .card + .card { margin-top: 0; } /* the grid gap spaces the tiles */
 .home-tile h2 { font-size: 15px; font-weight: 600; }
@@ -956,3 +956,16 @@ sup { font-size: 0.72em; line-height: 0; vertical-align: super; }
 .iv-check.on { border-color: var(--good-line); background: var(--good-bg); }
 .iv-alldone { margin: 8px 0 0; font-size: 14px; color: var(--good); }
 @media (max-width: 480px) { .iv-tasks li { grid-template-columns: auto minmax(0, 1fr); } .iv-task-act { grid-column: 2; justify-content: flex-start; } }
+
+/* Paper LBO trainer */
+.paper-case p { margin: 0 0 10px; }
+.paper-sheet { display: grid; gap: 0; margin: 0; border-top: 1px solid var(--rule); }
+.paper-sheet > div { display: grid; grid-template-columns: minmax(120px, 30%) 1fr; gap: 12px; padding: 7px 0; border-bottom: 1px solid var(--rule); font-size: 14px; }
+.paper-sheet dt { color: var(--muted); }
+.paper-sheet dd { margin: 0; font-variant-numeric: tabular-nums; }
+.paper-form .case-steps { margin-bottom: 14px; }
+.paper-form .typed-hint { margin: 0; }
+.paper-tips ul { margin: 6px 0 0; padding-left: 18px; display: grid; gap: 4px; font-size: 14px; }
+.paper-hist td:nth-child(n+3), .paper-hist th:nth-child(n+3) { text-align: right; white-space: nowrap; }
+@media (max-width: 560px) { .paper-sheet > div { grid-template-columns: 1fr; gap: 2px; } }
+.page-head h1[tabindex="-1"]:focus { outline: none; }

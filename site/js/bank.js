@@ -64,6 +64,27 @@ window.Bank = {
               .filter(w => Math.abs(w.value - answer) > s.tolerance + 1e-6) }; // a hair wider than grading's edge, so none is graded right
         }) };
     });
+  },
+  /* Paper LBOs for the timed trainer (not used in rounds): a whole leveraged buyout on one screen, worked on paper and
+     typed in at the end. Bank.paper(id, spec), spec = { name, blurb, lv, minutes, make(), intro(i), sheet(i) → [[label,
+     value]], why(i), steps: [{ ask, solve, unit, dp, tolerance (a number, or "1%" = 1% of the answer, at least 0.5),
+     prompt, why, wrongs }] }. Items have the case-study shape (type "case"), so steps are graded the same way. A known
+     wrong answer within 10% of the right one is dropped: rounding on paper could land there. id never changes. */
+  papers: [],
+  paper(id, spec) {
+    const make = () => {
+      const i = spec.make(), sheet = spec.sheet(i);
+      return { type: "case", paper: id, ...(spec.lv ? { lv: spec.lv } : {}), name: spec.name, minutes: spec.minutes || 10, sheet,
+        q: `${spec.intro(i)} ${sheet.map(([k, v]) => `${k}: ${v}.`).join(" ")}`, why: spec.why(i),
+        steps: spec.steps.map(s => {
+          const answer = (s.unit === "%" ? 100 : 1) * s.solve(i);
+          const tolerance = s.tolerance === "1%" ? Math.max(0.5, +(Math.abs(answer) * 0.01).toFixed(1)) : s.tolerance;
+          return { q: s.ask(i) + (s.prompt ? ` Type your answer ${s.prompt}.` : ""), unit: s.unit, tolerance, ...(s.dp != null ? { dp: s.dp } : {}), answer, why: s.why(i),
+            wrongs: s.wrongs(i).map(x => ({ value: +((s.unit === "%" ? 100 : 1) * x.value).toFixed(9), note: x.note, trap: x.trap || null }))
+              .filter(w => Math.abs(w.value - answer) > Math.max(tolerance, 0.1 * Math.abs(answer)) + 1e-6) };
+        }) };
+    };
+    this.papers.push({ id, name: spec.name, blurb: spec.blurb, minutes: spec.minutes || 10, make });
   }
 };
 

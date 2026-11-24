@@ -176,7 +176,11 @@ db.formulaSchedule ||= {};
 //      attempts / history / totals entry); its round in progress and results carry ivId. Interviews only read the shared
 //      progress, and plan rounds update it like any other round.
 db.interviews ||= [];
-const SCHEMA_VERSION = 23;
+//  24: added db.paperLbos: the last 30 paper LBOs (the timed trainer), each { at, v (the case's id, e.g. "classic"), ms (time
+//      taken), right (steps right), n (steps) }. Like sprints, they don't touch the answer log, spaced repetition or
+//      accuracy. An interview's today.done can also hold paper (a paper LBO finished from its plan).
+db.paperLbos ||= [];
+const SCHEMA_VERSION = 24;
 db.schemaVersion = Math.max(db.schemaVersion || 1, SCHEMA_VERSION);
 let saveWarned = false;
 const persist = () => {
@@ -758,6 +762,7 @@ function go(v) {
   glHide();
   if (v.name !== "quiz") CalcUI.hide(); // the calculator only lives on the quiz screen
   if (v.name !== "sprint") sprint = null; // leaving a sprint abandons it; only finished sprints are saved
+  if (!(v.name === "paper" && v.run)) paper = null; // leaving a paper LBO drops it; only finished ones are saved
   if (v.name !== "drill") drill = null; // leaving a recall drill drops the set; cards already marked stay scheduled
   if (v.name !== "interviewEdit") ivDraft = null; // leaving the interview form drops what wasn't saved
   // Leaving a live round (Save & exit, logo, etc.): stop its clock so time away isn't counted.
@@ -794,6 +799,7 @@ function render() {
   else if (view.name === "glossary") renderGlossary();
   else if (view.name === "formulas") renderFormulas();
   else if (view.name === "drill") renderDrill();
+  else if (view.name === "paper") renderPaper();
   else if (view.name === "interviews") renderInterviews();
   else if (view.name === "interview") renderInterview();
   else if (view.name === "interviewEdit") renderInterviewEdit();
@@ -976,6 +982,11 @@ function renderPracticeTab() {
         <div class="tile-actions"><button class="btn" type="button" data-sprint>Start sprint</button><button class="link" type="button" data-sprint-overview>Progress &amp; tips</button></div>
       </section>
       ${dueTile()}
+      ${(() => { const l = db.paperLbos[db.paperLbos.length - 1]; return `<section class="card home-tile">
+        <h2>Paper LBO</h2>
+        <p>A whole buyout in about 10 minutes, on paper, against the clock.${l ? ` Last: <b>${l.right} of ${l.n}</b> right in ${paperTime(l.ms)}.` : ""}</p>
+        <div class="tile-actions"><button class="btn" type="button" data-paper-open>Start a paper LBO</button></div>
+      </section>`; })()}
       <section class="card home-tile">
         <h2>Lessons</h2>
         <p>A method, a worked example and a source for every category.</p>
@@ -1085,6 +1096,7 @@ function wireHome() {
   app.querySelectorAll("[data-lessons]").forEach(b => b.onclick = () => go({ name: "lessons" }));
   app.querySelectorAll("[data-glossary]").forEach(b => b.onclick = () => go({ name: "glossary", back: { name: "home" } }));
   app.querySelectorAll("[data-drill]").forEach(b => b.onclick = () => go({ name: "drill", back: { name: "home" } }));
+  app.querySelectorAll("[data-paper-open]").forEach(b => b.onclick = () => go({ name: "paper", back: { name: "home" } }));
   wireIv({ name: "home" });
   if (document.getElementById("srs")) wireSrsPanel();
   app.querySelectorAll("[data-new]").forEach(b => b.onclick = () => b.dataset.new === "mixed" ? go({ name: "setup" }) : newRound(b.dataset.new));
@@ -2423,6 +2435,163 @@ function renderFormulas() {
    Order: due cards first (most overdue), then ones never drilled, alternating between lessons; 10 at a time.
    The set in progress isn't saved, but every card already marked is scheduled. */
 const DRILL_SET = 10;
+/* Paper LBO trainer: a whole leveraged buyout on one screen against the clock, worked on paper with no calculator, then
+   typed in and checked at once. The cases are in generators-paper.js (Bank.papers). Results go to db.paperLbos (last 30);
+   the case itself isn't saved, so leaving the screen part-way drops it. Paper LBOs don't touch the answer log, spaced
+   repetition or category accuracy. */
+let paper = null; // { id, item, start, vals: [typed answers], done: false | { ms, right } }
+const PAPER_KEEP = 30, PAPER_MIN = 15; // results kept; minutes a paper LBO takes in an interview plan (reading the answers included)
+const paperById = id => Bank.papers.find(p => p.id === id);
+const paperToday = () => db.paperLbos.some(r => todayKey(r.at) === todayKey());
+// Amounts as written on the assumption sheet (US$1,572m, US$292.5m); multiples and percentages as usual.
+const paperShow = (v, unit, dp) => unit === "US$m" ? R.m(+v.toFixed(dp ?? 1)).replace("US$-", "−US$") : Typed.show(v, unit, dp);
+const paperTime = ms => { const t = Math.round(ms / 1000); return `${Math.floor(t / 60)}:${String(t % 60).padStart(2, "0")}`; };
+function startPaper(id, from) {
+  // Surprise me: a case not done yet if any, else the one done longest ago.
+  if (!id) {
+    const last = v => Math.max(0, ...db.paperLbos.filter(r => r.v === v).map(r => r.at));
+    const fresh = Bank.papers.filter(p => !last(p.id));
+    id = (fresh.length ? R.pick(fresh) : [...Bank.papers].sort((a, b) => last(a.id) - last(b.id))[0]).id;
+  }
+  const p = paperById(id);
+  paper = { id, item: p.make(), start: Date.now(), vals: [], done: false };
+  go({ name: "paper", run: true, back: from && from.back, ivId: from && from.ivId });
+}
+function renderPaper() {
+  if (view.run && paper) return paper.done ? renderPaperResult() : renderPaperRun();
+  const back = view.back || { name: "home" };
+  meta.innerHTML = `<button class="link" id="backLink" type="button">Back</button>`;
+  const runs = db.paperLbos, lastOf = id => runs.filter(r => r.v === id).slice(-1)[0];
+  const row = p => { const l = lastOf(p.id); return `<button class="iv-row" type="button" data-paper="${p.id}">
+      <span class="iv-row-main"><b>${esc(p.name)}</b><span class="muted">${esc(p.blurb)}</span></span>
+      <span class="iv-row-side"><span>${p.minutes} min</span>${l ? `<span class="muted">Last: ${l.right} of ${l.n}</span>` : ""}</span>
+    </button>`; };
+  const day = t => new Date(t).toLocaleDateString("en-GB", { day: "numeric", month: "short" });
+  app.innerHTML = `
+    <div class="page-head">
+      <h1>Paper LBO</h1>
+      <p>A whole leveraged buyout (LBO) on one screen, against the clock, as in a private equity interview. Work it out on paper without a calculator, then type your answers in and check them all at once. Rounding is fine: amounts within about 1% count.</p>
+    </div>
+    <section class="card">
+      <div class="iv-ready-head"><h2>Choose a case</h2><button class="btn primary" type="button" data-paper="">Surprise me</button></div>
+      <div class="iv-list">${Bank.papers.map(row).join("")}</div>
+    </section>
+    <section class="card paper-tips iv-sec">
+      <h2>How to do it fast</h2>
+      <ul>
+        <li>Copy the assumptions onto your paper first, as a small table with today and year 5.</li>
+        <li>Round to easy numbers as you go. The answer only needs to be close.</li>
+        <li>For the internal rate of return (IRR) over 5 years, use rules of thumb: 2x ≈ 15%, 2.5x ≈ 20%, 3x ≈ 25%.</li>
+        <li>Say each step out loud as you write it, as you would to an interviewer.</li>
+      </ul>
+    </section>
+    ${runs.length ? `<section class="card iv-sec">
+      <h2>Your last paper LBOs</h2>
+      <table class="report-table paper-hist"><thead><tr><th>Date</th><th>Case</th><th>Right</th><th>Time</th></tr></thead><tbody>
+        ${runs.slice(-8).reverse().map(r => { const p = paperById(r.v), over = p && r.ms > p.minutes * 60000; return `<tr><td>${day(r.at)}</td><td>${esc(p ? p.name : r.v)}</td><td>${r.right} of ${r.n}</td><td>${paperTime(r.ms)}${over ? ` <span class="muted">(over)</span>` : ""}</td></tr>`; }).join("")}
+      </tbody></table>
+    </section>` : ""}`;
+  document.getElementById("backLink").onclick = () => go(back);
+  app.querySelectorAll("[data-paper]").forEach(b => b.onclick = () => startPaper(b.dataset.paper || null, { back, ivId: view.ivId }));
+}
+function renderPaperRun() {
+  const it = paper.item, limit = it.minutes * 60000;
+  meta.innerHTML = `<button class="link" id="paperStop" type="button">Stop</button>`;
+  const ask = s => s.q.split(" Type your answer")[0], how = s => (s.q.split(" Type your answer ")[1] || "").replace(/\.$/, "");
+  app.innerHTML = `
+    <div class="title-row">
+      <div><h1>Paper LBO · ${esc(it.name)}</h1><p>On paper, no calculator · ${it.minutes} minutes</p></div>
+      <div class="timer" id="timer" role="timer"><span id="clockLabel">Time left</span><strong id="clock">${fmt(limit)}</strong></div>
+    </div>
+    <section class="card paper-case">
+      <p>${rich(it.q.split(` ${it.sheet[0][0]}:`)[0])}</p>
+      <dl class="paper-sheet">${it.sheet.map(([k, v]) => `<div><dt>${esc(k)}</dt><dd>${rich(v)}</dd></div>`).join("")}</dl>
+    </section>
+    <form class="card paper-form" id="paperForm" novalidate>
+      <ol class="case-steps">${it.steps.map((s, k) => `<li class="case-step">
+        <label class="case-q" for="pIn${k}"><span class="case-num">Step ${k + 1} of ${it.steps.length}</span>${esc(ask(s))}</label>
+        <div class="typed-row">
+          <input id="pIn${k}" class="typed-input" type="text" inputmode="decimal" autocomplete="off" autocorrect="off" spellcheck="false" ${how(s) && how(s) !== "in US$m" ? `aria-describedby="pHow${k}" ` : ""}value="${esc(paper.vals[k] ?? "")}">
+          ${s.unit ? `<span class="typed-unit" aria-hidden="true">${esc(s.unit)}</span>` : ""}
+        </div>
+        ${how(s) && how(s) !== "in US$m" ? `<p class="typed-hint" id="pHow${k}">${esc(how(s)[0].toUpperCase() + how(s).slice(1))}</p>` : ""}
+      </li>`).join("")}</ol>
+      <div class="tile-actions"><button class="btn primary" type="submit">Check my answers</button><span class="muted" id="paperNote" aria-live="polite"></span></div>
+    </form>`;
+  it.steps.forEach((_, k) => { document.getElementById("pIn" + k).oninput = e => { paper.vals[k] = e.target.value; }; });
+  const finish = () => {
+    clearInterval(tick);
+    const ms = Date.now() - paper.start;
+    const right = it.steps.filter((s, k) => Typed.grade(s, paper.vals[k] ?? "", Typed.caseContext(it, k)).ok).length;
+    paper.done = { ms, right };
+    db.paperLbos = [...db.paperLbos, { at: Date.now(), v: paper.id, ms, right, n: it.steps.length }].slice(-PAPER_KEEP);
+    const iv = view.ivId && ivById(view.ivId);
+    if (iv) ivMarkDone(iv, "paper"); else persist();
+    window.scrollTo(0, 0);
+    renderPaper();
+  };
+  document.getElementById("paperForm").onsubmit = e => {
+    e.preventDefault();
+    const blank = it.steps.filter((_, k) => isBlank(paper.vals[k]) || !String(paper.vals[k]).trim()).length;
+    if (!blank) return finish();
+    confirmModal(`${blank} step${blank > 1 ? "s are" : " is"} blank`, "Blank steps count as wrong. Check your answers anyway?", "Check anyway", finish);
+  };
+  document.getElementById("paperStop").onclick = () => confirmModal("Stop this paper LBO?", "It won't be saved.", "Stop", () => { paper = null; go({ name: "paper", back: view.back, ivId: view.ivId }); });
+  const update = () => {
+    const clock = document.getElementById("clock");
+    if (!paper || paper.done || !clock) return clearInterval(tick);
+    const left = limit - (Date.now() - paper.start);
+    clock.textContent = left >= 0 ? fmt(left) : "+" + fmt(-left);
+    document.getElementById("clockLabel").textContent = left >= 0 ? "Time left" : "Over time";
+    document.getElementById("timer").classList.toggle("low", left < 60000);
+  };
+  clearInterval(tick);
+  tick = setInterval(update, 250);
+  document.getElementById("pIn0").focus({ preventScroll: true });
+}
+function renderPaperResult() {
+  const it = paper.item, { ms, right } = paper.done, n = it.steps.length, limit = it.minutes * 60000;
+  const iv = view.ivId && ivById(view.ivId);
+  meta.innerHTML = `<button class="link" id="backLink" type="button">Done</button>`;
+  const prev = db.paperLbos.filter(r => r.v === paper.id).slice(0, -1).slice(-1)[0];
+  const step = (s, k) => {
+    const v = paper.vals[k] ?? "", g = Typed.grade(s, v, Typed.caseContext(it, k)), ans = paperShow(s.answer, s.unit, s.dp);
+    return `<li class="case-step ${g.ok ? "ok" : "no"}">
+      <p class="case-q"><span class="case-num">Step ${k + 1} of ${n}</span>${esc(s.q.split(" Type your answer")[0])}</p>
+      <div class="feedback ${g.ok ? "ok" : "no"}">
+        <p class="feedback-title">${g.ok ? `Right: ${esc(ans)}` : isBlank(v) || !String(v).trim() ? `Blank. The answer is ${esc(ans)}.` : `Not quite. The answer is ${esc(ans)}${g.value != null ? `; you gave ${esc(paperShow(g.value, s.unit))}` : ""}.`}</p>
+        ${g.ok || isBlank(v) || !String(v).trim() ? "" : `<p>${esc(causeText(g))}</p>`}
+        <p>${rich(s.why)}</p>
+      </div>
+    </li>`;
+  };
+  app.innerHTML = `
+    <div class="page-head">
+      <h1>${esc(it.name)}: ${right} of ${n} right</h1>
+      <p>Time: <b>${paperTime(ms)}</b>${ms > limit ? `, ${paperTime(ms - limit)} over the ${it.minutes} minutes` : ` of ${it.minutes} minutes`}.${prev ? ` Last time: ${prev.right} of ${prev.n} in ${paperTime(prev.ms)}.` : ""}</p>
+    </div>
+    <section class="card paper-case">
+      <dl class="paper-sheet">${it.sheet.map(([k, v]) => `<div><dt>${esc(k)}</dt><dd>${rich(v)}</dd></div>`).join("")}</dl>
+    </section>
+    <section class="card">
+      <ol class="case-steps">${it.steps.map(step).join("")}</ol>
+      <div class="feedback ${right === n ? "ok" : "no"}"><p class="feedback-title">${right === n ? "Every step right" : "The big picture"}</p><p>${rich(it.why)}</p></div>
+      <div class="tile-actions">
+        ${iv ? `<button class="btn primary" type="button" id="paperPlan">Back to your plan</button>` : ""}
+        <button class="btn${iv ? "" : " primary"}" type="button" id="paperAgain">Same case, new numbers</button>
+        <button class="btn" type="button" id="paperOther">Choose another</button>
+      </div>
+    </section>`;
+  const back = view.back || { name: "home" };
+  document.getElementById("backLink").onclick = () => go(back);
+  document.getElementById("paperAgain").onclick = () => startPaper(paper.id, { back, ivId: view.ivId });
+  document.getElementById("paperOther").onclick = () => go({ name: "paper", back, ivId: view.ivId });
+  const pb = document.getElementById("paperPlan");
+  if (pb) pb.onclick = () => go({ name: "interview", id: iv.id, back: { name: "home" } });
+  document.querySelector(".page-head h1").setAttribute("tabindex", "-1");
+  document.querySelector(".page-head h1").focus({ preventScroll: true });
+}
+
 let drill = null; // { cat: "all" | category id, anyway, set: [cards], i, shown, got, missed, done: Set of keys drilled this visit }
 
 // Every formula block in the lessons, in lesson order: { key, cat, catName, name, lines }.
@@ -2823,9 +2992,13 @@ function wireIv(from) {
      would otherwise only come back after the interview (not reviewed for half the days left, at most 7 days).
    - Formula cards (about 30 seconds each) from its topics: due and new ones; in the last days, all of them.
    - While building, one lesson to read: the weakest key topic whose lesson still has unread sections (10 minutes).
+   - A paper LBO (15 minutes): for a paper LBO round in every phase but the day itself, and for buyout and sponsor
+     coverage roles once past building, if there are at least 30 minutes a day. Any paper LBO finished today counts.
+     Under 45 minutes a day, days with a paper LBO have no reading and the other way round.
    Build: Learning mode, half the questions reviews. Consolidate: timed, mostly reviews. Final: timed, reviews only.
    Interview day: formulas only. Nothing here changes the shared schedule; answering updates it as usual.
-   Parts done today are kept on the interview (today: { day, done }), so the plan can tick them off. */
+   Parts done today are kept on the interview (today: { day, done }), so the plan can tick them off. With four parts the
+   home card's button goes through them in this order: questions, formulas, paper LBO, reading. */
 const PLAN_CFG = {
   build: { perQ: 1.5, review: 0.5, f: 5, read: true, learning: true },
   consolidate: { perQ: 1, review: 0.7, f: 6 },
@@ -2870,16 +3043,20 @@ function ivLessonToRead(iv, ready = readinessByCat()) {
 function ivPlan(iv) {
   const ph = ivPhase(iv);
   if (ph === "past") return null;
-  const cfg = PLAN_CFG[ph], done = ivDone(iv);
-  const read = cfg.read ? ivLessonToRead(iv) : null;
+  const cfg = PLAN_CFG[ph], done = { ...ivDone(iv) };
+  let read = cfg.read ? ivLessonToRead(iv) : null;
   const nF = Math.min(cfg.f, drillQueue("iv:" + iv.id, new Set(), !!cfg.all).length);
   const reviews = ivReviewList(iv);
-  const spare = Math.max(0, (iv.minutes || 30) - nF * 0.5 - (read ? READ_MIN : 0));
+  let paperLbo = ph !== "day" && (iv.stage === "paperlbo" || (["buyout", "sponsor"].includes(iv.role) && ph !== "build" && (iv.minutes || 30) >= 30));
+  // Under 45 minutes a day, a paper LBO and a lesson to read would leave almost no time for questions: one each day, in turn.
+  if (paperLbo && read && (iv.minutes || 30) < 45) { if (Math.round(startOfDay(Date.now()) / 864e5) % 2) read = null; else paperLbo = false; }
+  if (paperLbo && paperToday()) done.paper = true;
+  const spare = Math.max(0, (iv.minutes || 30) - nF * 0.5 - (read ? READ_MIN : 0) - (paperLbo ? PAPER_MIN : 0));
   let nQ = Math.min(PLAN_MAX_Q, cfg.maxQ ?? PLAN_MAX_Q, Math.floor(spare / cfg.perQ));
   if (cfg.review === 1) nQ = Math.min(nQ, reviews.length); // final days: nothing new
   const nReview = Math.min(reviews.length, Math.round(nQ * cfg.review), nQ);
-  return { ph, nQ, nReview, nNew: nQ - nReview, nF, read, all: !!cfg.all, learning: !!cfg.learning, done,
-    minutes: Math.round(nQ * cfg.perQ + nF * 0.5 + (read ? READ_MIN : 0)) };
+  return { ph, nQ, nReview, nNew: nQ - nReview, nF, read, paper: paperLbo, all: !!cfg.all, learning: !!cfg.learning, done,
+    minutes: Math.round(nQ * cfg.perQ + nF * 0.5 + (read ? READ_MIN : 0) + (paperLbo ? PAPER_MIN : 0)) };
 }
 
 // Build and start the questions part. New questions: each slot goes to a topic picked at random, weighted by
@@ -2919,10 +3096,11 @@ function startPlanNext(iv, from) {
   if (at && at.ivId === iv.id) return go({ name: "quiz", mode: PLAN });
   if (p.nQ && !p.done.questions) return startPlan(iv.id);
   if (p.nF && !p.done.formulas) return startPlanFormulas(iv, p, from);
+  if (p.paper && !p.done.paper) return go({ name: "paper", ivId: iv.id, back: { ...from } });
   if (p.read && !p.done.read) { ivMarkDone(iv, "read"); return go({ name: "lesson", cat: p.read.cat, back: { ...from } }); }
   go({ name: "interview", id: iv.id, back: { ...from } });
 }
-const planLeft = p => p ? [p.nQ && !p.done.questions, p.nF && !p.done.formulas, p.read && !p.done.read].filter(Boolean).length : 0;
+const planLeft = p => p ? [p.nQ && !p.done.questions, p.nF && !p.done.formulas, p.paper && !p.done.paper, p.read && !p.done.read].filter(Boolean).length : 0;
 
 // The "Today's session" card on an interview's page.
 function planCard(iv) {
@@ -2938,9 +3116,11 @@ function planCard(iv) {
     const action = mine ? `<button class="btn primary" type="button" data-resume="${PLAN}">Resume · ${at.answers.filter(a => !isBlank(a)).length}/${at.items.length}</button><button class="link" type="button" data-plan-discard>Discard</button>`
       : other ? `<span class="muted">Finish or discard your session for ${esc(ivName(other))} first.</span>`
       : `<button class="btn primary" type="button" data-plan-q>Start</button>`;
-    rows.push(task(qDone, `${mine ? at.items.length : p.nQ} questions`, sub, action));
+    const nQ = mine ? at.items.length : p.nQ;
+    rows.push(task(qDone, `${nQ} question${nQ === 1 ? "" : "s"}`, sub, action));
   }
   if (p.nF) rows.push(task(!!p.done.formulas, `${p.nF} formula${p.nF === 1 ? "" : "s"}`, p.all ? "Recall every formula from your topics" : "Formula recall from your topics", `<button class="btn" type="button" data-plan-f>Start</button>`));
+  if (p.paper) rows.push(task(!!p.done.paper, "Paper LBO", `One timed case on paper, no calculator · about ${PAPER_MIN} minutes`, `<button class="btn" type="button" data-plan-paper>Start</button>`));
   if (p.read) rows.push(task(!!p.done.read, `Read: ${esc(catById(p.read.cat).name)}`, `${p.read.read} of ${p.read.total} sections read · about ${READ_MIN} minutes`, `<button class="btn" type="button" data-plan-read>Open</button>`));
   const allDone = rows.length && !planLeft(p) && !mine;
   return `<section class="card iv-today">
@@ -2953,6 +3133,7 @@ function wirePlan(iv, from) {
   const p = ivPlan(iv);
   app.querySelectorAll("[data-plan-q]").forEach(b => b.onclick = () => startPlan(iv.id));
   app.querySelectorAll("[data-plan-f]").forEach(b => b.onclick = () => startPlanFormulas(iv, p, from));
+  app.querySelectorAll("[data-plan-paper]").forEach(b => b.onclick = () => go({ name: "paper", ivId: iv.id, back: { ...from } }));
   app.querySelectorAll("[data-plan-read]").forEach(b => b.onclick = () => { ivMarkDone(iv, "read"); go({ name: "lesson", cat: p.read.cat, back: { ...from } }); });
   app.querySelectorAll("[data-plan-discard]").forEach(b => b.onclick = () => confirmModal("Discard today's session?", "Your session in progress will be deleted. You can start a new one.", "Discard", () => { delete db.attempts[PLAN]; persist(); render(); }));
   app.querySelectorAll("[data-resume]").forEach(b => b.onclick = () => go({ name: "quiz", mode: b.dataset.resume }));
