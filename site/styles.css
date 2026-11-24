@@ -808,3 +808,7 @@ sup { font-size: 0.72em; line-height: 0; vertical-align: super; }
   body { background: #fff; }
   .formula-sheet .mblock { margin-bottom: 8px; }
 }
+
+/* Read tick on a lesson section's header (opened before). */
+.mb-sec-read { flex: none; display: inline-flex; align-items: center; color: var(--good); }
+.mb-sec-read[hidden] { display: none; }

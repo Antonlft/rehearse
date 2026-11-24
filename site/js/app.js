@@ -140,7 +140,11 @@ db.askConfidence ??= true;
 //  18: a timed round left part-way (Save & exit, another screen, the page closed or hidden) is paused: it gains
 //      pausedAt (when it was left), and on coming back its deadline and start move on by the time away, then pausedAt
 //      is removed. Rounds saved before this have no pausedAt and keep their deadline. No new top-level fields.
-const SCHEMA_VERSION = 18;
+//  19: added db.lessonRead: { category: { "section title": when it was first opened } }, for the read ticks on lesson
+//      sections and the "3 of 6 read" count on lesson cards. Only lessons shown as sections (two or more) use it.
+//      Keyed by the section's title (without any "1." numbering), so renaming a section drops its tick.
+db.lessonRead ||= {};
+const SCHEMA_VERSION = 19;
 db.schemaVersion = Math.max(db.schemaVersion || 1, SCHEMA_VERSION);
 let saveWarned = false;
 const persist = () => {
@@ -2007,7 +2011,19 @@ const NEW_DAYS = 14;
 const isRecent = d => { const t = d ? Date.parse(d + "T00:00:00") : NaN; return !isNaN(t) && Date.now() >= t && Date.now() - t < NEW_DAYS * 864e5; };
 const newPill = what => `<span class="pill new-pill" title="${esc(what)}, added in the last ${NEW_DAYS} days">New</span>`;
 const lessonNews = l => [(l.method || []).some(b => b && b.section && isRecent(b.added)) && "new sections", isRecent(l.newQuestions) && "new questions"].filter(Boolean);
-function methodHtml(items) {
+/* Read ticks (schema 19): opening a section of a lesson shown as sections marks it read in db.lessonRead, keyed by the
+   section's title. A tick then shows on its header, and the lesson's card counts "3 of 6 read". */
+const secTitles = l => { const t = ((l && l.method) || []).filter(b => b && b.section).map(b => b.section.replace(/^\d+\.\s*/, "")); return t.length >= 2 ? t : []; };
+const isRead = (cat, title) => !!(cat && db.lessonRead[cat] && db.lessonRead[cat][title]);
+const READ_TICK = `<svg class="mb-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>`;
+function markRead(cat, title, d) {
+  if (!cat || !title || isRead(cat, title)) return;
+  (db.lessonRead[cat] ||= {})[title] = Date.now();
+  persist();
+  const tick = d && d.querySelector(".mb-sec-read");
+  if (tick) tick.hidden = false;
+}
+function methodHtml(items, cat) {
   const block = b => `<div class="mblock mb-${esc(b.kind)}">
       <span class="mb-label">${mbIcon(b.kind)}${esc(Lessons.BLOCKS[b.kind] || b.kind)}${b.title ? ` · ${esc(b.title)}` : ""}</span>
       ${b.kind === "formula" ? `<p class="mb-eq">${b.text.split("\n").map(line => `<span class="mb-line">${rich(line)}</span>`).join("")}</p>` : `<p class="mb-text">${b.text.split("\n").map(line => `<span class="mb-line">${LEAD_KINDS.has(b.kind) ? leadLine(line) : rich(line)}</span>`).join("")}</p>`}
@@ -2029,8 +2045,8 @@ function methodHtml(items) {
   }
   return `<div class="mb-secs">
     <div class="mb-secs-tools"><span class="label">${groups.length} sections</span><button class="link" type="button" data-sec-all>Open all</button></div>
-    ${groups.map((g, i) => `<details class="mb-sec">
-      <summary class="mb-sec-head"><span class="mb-sec-num" aria-hidden="true">${i + 1}</span><span class="mb-sec-title">${esc(g.title)}${isRecent(g.added) ? newPill("New section") : ""}</span>${g.items.some(b => b && b.check) ? `<span class="mb-sec-meta">${mbIcon("check")}<span class="mb-sec-meta-text">Quick check</span></span>` : ""}</summary>
+    ${groups.map((g, i) => `<details class="mb-sec" data-sec-title="${esc(g.title)}">
+      <summary class="mb-sec-head"><span class="mb-sec-num" aria-hidden="true">${i + 1}</span><span class="mb-sec-title">${esc(g.title)}${isRecent(g.added) ? newPill("New section") : ""}</span><span class="mb-sec-read" role="img" aria-label="Read" title="You've opened this section"${isRead(cat, g.title) ? "" : " hidden"}>${READ_TICK}</span>${g.items.some(b => b && b.check) ? `<span class="mb-sec-meta">${mbIcon("check")}<span class="mb-sec-meta-text">Quick check</span></span>` : ""}</summary>
       <div class="mb-sec-body">${g.items.map(item).join("")}
         <p class="mb-sec-back"><button class="link" type="button" data-sec-back>Back to sections</button></p>
       </div>
@@ -2039,13 +2055,14 @@ function methodHtml(items) {
 }
 
 /* Lesson sections as an accordion: "Open all / Close all" follows what's open, and "Back to sections" closes the
-   section it's in and returns to its line in the list. Nothing is saved: a lesson always opens with every section closed. */
-function wireSections() {
+   section it's in and returns to its line in the list. A lesson always opens with every section closed; opening a
+   section marks it read (markRead), which is the only thing saved. */
+function wireSections(cat) {
   const box = app.querySelector(".mb-secs");
   if (!box) return;
   const secs = [...box.querySelectorAll("details.mb-sec")], all = box.querySelector("[data-sec-all]");
   const sync = () => { all.textContent = secs.every(d => d.open) ? "Close all" : "Open all"; };
-  secs.forEach(d => d.addEventListener("toggle", sync));
+  secs.forEach(d => d.addEventListener("toggle", () => { sync(); if (d.open) markRead(cat, d.dataset.secTitle, d); }));
   all.onclick = () => { const open = !secs.every(d => d.open); secs.forEach(d => { d.open = open; }); sync(); };
   box.querySelectorAll("[data-sec-back]").forEach(b => b.onclick = () => {
     const d = b.closest("details"), head = d.querySelector("summary");
@@ -2135,10 +2152,12 @@ function renderLessons() {
     <div class="lesson-grid">
       ${CATEGORIES.filter(c => c.group === g.id).map(c => {
         const l = Lessons.all[c.id] || { status: "stub" }, n = tryCount(l), news = lessonNews(l);
+        const st = secTitles(l), r = st.filter(t => isRead(c.id, t)).length;
+        const foot = [r ? `${r} of ${st.length} read` : "", n ? `Try it × ${n}` : ""].filter(Boolean).join(" · ");
         return `<button type="button" class="lesson-card" data-lesson="${c.id}">
           <span class="lesson-card-name">${esc(c.name)}${news.length ? newPill(news.join(" and ").replace(/^./, s => s.toUpperCase())) : ""}</span>
           <span class="lesson-card-desc">${esc(c.desc)}</span>
-          <span class="lesson-card-foot">${lessonStatusPill(l)}${n ? `<span>Try it × ${n}</span>` : ""}</span>
+          <span class="lesson-card-foot">${lessonStatusPill(l)}${foot ? `<span>${foot}</span>` : ""}</span>
         </button>`;
       }).join("")}
     </div>`).join("")}`;
@@ -2252,7 +2271,7 @@ function renderLesson() {
         <ul>${l.summary.map(s => `<li>${rich(s)}</li>`).join("")}</ul>
       </div>` : ""}
       <h2>Method</h2>
-      ${l.method && l.method.length ? methodHtml(l.method) : missing}
+      ${l.method && l.method.length ? methodHtml(l.method, view.cat) : missing}
       <h2>Worked example</h2>
       ${ex ? `<p class="prompt">${rich(ex.question)}</p>
         <div class="stepper" id="stepper">
@@ -2280,7 +2299,7 @@ function renderLesson() {
   tries.forEach((w, i) => Widgets.mount(document.getElementById("lessonWidget" + i), w.type, w.values || {}));
   app.querySelectorAll("[data-check]").forEach(el => mountCheck(el, view.cat));
   wireStepper(document.getElementById("stepper"));
-  wireSections();
+  wireSections(view.cat);
   // Arriving from "Review the method" for a question that is this lesson's quick check: open its section and show it.
   if (view.openSec != null) {
     const d = app.querySelectorAll("details.mb-sec")[view.openSec];
@@ -2539,6 +2558,7 @@ function backupProblem(d) {
   if (missing.length) return `This file doesn't look like a Rehearse backup: ${missing.join(", ")} ${missing.length > 1 ? "are" : "is"} missing or the wrong shape.`;
   if ("qStats" in d && !isObj(d.qStats)) return "This backup is damaged: qStats is the wrong shape.";
   for (const k of ["excluded", "log", "sprints"]) if (k in d && !Array.isArray(d[k])) return `This backup is damaged: ${k} should be a list.`;
+  if ("lessonRead" in d && !isObj(d.lessonRead)) return "This backup is damaged: lessonRead is the wrong shape.";
   return null;
 }
 
