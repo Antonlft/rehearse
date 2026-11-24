@@ -170,6 +170,9 @@ main { padding-block: 30px 48px; }
 .page-head { margin-bottom: 20px; }
 .page-head h1 { font-size: 20px; font-weight: 600; margin-bottom: 4px; }
 .page-head p { color: var(--muted); max-width: 64ch; }
+/* Home page: heading and intro centred, the intro kept to a readable width in the middle. */
+.page-head.centered { text-align: center; }
+.page-head.centered p { margin-inline: auto; }
 .nudge { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px 20px; margin-bottom: 18px; padding: 10px 14px; border: 1px solid var(--rule); border-radius: var(--radius); background: var(--tray); font-size: 13px; }
 .nudge-actions { display: flex; gap: 16px; }
 .test-row { display: flex; flex-wrap: wrap; gap: 16px 24px; align-items: center; justify-content: space-between; }

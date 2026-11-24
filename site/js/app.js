@@ -825,9 +825,9 @@ function renderHome() {
   meta.innerHTML = `<span>Progress is saved in this browser</span>`;
   const body = homeTab === "browse" ? renderBrowseTab() : homeTab === "progress" ? renderProgressTab() : renderPracticeTab();
   app.innerHTML = `
-    <div class="page-head">
+    <div class="page-head centered">
       <h1>Assessments</h1>
-      <p>Practise for finance, real estate and hospitality interviews: take the full test or drill one category, in multiple choice or in new formats such as typed calculations, ordering, walk-throughs and case studies. Questions you get wrong come back sooner, calculations get new numbers each time, and every category has a lesson with the method and a worked example.</p>
+      <p>Practise for investment banking division (IBD) interviews, from mergers and acquisitions (M&amp;A), private equity (PE) and private debt (PD) to restructuring and capital markets, with a specialism in real estate and hospitality. Take the full test or drill one category: questions you get wrong come back sooner, and every category has a lesson with a worked example.</p>
     </div>
     <nav class="home-tabs" aria-label="Home sections">
       <div class="seg" role="group" aria-label="Home sections">
