@@ -729,6 +729,51 @@ Bank.calc("val", {
   fmt: v => v.toFixed(2)
 });
 
+// Valuation (SaaS): net revenue retention. New customers are given but left out.
+Bank.calc("val", {
+  lv: 2, unit: "%", tolerance: 0.1, dp: 1, prompt: "as a percentage, to 1 decimal place",
+  make() {
+    for (;;) {
+      const S = R.step(40, 200, 5);
+      const U = Math.max(1, Math.round(S * R.step(0.06, 0.3, 0.01))), D = Math.max(1, Math.round(S * R.step(0.02, 0.06, 0.01)));
+      const L = Math.max(1, Math.round(S * R.step(0.03, 0.12, 0.01))), N = Math.max(2, Math.round(S * R.step(0.1, 0.4, 0.01)));
+      const i = { S, U, D, L, N };
+      if (mnaFar(this.solve(i), this.wrongs(i).map(w => w.value), 0.03, 0.02)) return i;
+    }
+  },
+  solve: ({ S, U, D, L }) => (S + U - D - L) / S,
+  wrongs: ({ S, U, D, L, N }) => [
+    { value: (S + U - D - L + N) / S, trap: "double-count", note: "That includes the new customers. Retention only follows the customers you had at the start." },
+    { value: (S - D - L) / S, trap: "missed-step", note: "That leaves out the upsells, which gives gross revenue retention. Net retention adds them." },
+    { value: S / (S + U - D - L), trap: "inverted", note: "That divides the start by the end. Retention divides what the customers pay now by what they paid a year ago." }
+  ],
+  ask: ({ S, U, D, L, N }) => `A year ago a software company had annual recurring revenue (ARR) of ${R.m(S)}. Over the year those customers added ${R.m(U)} through upsells and cut ${R.m(D)} through downgrades, and customers paying ${R.m(L)} left. New customers added ${R.m(N)}. What is its net revenue retention?`,
+  why(i) { const { S, U, D, L, N } = i; return `Net revenue retention = (start + upsells − downgrades − departures) ÷ start = (${S} + ${U} − ${D} − ${L}) ÷ ${S} = ${R.pct(this.solve(i))}. The ${R.m(N)} from new customers is left out: it counts in ARR growth, not in retention.`; },
+  fmt: v => R.pct(v)
+});
+
+// Valuation (SaaS): CAC payback in months, on gross profit.
+Bank.calc("val", {
+  lv: 2, tolerance: 0.1, dp: 1, prompt: "in months, as a number only, to 1 decimal place",
+  make() {
+    for (;;) {
+      const SM = R.step(5, 60, 1), C = R.step(100, 2000, 50), M = R.step(500, 5000, 100), G = R.step(0.6, 0.85, 0.05);
+      const i = { SM, C, M, G }, v = this.solve(i);
+      if (v < 6 || v > 40) continue;
+      if (mnaFar(v, this.wrongs(i).map(w => w.value), 0.12, 1)) return i;
+    }
+  },
+  solve: ({ SM, C, M, G }) => SM * 1e6 / C / (M * G),
+  wrongs: ({ SM, C, M, G }) => [
+    { value: SM * 1e6 / C / M, trap: "missed-step", note: "That uses monthly revenue. The cost is earned back from gross profit, after the costs of serving the customer." },
+    { value: SM * 1e6 / C / (M * G) / 12, trap: "units", note: "That's in years. The question asks for months." },
+    { value: SM * 1e6 / C * G / M, trap: "inverted", note: "The gross margin went the wrong way: divide the cost by gross profit per month (revenue × margin)." }
+  ],
+  ask: ({ SM, C, M, G }) => `A software company spent ${R.m(SM)} on sales and marketing last year and won ${R.num(C)} new customers. Each pays US$${R.num(M)} a month, and its gross margin is ${R.pct(G, 0)}. How many months does it take to earn back the cost of winning a customer (CAC payback)?`,
+  why(i) { const { SM, C, M, G } = i, cac = SM * 1e6 / C; return `Customer acquisition cost (CAC) = ${R.m(SM)} ÷ ${R.num(C)} = US$${R.num(Math.round(cac), 0)} per customer. Gross profit per customer each month = US$${R.num(M)} × ${R.pct(G, 0)} = US$${R.num(M * G)}. Payback = ${R.num(Math.round(cac), 0)} ÷ ${R.num(M * G)} = ${R.num(this.solve(i), 1)} months. The shorter it is, the less cash the company needs to grow.`; },
+  fmt: v => R.num(v, 1) + " months"
+});
+
 // ECM: the new investor's stake after a funding round. Same redraw guard (mnaFar).
 Bank.calc("cm", {
   lv: 1, unit: "%", tolerance: 0.1, dp: 1, prompt: "as a percentage, to 1 decimal place",

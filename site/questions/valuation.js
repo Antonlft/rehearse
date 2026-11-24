@@ -194,7 +194,43 @@ Bank.add("val", [
   { id: "val-49", lv: 2, trap: ["sign", "missed-step", "sign"], q: "In the final year of a DCF forecast, for a company growing steadily at 2–3% a year, how should capex compare with depreciation?",
     o: ["Slightly above it, so the asset base keeps growing with the business", "Well below it, because the company no longer needs new capacity", "At zero, because growth in the terminal value is already assumed", "Well above it, at the levels of the company's expansion years"],
     why: "Capex below depreciation means the asset base shrinks, which can't support growth forever. Capex far above it funds expansion the terminal growth rate doesn't assume. Maintenance capex roughly replaces what wears out, and a little growth capex on top supports steady growth. That's why the final year should be normalised before applying the Gordon growth formula.",
-    x: ["A shrinking asset base can't support growing revenue forever.", "Growing cash flows still need investment, so zero capex overstates free cash flow.", "Expansion-level capex doesn't match 2–3% growth, so it understates free cash flow."] }
+    x: ["A shrinking asset base can't support growing revenue forever.", "Growing cash flows still need investment, so zero capex overstates free cash flow.", "Expansion-level capex doesn't match 2–3% growth, so it understates free cash flow."] },
+  { id: "val-50", lv: 1, trap: ["wrong-measure", "concept", "concept"], q: "A software company has US$80m a year of subscription contracts in force at the year end. This year it also earned US$12m of one-off set-up fees and US$8m from consulting. What is its annual recurring revenue (ARR)?",
+    o: ["US$80m, the subscriptions in force at the year end", "US$100m, everything billed to customers this year", "US$92m, subscriptions plus the set-up fees tied to them", "US$88m, subscriptions plus consulting for subscribers"],
+    why: "ARR is the yearly value of the subscription contracts in force at a point in time: the revenue that repeats if nobody leaves or buys more. One-off fees and project work don't repeat, so they're left out, even though they're real revenue. That's why ARR can differ from revenue in the accounts.",
+    x: ["That's all of this year's revenue. Set-up fees and consulting won't come back next year unless new work is sold.", "Set-up fees are paid once, when a customer joins, so they don't recur, even though they come with a subscription.", "Consulting is billed as the work is done. Customers may buy more, but nothing commits them to it."] },
+  { id: "val-51", lv: 2, trap: ["concept", "wrong-measure", "concept"], q: "On 1 January a customer signs a 3-year subscription at US$1.2m a year and pays the first year upfront. Under IFRS 15, what does the company show at 31 March, the end of its first quarter?",
+    o: ["US$0.3m of revenue and a US$0.9m contract liability (deferred revenue)", "US$1.2m of revenue, because the whole year's cash has been received", "US$3.6m of revenue, the full value of the contract it has signed", "US$0.3m of revenue and a US$3.3m contract liability for the rest of the deal"],
+    why: "Three figures move differently. Bookings are the contracts signed (US$3.6m here). Billings are what's been invoiced (US$1.2m). Revenue is earned as the service is delivered: one quarter of a year, so US$0.3m. The US$0.9m paid but not yet earned sits as a contract liability, often called deferred revenue, and becomes revenue over the next nine months.",
+    x: ["Cash received isn't revenue under IFRS 15. Revenue follows the delivery of the service, month by month.", "US$3.6m is the booking, the contract's total value. Most of it hasn't been delivered or even invoiced.", "Only amounts already paid or due create a contract liability. The later years haven't been invoiced, so they're not on the balance sheet yet."] },
+  { id: "val-52", lv: 1, trap: ["wrong-measure", "double-count", "missed-step"], q: "A software company reports net revenue retention of 115%. What does that mean?",
+    o: ["Last year's customers now pay 15% more in total, after losses and downgrades", "It has 15% more customers than a year ago, counting new and lost ones", "Total revenue grew 15%, including revenue from customers who joined this year", "Upsells to existing customers came to 15% of revenue, before any losses"],
+    why: "Net revenue retention takes the customers you had a year ago and compares what they pay now with what they paid then. It adds upsells and price rises, and deducts downgrades and customers who left. New customers are left out. Above 100% means the existing base grows on its own, before any new sales, which is why investors pay up for it.",
+    x: ["It counts revenue, not customers. Customers paying more can make up for losing some.", "New customers are left out. Including them turns it into ordinary revenue growth.", "The 115% is after downgrades and lost customers, not before."] },
+  { id: "val-53", lv: 2, trap: ["concept", "double-count", "units"], q: "Over a year, a software company loses 10% of its customers, but the revenue those customers paid is only 4% of its starting recurring revenue. What best explains the gap?",
+    o: ["The customers who left were mostly small accounts paying below average", "Prices rose during the year, which lifted what the remaining customers paid", "New customers joined during the year and replaced most of the lost revenue", "Revenue churn is measured monthly, so it always comes out below customer churn"],
+    why: "Customer churn counts accounts; revenue churn weights them by what they paid. Losing 10% of customers but only 4% of revenue means those who left were smaller than average, which is common: small customers leave more often. That's why investors ask for both, and use revenue churn for value.",
+    x: ["Price rises change what the remaining customers pay, which shows up in net retention. They don't change the revenue lost from those who left.", "Revenue from new customers isn't part of churn. It can make total revenue grow, but the 4% only measures what was lost.", "Both figures cover the same year here. Monthly and yearly rates differ, but that doesn't explain this gap."] },
+  { id: "val-54", lv: 2, trap: ["concept", "double-count", "concept"], q: "When working out how many months a software company takes to earn back the cost of winning a customer (CAC payback), why do analysts divide by monthly gross profit per customer rather than monthly revenue?",
+    o: ["Hosting and support costs come out of each dollar before it repays the spend", "Revenue includes the one-off set-up fees that were paid when the customer joined", "Gross profit is after sales and marketing, so it avoids counting that cost twice", "Revenue is booked upfront, so it overstates what the customer pays each month"],
+    why: "Winning a customer costs sales and marketing money upfront. It's repaid from what each customer leaves after the costs of serving them: hosting, support and payment fees. Using revenue ignores those costs and makes payback look faster. With a 75% gross margin, 12 months on revenue becomes 16 months on gross profit.",
+    x: ["Set-up fees can be left out either way. The point is the cost of serving the customer, which revenue ignores.", "Gross profit is before sales and marketing. The acquisition cost is the figure being repaid, counted once.", "Subscription revenue is recognised over the contract, month by month, not upfront."] },
+  { id: "val-55", lv: 2, trap: ["wrong-measure", "concept", "inverted"], q: "A software company's customer lifetime value (CLV) is three times its customer acquisition cost (CAC). The CLV assumes customers stay ten years, but the company loses 20% of its recurring revenue to departing customers each year. What's the main problem?",
+    o: ["The life is too long: 20% churn implies about five years, halving the ratio", "The CLV should use revenue per customer, which would make the ratio higher", "A ratio of 3x means it overspends on sales and should cut its marketing", "Churn only affects CAC, so the CLV is right but the acquisition cost is too low"],
+    why: "Customer lifetime value is the gross profit a customer brings over the time they stay. Losing 20% of revenue a year means the average customer lasts about 1 ÷ 20% = five years, not ten. Halving the lifetime roughly halves the value, so the ratio is nearer 1.5x than 3x. About 3x is often quoted as healthy, but only if the churn behind it is real.",
+    x: ["Revenue ignores the costs of serving customers. Using it would overstate the value further, not fix it.", "About 3x is usually read as healthy. The problem is the ten-year life behind it, not the spending.", "Churn shortens how long customers stay, so it cuts lifetime value. CAC is the upfront cost and doesn't depend on churn."] },
+  { id: "val-56", lv: 1, trap: ["sign", "missed-step", "concept"], q: "A software company grows revenue 30% a year and has a free cash flow margin of −5%. How does it score on the rule of 40?",
+    o: ["25%, below 40%, so its growth isn't yet making up for the cash burn", "35%, because the negative margin is added to growth, not taken off", "30%, because only growth counts while free cash flow is negative", "It passes, since growth above 25% meets the rule whatever the margin"],
+    why: "The rule of 40 adds the revenue growth rate to a profit margin, usually EBITDA or free cash flow: 30% + (−5%) = 25%. A score of 40% or more suggests a healthy balance between growing and making money. Investors use it to compare companies that trade growth for profit in different ways.",
+    x: ["A negative margin pulls the score down: 30% − 5% = 25%.", "The margin always counts, positive or negative. That's the point of the rule: it balances growth against profit.", "There's no growth threshold on its own. The rule only looks at growth plus margin."] },
+  { id: "val-57", lv: 1, trap: ["concept", "concept", "inverted"], q: "Why are fast-growing software companies often valued on EV/revenue or EV/ARR rather than EV/EBITDA?",
+    o: ["Their EBITDA is often small or negative, as sales costs are expensed upfront", "Revenue multiples already include the value of growth, so no forecast is needed", "IFRS 15 doesn't allow subscription businesses to report EBITDA at all", "Their revenue is mostly one-off, so EBITDA swings too much to be useful"],
+    why: "A growing software company spends heavily on sales and marketing to win customers who pay for years, and that spend is expensed straight away. EBITDA is depressed or negative, so an EBITDA multiple tells you little. Revenue or ARR multiples are used instead, and they vary with growth, retention and gross margin: a company growing 40% with 120% net revenue retention earns a far higher multiple than one growing 10%.",
+    x: ["A revenue multiple still depends on growth: peers growing at different rates trade at very different multiples.", "IFRS 15 covers revenue. EBITDA isn't an IFRS measure, and companies can still report it alongside their accounts.", "Subscription revenue is the most predictable kind. The problem is EBITDA, not revenue."] },
+  { id: "val-58", lv: 2, trap: ["concept", "wrong-measure", "concept"], q: "A software company pays a salesperson a US$30,000 commission for signing a 3-year subscription. Under IFRS 15, how is the commission treated?",
+    o: ["As an asset, spread over the contract's life: about US$10,000 a year", "As an expense in full when the contract is signed, like other selling costs", "As a deduction from revenue over the contract, like a discount to the customer", "As part of the contract liability, released when the customer pays"],
+    why: "IFRS 15 treats the extra costs of winning a contract, ones the company wouldn't have paid without the sale, as an asset when it expects to recover them. The asset is spread (amortised) over the period the service is provided, here about US$10,000 a year. If that period is a year or less, the company may simply expense it. This smooths profit for subscription businesses.",
+    x: ["That's allowed only when the period is a year or less. For a 3-year contract the cost is spread.", "The commission is paid to the salesperson, not the customer, so it's a cost, not a reduction in revenue.", "The contract liability holds cash received from customers for service not yet delivered. A commission paid out has nothing to do with it."] }
 ]);
 
 // New-format questions (shown only when "new formats" is on).
@@ -240,7 +276,18 @@ Bank.addFormat("val", [
       { text: "A company being wound up, with its assets about to be sold", answer: 1, note: "There's no ongoing business to forecast. Value comes from selling the assets, so a liquidation value applies." },
       { text: "A mature consumer brand with steady growth and margins", answer: 0, note: "Predictable growth and margins make both the forecast and the terminal value reliable." }
     ],
-    why: "A DCF works best when cash flows can be forecast with some confidence and the business will keep operating. It struggles where debt is part of the business model (banks), where the cash flows are too distant and uncertain (start-ups), and where there's no ongoing business (a liquidation)." }
+    why: "A DCF works best when cash flows can be forecast with some confidence and the business will keep operating. It struggles where debt is part of the business model (banks), where the cash flows are too distant and uncertain (start-ups), and where there's no ongoing business (a liquidation)." },
+  { id: "val-grid-03", lv: 1, type: "grid", q: "Does each of these count in a software company's annual recurring revenue (ARR)?",
+    columns: ["Counts", "Doesn't count"],
+    rows: [
+      { text: "A 12-month subscription that renews every year", answer: 0, note: "It repeats each year as long as the customer stays." },
+      { text: "A 3-year contract at US$300,000 a year", answer: 0, note: "ARR takes the yearly value, US$300,000, not the US$900,000 total." },
+      { text: "A one-off fee to set up and configure the software", answer: 1, note: "It's paid once, when the customer joins, so it doesn't recur." },
+      { text: "A consulting project to connect the software to the customer's systems", answer: 1, note: "Project work ends when the project does; nothing commits the customer to more." },
+      { text: "A monthly subscription of US$5,000", answer: 0, note: "Monthly recurring revenue (MRR) × 12 gives its ARR: US$60,000." },
+      { text: "Hardware sold once alongside the software", answer: 1, note: "A one-off sale, even though it comes with a subscription." }
+    ],
+    why: "ARR is the yearly value of the contracts that repeat if customers simply stay: subscriptions, whatever their billing period, turned into a yearly figure. One-off fees, projects and hardware are real revenue but don't recur, so they're left out. Mixing them in makes ARR, and any multiple applied to it, look bigger." }
 ]);
 
 // Answer + reason: pick the answer, then why it's true. Right only if both are right. In each list the right one
@@ -332,7 +379,25 @@ Bank.addFormat("val", [
       "That compares book values. A buyer would value the business on its cash flows, typically well above book.",
       "No such rule exists. Several large, well-known companies have operated with negative book equity for years.",
       "Here it comes from buybacks, not losses: the company is profitable."],
-    why: "Shareholders' equity falls by every dollar spent on buybacks or dividends. A company that borrows to return cash can push it below zero while its business keeps earning well. Market value prices those future earnings, so negative book equity on its own says little; look at leverage and interest cover instead. It does make return on equity meaningless." }
+    why: "Shareholders' equity falls by every dollar spent on buybacks or dividends. A company that borrows to return cash can push it below zero while its business keeps earning well. Market value prices those future earnings, so negative book equity on its own says little; look at leverage and interest cover instead. It does make return on equity meaningless." },
+
+  { id: "val-why-06", lv: 2, type: "reason",
+    q: "A software company grows 50% a year and has negative EBITDA because it spends heavily on sales and marketing. Each new customer earns back its acquisition cost in 14 months and then stays for years. Is the company destroying value?",
+    answers: ["Not necessarily", "Yes, until EBITDA turns positive", "Yes, because it burns cash", "No, growth always creates value"],
+    answerNotes: [
+      "EBITDA counts the whole cost of winning a customer now, but none of the years of profit that follow.",
+      "Spending cash on customers who repay it in 14 months can be a good investment. It's a problem only if the funding runs out first.",
+      "Growth creates value only when customers bring in more than they cost. Customers who leave quickly or cost too much to win destroy it."],
+    reasons: [
+      "New customers cost money now but bring in profit for several years after",
+      "Negative EBITDA means each sale loses money, so selling more loses more",
+      "Revenue multiples ignore profit, so investors will value it on growth alone",
+      "Sales spend is an investment, so IFRS adds it back when working out EBITDA"],
+    reasonNotes: [
+      "The loss comes from spending upfront on new customers, not from each sale. Once a customer has earned back that cost, it's profitable.",
+      "Revenue multiples are higher for companies whose customers stay and are profitable to serve. Investors look through to the unit economics.",
+      "IFRS expenses sales and marketing as it's spent (apart from some commissions). Nothing is added back to EBITDA."],
+    why: "Spending to win customers is expensed at once, while the customers pay for years. A fast-growing company therefore shows losses even when each customer is clearly profitable. Judge it on the unit economics: payback in 14 months and customers who stay several years point to value being created. The risks are churn rising, and funding running out before growth slows." }
 ]);
 
 // Spot the error: a short worked answer with one mistake. Tap the line, then pick the fix. Right only if both are right.
@@ -444,5 +509,33 @@ Bank.addFormat("val", [
       "Next year's dividend is the right one: the formula values the dividends from next year on.",
       "Dividends belong to shareholders only, so their required return applies, not a blend of the costs of debt and equity.",
       "The formula divides by the discount rate minus growth, not plus."],
-    why: "Dividends are paid to shareholders, so they're discounted at the return shareholders require: the cost of equity. The WACC blends in the cheaper cost of debt and belongs with cash flows to all investors. Here value = US$2.06 ÷ (9% − 3%) = US$34.33; using the WACC overstates it by half." }
+    why: "Dividends are paid to shareholders, so they're discounted at the return shareholders require: the cost of equity. The WACC blends in the cheaper cost of debt and belongs with cash flows to all investors. Here value = US$2.06 ÷ (9% − 3%) = US$34.33; using the WACC overstates it by half." },
+
+  { id: "val-spot-05", lv: 2, type: "spot",
+    q: "A year ago a software company had annual recurring revenue (ARR) of US$50m. Over the year those customers added US$8m through upsells, cut US$2m through downgrades, and customers paying US$4m left. New customers added US$10m. A candidate works out net revenue retention. Which line contains the mistake?",
+    lines: [
+      "Starting ARR from last year's customers: US$50m",
+      "Upsells to those customers: + US$8m",
+      "Downgrades and departures: − US$2m − US$4m = − US$6m",
+      "New customers: + US$10m",
+      "Ending ARR: 50 + 8 − 6 + 10 = US$62m",
+      "Net revenue retention: 62 ÷ 50 = 124%"],
+    wrong: 3,
+    lineNotes: [
+      "Right: retention starts from last year's customers.",
+      "Right: upsells to existing customers count.",
+      "Right: downgrades and lost customers are both deducted.",
+      null,
+      "The sum is right, but it carries forward the new customers from line 4.",
+      "The division is right, but the ending figure includes new customers."],
+    fixes: [
+      "Leave new customers out: (50 + 8 − 6) ÷ 50 = 104%",
+      "Leave out the departures instead: (50 + 8 − 2 + 10) ÷ 50 = 132%",
+      "Turn it round, start over end: 50 ÷ 62 = 81%",
+      "Leave out the upsells too: (50 − 6) ÷ 50 = 88%"],
+    fixNotes: [
+      "Departures are a large part of what retention measures. Leaving them out hides the customers who left.",
+      "Retention compares what the same customers pay now with what they paid a year ago, so the start goes underneath.",
+      "That's gross revenue retention, a separate measure that ignores upsells. Net retention includes them."],
+    why: "Net revenue retention follows one group of customers: those you had a year ago. Take their starting ARR, add their upsells, and deduct their downgrades and departures: (50 + 8 − 6) ÷ 50 = 104%. New customers belong in total ARR growth (here 50 to 62, or 24%), not in retention. Including them makes retention look much stronger than it is." }
 ]);
