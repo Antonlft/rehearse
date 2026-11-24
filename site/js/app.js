@@ -1983,6 +1983,13 @@ const leadLine = line => {
   const m = LEAD.exec(line);
   return m && m[1].split(/\s+/).length <= 7 ? `<b class="mb-lead">${rich(m[1])}:</b> ${rich(line.slice(m[0].length))}` : rich(line);
 };
+/* "New" badges: a lesson section carries the date it was added ("added") and a lesson the date its category last got
+   new questions ("newQuestions"), both YYYY-MM-DD. For 14 days from that date a small "New" pill shows on the section's
+   header and on the lesson's card. Nothing is saved: the badge simply goes away after two weeks. */
+const NEW_DAYS = 14;
+const isRecent = d => { const t = d ? Date.parse(d + "T00:00:00") : NaN; return !isNaN(t) && Date.now() >= t && Date.now() - t < NEW_DAYS * 864e5; };
+const newPill = what => `<span class="pill new-pill" title="${esc(what)}, added in the last ${NEW_DAYS} days">New</span>`;
+const lessonNews = l => [(l.method || []).some(b => b && b.section && isRecent(b.added)) && "new sections", isRecent(l.newQuestions) && "new questions"].filter(Boolean);
 function methodHtml(items) {
   const block = b => `<div class="mblock mb-${esc(b.kind)}">
       <span class="mb-label">${mbIcon(b.kind)}${esc(Lessons.BLOCKS[b.kind] || b.kind)}${b.title ? ` · ${esc(b.title)}` : ""}</span>
@@ -1994,19 +2001,19 @@ function methodHtml(items) {
     : block(b);
   const sections = items.filter(b => b && b.section).length;
   // One section or none: the blocks read straight down, with a heading if there is one.
-  if (sections < 2) return items.map(b => b && b.section ? `<h3 class="mb-section">${esc(b.section)}</h3>` : item(b)).join("");
+  if (sections < 2) return items.map(b => b && b.section ? `<h3 class="mb-section">${esc(b.section)}${isRecent(b.added) ? newPill("New section") : ""}</h3>` : item(b)).join("");
   // Two or more: an accordion. Each section is a numbered line that opens and closes; all start closed, so the page
   // opens on the lesson's map (the summary, then one line per section).
   // Section titles may carry their own "1." numbering, which is dropped in favour of the accordion's.
   const groups = [];
   for (const b of items) {
-    if (b && b.section) groups.push({ title: b.section.replace(/^\d+\.\s*/, ""), items: [] });
+    if (b && b.section) groups.push({ title: b.section.replace(/^\d+\.\s*/, ""), added: b.added, items: [] });
     else (groups[groups.length - 1] || groups[groups.push({ title: "", items: [] }) - 1]).items.push(b);
   }
   return `<div class="mb-secs">
     <div class="mb-secs-tools"><span class="label">${groups.length} sections</span><button class="link" type="button" data-sec-all>Open all</button></div>
     ${groups.map((g, i) => `<details class="mb-sec">
-      <summary class="mb-sec-head"><span class="mb-sec-num" aria-hidden="true">${i + 1}</span><span class="mb-sec-title">${esc(g.title)}</span>${g.items.some(b => b && b.check) ? `<span class="mb-sec-meta">${mbIcon("check")}<span class="mb-sec-meta-text">Quick check</span></span>` : ""}</summary>
+      <summary class="mb-sec-head"><span class="mb-sec-num" aria-hidden="true">${i + 1}</span><span class="mb-sec-title">${esc(g.title)}${isRecent(g.added) ? newPill("New section") : ""}</span>${g.items.some(b => b && b.check) ? `<span class="mb-sec-meta">${mbIcon("check")}<span class="mb-sec-meta-text">Quick check</span></span>` : ""}</summary>
       <div class="mb-sec-body">${g.items.map(item).join("")}
         <p class="mb-sec-back"><button class="link" type="button" data-sec-back>Back to sections</button></p>
       </div>
@@ -2110,9 +2117,9 @@ function renderLessons() {
     <h2 class="lesson-group">${esc(g.name)}</h2>
     <div class="lesson-grid">
       ${CATEGORIES.filter(c => c.group === g.id).map(c => {
-        const l = Lessons.all[c.id] || { status: "stub" }, n = tryCount(l);
+        const l = Lessons.all[c.id] || { status: "stub" }, n = tryCount(l), news = lessonNews(l);
         return `<button type="button" class="lesson-card" data-lesson="${c.id}">
-          <span class="lesson-card-name">${esc(c.name)}</span>
+          <span class="lesson-card-name">${esc(c.name)}${news.length ? newPill(news.join(" and ").replace(/^./, s => s.toUpperCase())) : ""}</span>
           <span class="lesson-card-desc">${esc(c.desc)}</span>
           <span class="lesson-card-foot">${lessonStatusPill(l)}${n ? `<span>Try it × ${n}</span>` : ""}</span>
         </button>`;

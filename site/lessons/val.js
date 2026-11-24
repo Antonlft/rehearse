@@ -2,6 +2,7 @@
 // Fields: method (sections { section } and labelled blocks { kind, title?, text, note? }, in the order of Lessons.ORDER), example (question, working steps, answer), source (text, optional url), widget (interactive "Try it"), widgets (optional extra ones).
 Lessons.add("val", {
   "status": "draft",
+  "newQuestions": "2026-11-24",
   "summary": [
     "Enterprise value (EV) is the whole business's value to all investors; equity value is what's left for shareholders after debt and other claims.",
     "Match each multiple to the right value: EV with figures before interest, such as operating profit; equity value with figures after interest, such as net income.",
@@ -35,14 +36,14 @@ Lessons.add("val", {
     {"kind": "watch", "text": "Check the base-case cell matches the model, and that the ranges are realistic.\nExample: with 2% growth, EV = FCF ÷ (WACC − g) doubles when WACC falls from 6% to 4%, so a table running WACC down to 3% shows absurd values."},
     {"kind": "practice", "text": "Describe the table before quoting numbers: what's on each axis, where the base case is, and which input moves the answer most."},
     {"check": "val-39"},
-    {"section": "Choosing the method"},
+    {"section": "Choosing the method", "added": "2026-11-24"},
     {"kind": "idea", "text": "No single method fits every company. Use the one whose inputs you can trust for this business, then cross-check it with another."},
     {"kind": "formula", "text": "Value per share = {{next year's dividend // cost of equity − growth}}", "note": "The dividend discount model (DDM) with steady growth. Dividends go to shareholders, so discount them at the cost of equity, never the WACC."},
     {"kind": "how", "text": "Steady, predictable cash flows: a DCF, cross-checked with trading multiples.\nLoss-making but growing fast: revenue multiples against peers growing at a similar rate, or multiples of profit a few years out, with a long-horizon DCF as a check.\nNo revenue yet: recent funding rounds, deals for similar start-ups, and a target exit value discounted back at a high required return.\nBanks and steady dividend payers: a DDM, plus price to tangible book value for banks.\nAt risk of failing, or worth more sold off than run: a liquidation value, as a floor."},
     {"kind": "example", "text": "A steady dividend payer will pay US$1.50 a share next year, growing 2% a year, and its cost of equity is 8%.\nValue per share = 1.50 ÷ (8% − 2%) = US$25.00."},
     {"kind": "watch", "text": "Shareholders' equity on the balance sheet isn't a valuation: it records past costs and leaves out the brands and know-how a company built itself. A company that borrowed to buy back shares can even have negative book equity and a healthy share price."},
     {"check": "val-42"},
-    {"section": "Tech and recurring-revenue (SaaS) companies"},
+    {"section": "Tech and recurring-revenue (SaaS) companies", "added": "2026-11-24"},
     {"kind": "idea", "text": "Software sold as a subscription (software as a service, SaaS) earns revenue that repeats every year its customers stay. Its value depends on how much recurring revenue it has, how well it keeps and grows its customers, and what it costs to win new ones."},
     {"kind": "formula", "title": "Retention", "text": "Net revenue retention (NRR) = {{starting ARR + upsells − downgrades − departures // starting ARR}}", "note": "Annual recurring revenue (ARR) is the yearly value of the subscriptions in force; monthly recurring revenue (MRR) × 12 gives the same figure. New customers are left out of NRR."},
     {"kind": "formula", "title": "Payback", "text": "CAC payback (months) = {{customer acquisition cost (CAC) // monthly revenue per customer × gross margin}}", "note": "CAC = sales and marketing spend ÷ new customers won. It's repaid from gross profit, after the costs of serving the customer."},

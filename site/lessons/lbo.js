@@ -2,6 +2,7 @@
 // Fields: method (paragraphs or labelled blocks { kind, text, note? }), example (question, working steps, answer), source (text, optional url), widget (interactive "Try it"), widgets (optional extra ones).
 Lessons.add("lbo", {
   "status": "draft",
+  "newQuestions": "2026-11-24",
   "summary": [
     "A private equity sponsor buys a company mostly with debt, repays the debt from the company's own cash and sells after three to seven years.",
     "Returns come from earnings before interest, tax, depreciation and amortisation (EBITDA) growth, debt paydown and any change in the multiple.",
@@ -26,7 +27,7 @@ Lessons.add("lbo", {
     {"kind": "example", "text": "From the worked example below: EBITDA 50 → 70 at 8x both times, net debt 250 → 150.\nEBITDA growth = 20 × 8 = 160; multiple change = 0; debt paydown = 250 − 150 = 100.\nTotal 260 = exit equity 410 − entry equity 150."},
     {"kind": "watch", "text": "The convention changes the story, not the total.\nExample: EBITDA goes from 50 to 70 and the multiple from 8x to 9x. Growth at the entry multiple = 20 × 8 = 160, multiple change = 1 × 70 = 70. Growth at the exit multiple = 20 × 9 = 180, multiple change = 1 × 50 = 50.\nBoth total 230, so say which convention you use."},
     {"check": "lbo-31"},
-    {"section": "How lenders size and price the debt"},
+    {"section": "How lenders size and price the debt", "added": "2026-11-24"},
     {"kind": "idea", "text": "Lenders size the debt on what the company can carry, then price it for the risk. The sponsor's equity fills the rest of the price."},
     {"kind": "formula", "text": "Debt capacity = the lower of (leverage cap × EBITDA) and {{EBITDA // minimum interest cover × interest rate}}", "note": "The leverage test caps debt as a multiple of earnings; the cover test makes sure earnings pay the interest with room to spare."},
     {"kind": "how", "text": "Leverage is quoted in turns of EBITDA, for senior debt and for total debt. Lenders also look at fixed charge cover (interest plus scheduled repayments) and how fast free cash flow can repay the debt.\nThe price is a margin over a base rate (SOFR in US dollars, SONIA in sterling), plus upfront fees or an original issue discount (OID), which lift the lender's return above the margin."},

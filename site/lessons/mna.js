@@ -2,6 +2,7 @@
 // Fields: method (sections { section } and labelled blocks { kind, title?, text, note? }, in the order of Lessons.ORDER), example (question, working steps, answer), source (text, optional url), widget (interactive "Try it"), widgets (optional extra ones).
 Lessons.add("mna", {
   "status": "draft",
+  "newQuestions": "2026-11-24",
   "summary": [
     "A deal is accretive if the buyer's earnings per share (EPS) rise: compare the earnings bought with what it costs to pay for them.",
     "In an all-share deal, buying a company on a lower price-to-earnings ratio than your own is accretive, but accretion doesn't prove value is created.",

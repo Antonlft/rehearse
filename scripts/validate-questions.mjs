@@ -22,7 +22,8 @@
 //    with one cell per column and an optional `base` [row, column] inside it.
 //  - every category has a lesson (site/lessons/<category>.js, loaded by index.html); a "stub" may be empty, but a
 //    "draft" or "reviewed" lesson needs a method, a worked example (question, working, answer) and a source (or a list);
-//    method items are paragraphs, { section } headings or blocks { kind, title?, text, note? } (kinds: Lessons.BLOCKS);
+//    method items are paragraphs, { section, added? } headings or blocks { kind, title?, text, note? } (kinds: Lessons.BLOCKS);
+//    `added` on a section and `newQuestions` on a lesson are real dates written YYYY-MM-DD (they drive the "New" badges);
 //    within each section blocks follow Lessons.ORDER, and a kind repeated in a section needs a title on each block;
 //    every section of a draft or reviewed lesson has an Example block, right under the rule it illustrates;
 //    a draft or reviewed lesson has an "In 30 seconds" summary of 3–4 short takeaways, and any acronym in it is spelled
@@ -369,7 +370,10 @@ for (const [cat, l] of Object.entries(Lessons)) {
   if (!["stub", "draft", "reviewed"].includes(l.status)) { fail(`${where}: status must be "stub", "draft" or "reviewed", got ${JSON.stringify(l.status)}`); continue; }
   const BLOCKS = ctx.Lessons?.BLOCKS || {};
   const ORDER = ctx.Lessons?.ORDER || [];
-  const isSection = p => p && typeof p === "object" && Object.keys(p).length === 1 && text(p.section);
+  const isDate = v => { if (typeof v !== "string" || !/^\d{4}-\d{2}-\d{2}$/.test(v)) return false; const d = new Date(v + "T00:00:00Z"); return !isNaN(d) && d.toISOString().slice(0, 10) === v; };
+  const isSection = p => p && typeof p === "object" && text(p.section) && Object.keys(p).every(k => k === "section" || (k === "added" && isDate(p.added)));
+  if (l.newQuestions != null && !isDate(l.newQuestions)) fail(`${where}: newQuestions must be a date written YYYY-MM-DD, got ${JSON.stringify(l.newQuestions)}`);
+  for (const p of l.method || []) if (p && typeof p === "object" && text(p.section) && p.added != null && !isDate(p.added)) fail(`${where}: section "${p.section}" has added ${JSON.stringify(p.added)}; write it as a date YYYY-MM-DD`);
   const isCheck = p => p && typeof p === "object" && Object.keys(p).length === 1 && text(p.check);
   const okItem = p => text(p) || isSection(p) || isCheck(p) || (p && typeof p === "object" && Object.hasOwn(BLOCKS, p.kind) && text(p.text) && (p.note == null || text(p.note)) && (p.title == null || text(p.title)) && Object.keys(p).every(k => ["kind", "title", "text", "note"].includes(k)));
   if (l.method != null && (!Array.isArray(l.method) || l.method.some(p => !okItem(p)))) fail(`${where}: method must list paragraphs, { section: "Title" } headings or blocks { kind: ${Object.keys(BLOCKS).join(" | ")}, title?, text, note? }`);

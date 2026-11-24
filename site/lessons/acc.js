@@ -2,6 +2,7 @@
 // Fields: method (sections { section } and labelled blocks { kind, title?, text, note? }, in the order of Lessons.ORDER), example (question, working steps, answer), source (text, optional url), widget (interactive "Try it").
 Lessons.add("acc", {
   "status": "draft",
+  "newQuestions": "2026-11-24",
   "summary": [
     "The three statements link up: net income starts the cash flow statement, and closing cash and retained earnings carry into the balance sheet.",
     "When depreciation rises, profit falls but cash rises by depreciation × the tax rate, because the extra charge saves tax.",

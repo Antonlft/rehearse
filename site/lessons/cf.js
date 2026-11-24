@@ -2,6 +2,7 @@
 // Fields: method (sections { section } and labelled blocks { kind, title?, text, note? }, in the order of Lessons.ORDER), example (question, working steps, answer), source (text, optional url), widget (interactive "Try it").
 Lessons.add("cf", {
   "status": "draft",
+  "newQuestions": "2026-11-24",
   "summary": [
     "The weighted average cost of capital (WACC) is the return a company must earn for all its investors, lenders and shareholders together.",
     "Debt is cheaper than equity because lenders are paid first and interest is tax-deductible, but more debt makes the shares riskier.",
