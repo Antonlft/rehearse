@@ -64,14 +64,19 @@ db.backupNudgeDismissedAt ||= null; // when the home-page backup reminder was la
 
 /* Spaced repetition: when each written question is next due.
    Wrong answer: due tomorrow, interval reset to 1 day. Right answer: interval doubles (first time: 2 days), up to 60 days.
+   A right answer rated for confidence counts for less when you weren't sure: "Guess" comes back tomorrow like a miss
+   (a lucky guess isn't learning), "Think so" keeps the current interval instead of doubling it (first time: 1 day).
+   "Sure", or no rating, doubles as above.
    A right answer given before the question is due doesn't double the interval, so practising the same question
    several times in a day can't push it weeks away. "Due" means from local midnight of that day.
    The schedule is always kept up to date; switching spaced repetition off only stops draw() from using it. */
 const SRS_MAX_DAYS = 60;
 const startOfDay = (ts, plusDays = 0) => { const d = new Date(ts); d.setHours(0, 0, 0, 0); d.setDate(d.getDate() + plusDays); return d.getTime(); };
-function scheduleAnswer(s, qid, ok, at) {
+function scheduleAnswer(s, qid, ok, at, conf) {
   const cur = s[qid];
   if (!ok) s[qid] = { dueAt: startOfDay(at, 1), intervalDays: 1, lastOk: false };
+  else if (conf === "guess") s[qid] = { dueAt: startOfDay(at, 1), intervalDays: 1, lastOk: true };
+  else if (conf === "think" && (!cur || at >= cur.dueAt)) { const n = cur ? Math.max(1, cur.intervalDays) : 1; s[qid] = { dueAt: startOfDay(at, n), intervalDays: n, lastOk: true }; }
   else if (!cur) s[qid] = { dueAt: startOfDay(at, 2), intervalDays: 2, lastOk: true };
   else if (at < cur.dueAt) cur.lastOk = true; // right, but not due yet: keep the schedule
   else { const n = Math.min(SRS_MAX_DAYS, cur.intervalDays * 2); s[qid] = { dueAt: startOfDay(at, n), intervalDays: n, lastOk: true }; }
@@ -79,7 +84,7 @@ function scheduleAnswer(s, qid, ok, at) {
 // Rebuild the whole schedule by replaying the answer log in order (written questions only).
 function buildSchedule(log) {
   const s = {};
-  for (const e of log) if (!e.kind && e.qid) scheduleAnswer(s, e.qid, e.ok, e.at);
+  for (const e of log) if (!e.kind && e.qid) scheduleAnswer(s, e.qid, e.ok, e.at, e.confidence);
   return s;
 }
 db.schedule ||= buildSchedule(db.log); // question id -> { dueAt, intervalDays, lastOk }
@@ -1058,8 +1063,8 @@ function srsPanel() {
   const status = !db.srsEnabled
     ? "Off. Rounds pick questions as they always have. Your schedule is still kept up to date, so you can switch it back on at any time."
     : !Object.keys(db.schedule).length
-      ? "Questions get scheduled as you answer them: wrong ones come back the next day, right ones after 2, 4, 8… days."
-      : `${due ? `<b>${due}</b> question${due > 1 ? "s" : ""} due for review` : "Nothing due right now"}${off ? ` · off for ${off} categor${off > 1 ? "ies" : "y"}` : ""}. Due questions come first in your rounds: wrong answers come back the next day, right ones after 2, 4, 8… days.`;
+      ? "Questions get scheduled as you answer them: wrong ones and lucky guesses come back the next day, right ones after 2, 4, 8… days (sooner if you weren't sure)."
+      : `${due ? `<b>${due}</b> question${due > 1 ? "s" : ""} due for review` : "Nothing due right now"}${off ? ` · off for ${off} categor${off > 1 ? "ies" : "y"}` : ""}. Due questions come first in your rounds: wrong answers and lucky guesses come back the next day, right ones after 2, 4, 8… days (sooner if you weren't sure).`;
   return `<section class="card srs" id="srs">
       <div class="srs-head">
         <div><h2>Spaced repetition</h2><p class="muted">${status}</p></div>
@@ -1588,7 +1593,7 @@ function submit(timedOut) {
     // Per-question record (written questions only; calculations get new numbers each time). Retries count here.
     if (it.id) { const qs = (db.qStats[it.id] ||= { n: 0, wrong: 0, last: null }); qs.n++; if (!ok) qs.wrong++; qs.last = ok ? "ok" : "wrong"; }
     // Spaced repetition schedule follows the answer log (answered written questions), whether or not it's switched on.
-    if (it.id && !isBlank(at.answers[i])) scheduleAnswer(db.schedule, it.id, ok, submittedAt);
+    if (it.id && !isBlank(at.answers[i])) scheduleAnswer(db.schedule, it.id, ok, submittedAt, confOf(at, i) && isRated(it) ? confOf(at, i) : null);
   });
   const pct = Math.round(correct / at.items.length * 100);
   const result = { at: submittedAt, mode, items: at.items, answers: at.answers, marked: at.marked, ...(at.conf ? { conf: at.conf } : {}), correct, total: at.items.length, pct,
