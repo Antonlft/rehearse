@@ -110,6 +110,11 @@ Text is shown as plain paragraphs and numbered steps (no formatting code needed)
 
 **Formula recall drill.** The formula sheet's *Recall drill* button (and *Recall formulas* on the home page's Due for review tile, when any are due) opens a card drill over every `formula` block in the lessons. Each card shows the formula's name (its title, else its section's), its lesson, and each line up to its first ` = `, ` ≈ `, ` ≥ ` or ` ≤ ` outside a `{{fraction}}` (else up to its first `: `; a line with neither is hidden whole). *Show* reveals the lines; *Got it* / *Not yet* schedules the card in `formulaSchedule` with the same rule as questions (Not yet: tomorrow; Got it: 2 days, then doubling up to 60 once due). Order: due cards (most overdue first), then never-drilled ones alternating between lessons; 10 per set, *10 more* continues; one lesson or all. With nothing due or new, *Drill anyway* takes the rest, soonest due first. A set in progress isn't saved; every marked card is. Renaming a formula's title or section starts it afresh.
 
+**Interviews.** The home page's interview card (*Add an interview*, or the next interview with its readiness) leads to *Your interviews* (coming up and past), each interview's page, and an add/edit form. Each interview is a lens on the shared progress: answers count everywhere, and an interview only adds its own focus topics, date and readiness score, so preparing for one never changes another or the overall stats.
+- Form: firm, role (`IV_ROLES`, grouped Investment banking / Private equity and nearby), stage (`IV_STAGES`), date and optional time, format, time per day, job ad or recruiter notes, an optional link (kept for reference only: a static site can't read other pages; only `http(s)` links are shown), and focus topics as chips that cycle off → Useful (1) → Key (2). The role and stage set default topics (`ivDefaultFocus`) until you change them; *Reset to the role's topics* restores them. *Suggest topics from this text* matches topic words in the notes (`IV_WORDS`, plain matching in the page) and adds what it finds, as Key when mentioned twice or more. After the date, the form adds *How it went*.
+- Interview page: phase (*Build* over 14 days out, *Consolidate* 14 to 3, *Final* the last 2, then interview day) with what to focus on, the focus topics with their readiness (key topics first, weakest first) and a *Practise* link each, notes, link, and Edit / Delete.
+- Interview readiness (`ivReadiness`): focus topics weighted by Key 2 / Useful 1, each counting 1 when Ready, 0.5 when Nearly ready and 0 otherwise, from the same per-category readiness as the weak-spots report.
+
 ## Saved data
 
 All progress lives in one `localStorage` key, `rehearse.v3` (the light/dark choice is kept separately under `rehearse.theme`). In `app.js` it's loaded into the global `db` object and written back with `persist()`.
@@ -132,6 +137,7 @@ All progress lives in one `localStorage` key, `rehearse.v3` (the light/dark choi
 | `lastBackupAt` | When a backup was last downloaded (or `null`) |
 | `backupNudgeDismissedAt` | When the home-page backup reminder was last dismissed (or `null`) |
 | `schedule` | Spaced repetition, per written question ID or `"gen:<key>"` for a calculation: `{ dueAt, intervalDays, lastOk }` (below) |
+| `interviews` | Interviews: `{ id, firm, role, stage, format, date, time, minutes, focus, notes, link, outcome, createdAt, updatedAt }` (`date` is `"YYYY-MM-DD"`, `time` `"HH:MM"` or empty, `focus` maps category to 1 or 2) |
 | `formulaSchedule` | The formula recall drill's spaced repetition, per `"<category>\|<formula name>"`: `{ dueAt, intervalDays, lastOk }` |
 | `srsEnabled` | Spaced repetition on or off (default on). Defaulted with `??=`, because `\|\|=` would turn a stored `false` back on |
 | `srsExcluded` | Category IDs where spaced repetition is off |
@@ -205,3 +211,4 @@ When it's on for a category, each written-question slot in a round takes a due q
 | 20 | Learning rounds in progress can hold extra items (missed questions asked again) with `againOf` and `again`; they're removed on submit, and a finished Learning round can have `laterRight` |
 | 21 | Calculation questions join spaced repetition: generated items and their log entries can carry `gkey` (the generator's permanent key), and `schedule` gains `"gen:<key>"` entries |
 | 22 | Added `formulaSchedule` (formula recall drill) |
+| 23 | Added `interviews` |

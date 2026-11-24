@@ -166,7 +166,11 @@ db.lessonRead ||= {};
 //      intervalDays, lastOk } }, updated by the same rule as db.schedule (Not yet = wrong, Got it = right, no confidence).
 //      Keyed by the formula's name (its title, else its section's), so renaming one starts it afresh.
 db.formulaSchedule ||= {};
-const SCHEMA_VERSION = 22;
+//  23: added db.interviews: [{ id, firm, role, stage, format, date ("YYYY-MM-DD"), time ("HH:MM" or ""), minutes (time per
+//      day), focus: { category: 1 (useful) | 2 (key) }, notes, link, outcome, createdAt, updatedAt }]. Interviews only read
+//      the shared progress; nothing else changes.
+db.interviews ||= [];
+const SCHEMA_VERSION = 23;
 db.schemaVersion = Math.max(db.schemaVersion || 1, SCHEMA_VERSION);
 let saveWarned = false;
 const persist = () => {
@@ -748,6 +752,7 @@ function go(v) {
   if (v.name !== "quiz") CalcUI.hide(); // the calculator only lives on the quiz screen
   if (v.name !== "sprint") sprint = null; // leaving a sprint abandons it; only finished sprints are saved
   if (v.name !== "drill") drill = null; // leaving a recall drill drops the set; cards already marked stay scheduled
+  if (v.name !== "interviewEdit") ivDraft = null; // leaving the interview form drops what wasn't saved
   // Leaving a live round (Save & exit, logo, etc.): stop its clock so time away isn't counted.
   if (view.name === "quiz" && view.live && db.attempts[view.mode]) { endVisit(db.attempts[view.mode]); pauseRound(db.attempts[view.mode]); persist(); }
   view = v;
@@ -782,6 +787,9 @@ function render() {
   else if (view.name === "glossary") renderGlossary();
   else if (view.name === "formulas") renderFormulas();
   else if (view.name === "drill") renderDrill();
+  else if (view.name === "interviews") renderInterviews();
+  else if (view.name === "interview") renderInterview();
+  else if (view.name === "interviewEdit") renderInterviewEdit();
   else if (view.name === "search") renderSearch();
   else renderHome();
 }
@@ -930,6 +938,7 @@ function renderPracticeTab() {
       <p>${esc(reminder)} Your progress is saved only in this browser.</p>
       <div class="nudge-actions"><button class="link" type="button" data-backup>Download backup</button><button class="link" type="button" data-snooze>Not now</button></div>
     </div>` : ""}
+    ${interviewCard()}
     <section class="card test-card">
       <div class="test-row">
         <div>
@@ -1069,6 +1078,7 @@ function wireHome() {
   app.querySelectorAll("[data-lessons]").forEach(b => b.onclick = () => go({ name: "lessons" }));
   app.querySelectorAll("[data-glossary]").forEach(b => b.onclick = () => go({ name: "glossary", back: { name: "home" } }));
   app.querySelectorAll("[data-drill]").forEach(b => b.onclick = () => go({ name: "drill", back: { name: "home" } }));
+  wireIv({ name: "home" });
   if (document.getElementById("srs")) wireSrsPanel();
   app.querySelectorAll("[data-new]").forEach(b => b.onclick = () => b.dataset.new === "mixed" ? go({ name: "setup" }) : newRound(b.dataset.new));
   app.querySelectorAll("[data-setup]").forEach(b => b.onclick = () => go({ name: "setup" }));
@@ -2525,6 +2535,264 @@ function renderDrill() {
 }
 // Keyboard: after each step the main button has focus, so Enter/Space works through a set.
 const focusFirst = () => { const b = app.querySelector(".drill-card .btn"); if (b) b.focus({ preventScroll: true }); };
+
+/* Interviews: each one is a lens on your shared progress. Answers count everywhere (knowing WACC for one interview
+   means knowing it for all); what an interview adds is its own focus topics, its date and a readiness score on those
+   topics, so preparing for one never changes another's plan or your overall stats. Saved in db.interviews (schema 23).
+   Firm names and notes stay in this browser, like the rest of your progress, and are included in backups. */
+// Roles: default focus topics, 2 = key, 1 = useful. Kept short on purpose; "Other" is a broad mix.
+const IV_ROLES = [
+  ["mna", "M&A / industry coverage", "Investment banking", { val: 2, mna: 2, acc: 2, cf: 1, lbo: 1, maths: 1 }],
+  ["sponsor", "Sponsor coverage (financial sponsors)", "Investment banking", { lbo: 2, val: 2, credit: 2, acc: 1, mna: 1, maths: 1 }],
+  ["levfin", "Leveraged finance", "Investment banking", { credit: 2, lbo: 2, acc: 2, cf: 1, val: 1, maths: 1 }],
+  ["ecm", "Equity capital markets (ECM)", "Investment banking", { cm: 2, val: 2, acc: 1, econ: 1, maths: 1 }],
+  ["dcm", "Debt capital markets (DCM)", "Investment banking", { cm: 2, credit: 2, econ: 1, acc: 1, maths: 1 }],
+  ["fig", "Financial institutions (FIG)", "Investment banking", { fig: 2, val: 2, acc: 1, mna: 1, credit: 1 }],
+  ["relh", "Real estate, lodging and hospitality", "Investment banking", { rev: 2, hk: 2, hom: 2, pf: 1, liv: 1, hds: 1, val: 1 }],
+  ["rx", "Restructuring", "Investment banking", { rx: 2, credit: 2, acc: 1, val: 1, lbo: 1 }],
+  ["buyout", "Private equity: buyout", "Private equity and nearby", { lbo: 2, val: 2, acc: 2, credit: 1, mna: 1, maths: 1 }],
+  ["growth", "Private equity: growth equity", "Private equity and nearby", { val: 2, acc: 2, lbo: 1, mna: 1, maths: 1 }],
+  ["repe", "Real estate private equity", "Private equity and nearby", { rev: 2, pf: 2, lbo: 1, hds: 1, liv: 1, hk: 1 }],
+  ["pcredit", "Private credit / direct lending", "Private equity and nearby", { credit: 2, lbo: 2, acc: 2, rx: 1, cf: 1 }],
+  ["other", "Other / not sure", "Private equity and nearby", { val: 1, acc: 1, mna: 1, lbo: 1, maths: 1 }]
+];
+// Stages: topics a stage adds on top of the role's (raised to at least this weight).
+const IV_STAGES = [
+  ["fit", "Fit / HR", {}],
+  ["technical", "Technical", { maths: 1 }],
+  ["superday", "Superday / assessment centre", { maths: 1, bt: 1 }],
+  ["case", "Case study", { val: 2, mna: 1 }],
+  ["modelling", "Modelling test", { acc: 2, val: 2, lbo: 1 }],
+  ["paperlbo", "Paper LBO", { lbo: 2, maths: 2 }],
+  ["other", "Other", {}]
+];
+const IV_FORMATS = [["video", "Video"], ["phone", "Phone"], ["inperson", "In person"], ["online", "Online test"]];
+const IV_MINUTES = [15, 30, 45, 60];
+const ivRole = id => IV_ROLES.find(r => r[0] === id) || IV_ROLES[IV_ROLES.length - 1];
+const ivStage = id => IV_STAGES.find(s => s[0] === id) || IV_STAGES[IV_STAGES.length - 1];
+const ivFormat = id => (IV_FORMATS.find(f => f[0] === id) || IV_FORMATS[0])[1];
+function ivDefaultFocus(role, stage) {
+  const f = { ...ivRole(role)[3] };
+  for (const [c, w] of Object.entries(ivStage(stage)[2])) f[c] = Math.max(f[c] || 0, w);
+  return f;
+}
+// Topic words in a pasted job ad or recruiter note → the categories they point to. Plain matching, nothing leaves the
+// page. Each entry: [pattern, categories].
+const IV_WORDS = [
+  [/\b(lbos?|leveraged buy-?outs?|buy-?outs?|private equity|financial sponsors?|sponsors?|paper lbo)\b/i, ["lbo"]],
+  [/\b(valuations?|dcf|discounted cash flows?|multiples|comparables?|comps|precedents?|fairness opinions?)\b/i, ["val"]],
+  [/\b(m&a|mergers?|acquisitions?|sell-side|buy-side|due diligence|auctions?|divestitures?|carve-outs?)\b/i, ["mna"]],
+  [/\b(restructuring|distressed|insolvency|chapter 11|liability management|turnaround)\b/i, ["rx"]],
+  [/\b(accounting|financial statements?|three[- ]statements?|3[- ]statements?|ifrs|gaap|balance sheets?|cash flow statements?)\b/i, ["acc"]],
+  [/\b(wacc|cost of capital|capital structure|corporate finance|dividend policy)\b/i, ["cf"]],
+  [/\b(credit|leveraged finance|lev ?fin|high[- ]yield|covenants?|term loans?|direct lending|private credit|bonds?)\b/i, ["credit"]],
+  [/\b(ecm|dcm|ipos?|capital markets|rights issues?|block trades?|bond issu\w*|equity offerings?)\b/i, ["cm"]],
+  [/\b(fig|financial institutions?|banks|insurers?|insurance|asset managers?|asset management)\b/i, ["fig"]],
+  [/\b(hotels?|hospitality|lodging|revpar|adr|occupancy|leisure)\b/i, ["hk", "hom"]],
+  [/\b(real estate|property|properties|reits?|cap rates?|noi|ltv|loan-to-value)\b/i, ["rev", "pf"]],
+  [/\b(student accommodation|pbsa|build-to-rent|btr|co-living|living sectors?|residential)\b/i, ["liv"]],
+  [/\b(brain ?teasers?|mental (?:maths?|arithmetic)|numerical tests?|aptitude tests?)\b/i, ["bt", "maths"]],
+  [/\b(modell?ing tests?|financial modell?ing|excel)\b/i, ["acc", "val"]]
+];
+function ivSuggest(text) {
+  const found = {};
+  for (const [re, cats] of IV_WORDS) {
+    const hits = (String(text || "").match(new RegExp(re.source, "gi")) || []).length;
+    if (hits) for (const c of cats) found[c] = (found[c] || 0) + hits;
+  }
+  return found; // category → number of mentions
+}
+
+// Dates are kept as "YYYY-MM-DD" (and an optional "HH:MM"), so a date never shifts with time zones.
+const ivDate = iv => { const [y, m, d] = iv.date.split("-").map(Number); const [h, mi] = (iv.time || "00:00").split(":").map(Number); return new Date(y, m - 1, d, h, mi); };
+const ivDaysLeft = (iv, now = Date.now()) => Math.round((startOfDay(ivDate(iv).getTime()) - startOfDay(now)) / 864e5);
+// Phases by days left: build (more than 14), consolidate (3 to 14), final (1 to 2), day (0), past (below 0).
+const IV_PHASES = [
+  ["build", "Build", "Learn and fill gaps. Read the lessons for your weakest key topics, then practise them in Learning mode."],
+  ["consolidate", "Consolidate", "Mostly review and timed rounds on your topics, like the real thing. New material only where a key topic is still weak."],
+  ["final", "Final", "Light recall only: the formula drill, saying answers out loud, one short timed round. Nothing new, and sleep well."]
+];
+const ivPhase = iv => { const d = ivDaysLeft(iv); return d < 0 ? "past" : d === 0 ? "day" : d <= 2 ? "final" : d <= 14 ? "consolidate" : "build"; };
+const ivWhen = d => d === 0 ? "today" : d === 1 ? "tomorrow" : d > 1 ? `in ${d} days` : d === -1 ? "yesterday" : `${-d} days ago`;
+const ivName = iv => iv.firm || ivRole(iv.role)[1];
+const ivSorted = () => [...db.interviews].sort((a, b) => ivDate(a) - ivDate(b));
+const ivUpcoming = () => ivSorted().filter(iv => ivDaysLeft(iv) >= 0);
+// Readiness for one interview: its focus topics weighted 2 (key) or 1 (useful); a topic counts 1 when Ready,
+// 0.5 when Nearly ready, 0 when it needs work or has too few answers. Uses the same readiness as everywhere else.
+function ivReadiness(iv, ready = readinessByCat()) {
+  const topics = Object.entries(iv.focus || {}).filter(([c, w]) => w > 0 && catById(c));
+  const score = { ready: 1, nearly: 0.5, work: 0, none: 0 };
+  const total = topics.reduce((s, [, w]) => s + w, 0);
+  const pct = total ? Math.round(topics.reduce((s, [c, w]) => s + w * score[ready[c].level], 0) / total * 100) : null;
+  return { pct, topics: topics.map(([c, w]) => ({ cat: c, w, r: ready[c] })) };
+}
+const ivDateText = iv => ivDate(iv).toLocaleDateString("en-GB", { weekday: "long", day: "numeric", month: "long", year: "numeric" }) + (iv.time ? `, ${iv.time}` : "");
+const safeLink = u => /^https?:\/\/[^\s"<>]+$/i.test(u || "") ? u : "";
+
+// Home: the next interview, or an invitation to add one.
+function interviewCard() {
+  const next = ivUpcoming()[0], more = ivUpcoming().length - 1;
+  if (!next) return `<section class="card iv-home">
+      <div class="iv-home-row"><div><h2>Preparing for an interview?</h2><p class="muted">Add its date and role for a plan tailored to it: its key topics, how ready you are on them, and what to focus on as the day gets closer.</p></div>
+      <div class="tile-actions"><button class="btn" type="button" data-iv-new>Add an interview</button>${db.interviews.length ? `<button class="link" type="button" data-iv-list>Past interviews</button>` : ""}</div></div>
+    </section>`;
+  const d = ivDaysLeft(next), r = ivReadiness(next), ph = ivPhase(next);
+  return `<section class="card iv-home">
+      <div class="iv-home-row">
+        <div>
+          <p class="label">Next interview · <span class="iv-when">${ivWhen(d)}</span></p>
+          <h2>${esc(ivName(next))}${next.firm ? ` <span class="muted iv-role">· ${esc(ivRole(next.role)[1])}</span>` : ""}</h2>
+          <p class="muted">${esc(ivStage(next.stage)[1])} · ${ph === "day" ? "Interview day" : `${(IV_PHASES.find(p => p[0] === ph) || [, ""])[1]} phase`}</p>
+          ${r.pct != null ? `<div class="iv-meter" role="img" aria-label="Ready on ${r.pct}% of its topics"><i style="width:${r.pct}%"></i></div><p class="iv-meter-label">Ready on <b>${r.pct}%</b> of its topics</p>` : ""}
+        </div>
+        <div class="tile-actions"><button class="btn primary" type="button" data-iv-open="${next.id}">Open plan</button><button class="link" type="button" data-iv-list>${more > 0 ? `All interviews · ${more + 1}` : "All interviews"}</button></div>
+      </div>
+    </section>`;
+}
+
+function renderInterviews() {
+  const back = view.back || { name: "home" };
+  meta.innerHTML = `<button class="link" id="backLink" type="button">Back</button>`;
+  const ready = readinessByCat(), up = ivUpcoming(), past = ivSorted().filter(iv => ivDaysLeft(iv) < 0).reverse();
+  const row = iv => { const r = ivReadiness(iv, ready), d = ivDaysLeft(iv); return `<button class="iv-row" type="button" data-iv-open="${iv.id}">
+      <span class="iv-row-main"><b>${esc(ivName(iv))}</b><span class="muted">${esc(ivRole(iv.role)[1])} · ${esc(ivStage(iv.stage)[1])}</span></span>
+      <span class="iv-row-side"><span>${ivWhen(d)}</span>${d >= 0 && r.pct != null ? `<span class="muted">${r.pct}% ready</span>` : ""}</span>
+    </button>`; };
+  app.innerHTML = `
+    <div class="page-head">
+      <h1>Your interviews</h1>
+      <p>Each interview gets its own plan: its key topics, how ready you are on them and what to focus on as it gets closer. Your answers count for all of them. Saved only in this browser, like your progress, and included in backups.</p>
+    </div>
+    <div class="tile-actions iv-top"><button class="btn primary" type="button" data-iv-new>Add an interview</button></div>
+    <h2 class="lesson-group">Coming up</h2>
+    ${up.length ? `<div class="iv-list">${up.map(row).join("")}</div>` : `<p class="muted">No interviews coming up.</p>`}
+    ${past.length ? `<h2 class="lesson-group">Past</h2><div class="iv-list">${past.map(row).join("")}</div>` : ""}`;
+  document.getElementById("backLink").onclick = () => go(back);
+  wireIv(view);
+}
+
+function renderInterview() {
+  const iv = db.interviews.find(x => x.id === view.id), back = view.back || { name: "interviews" };
+  meta.innerHTML = `<button class="link" id="backLink" type="button">Back</button>`;
+  if (!iv) { app.innerHTML = `<div class="page-head"><h1>Interview not found</h1><p>It may have been deleted.</p></div>`; document.getElementById("backLink").onclick = () => go(back); return; }
+  const d = ivDaysLeft(iv), ph = ivPhase(iv), r = ivReadiness(iv);
+  const phaseIdx = IV_PHASES.findIndex(p => p[0] === ph);
+  const order = { work: 0, none: 1, nearly: 2, ready: 3 };
+  const topics = [...r.topics].sort((a, b) => b.w - a.w || order[a.r.level] - order[b.r.level]);
+  const link = safeLink(iv.link);
+  const guide = ph === "past" ? (iv.outcome ? "" : "How did it go? Note what they asked under Edit: it helps with the next one.")
+    : ph === "day" ? "Interview day. At most a 10-minute warm-up: the formula drill on your key topics. You're ready."
+    : IV_PHASES[phaseIdx][2];
+  app.innerHTML = `
+    <div class="page-head iv-head">
+      <p class="label">${esc(ivRole(iv.role)[1])} · ${esc(ivStage(iv.stage)[1])}</p>
+      <h1>${esc(ivName(iv))}</h1>
+      <p>${esc(ivDateText(iv))} · ${esc(ivFormat(iv.format))} · <b>${ivWhen(d)}</b></p>
+    </div>
+    ${d >= 0 ? `<section class="card iv-phase">
+      <ol class="iv-steps">${IV_PHASES.map(([k, l], i) => `<li class="${i < phaseIdx || ph === "day" ? "done" : i === phaseIdx ? "now" : ""}"${i === phaseIdx ? ` aria-current="step"` : ""}><span>${l}</span><span class="muted">${k === "build" ? "more than 14 days" : k === "consolidate" ? "14 to 3 days" : "last 2 days"}</span></li>`).join("")}</ol>
+      <p>${esc(guide)}</p>
+    </section>` : guide ? `<section class="card iv-phase"><p>${esc(guide)}</p></section>` : ""}
+    <section class="card">
+      <div class="iv-ready-head"><h2>Your topics</h2>${r.pct != null ? `<p><b>${r.pct}%</b> ready <span class="muted">· key topics count double</span></p>` : ""}</div>
+      ${topics.length ? `<div class="table-wrap"><table class="report-table iv-table">
+        <thead><tr><th scope="col">Topic</th><th scope="col">Readiness</th><th scope="col"><span class="sr-only">Practise</span></th></tr></thead>
+        <tbody>${topics.map(t => `<tr><th scope="row">${esc(catById(t.cat).name)}${t.w === 2 ? ` <span class="iv-key">Key</span>` : ""}</th>
+          <td>${readyPill(t.r)}${t.r.pct != null ? `<span class="calib-n">${t.r.pct}% of last ${t.r.n}</span>` : `<span class="calib-n">${t.r.n} of ${Readiness.MIN} answers</span>`}</td>
+          <td><button class="link" type="button" data-new="${t.cat}">Practise</button></td></tr>`).join("")}</tbody>
+      </table></div>` : `<p class="muted">No topics chosen yet. Use Edit to pick them.</p>`}
+    </section>
+    ${iv.outcome ? `<section class="card iv-sec"><h2>How it went</h2><p class="iv-text">${esc(iv.outcome)}</p></section>` : ""}
+    ${iv.notes || link ? `<section class="card iv-sec"><h2>Job ad and notes</h2>${iv.notes ? `<p class="iv-text">${esc(iv.notes)}</p>` : ""}${link ? `<p><a class="link" href="${esc(link)}" target="_blank" rel="noopener noreferrer">Open saved link</a></p>` : ""}</section>` : ""}
+    <div class="tile-actions"><button class="btn" type="button" id="ivEdit">Edit</button><button class="link danger-link" type="button" id="ivDelete">Delete interview</button></div>`;
+  document.getElementById("backLink").onclick = () => go(back);
+  document.getElementById("ivEdit").onclick = () => go({ name: "interviewEdit", id: iv.id, back: { ...view } });
+  document.getElementById("ivDelete").onclick = () => confirmModal("Delete this interview?", `${ivName(iv)} on ${ivDateText(iv)} and its notes will be removed. Your answers and progress stay as they are.`, "Delete", () => {
+    db.interviews = db.interviews.filter(x => x.id !== iv.id); persist(); go(back.name === "interview" ? { name: "interviews" } : back);
+  });
+  app.querySelectorAll("[data-new]").forEach(b => b.onclick = () => newRound(b.dataset.new));
+}
+
+// Add or edit an interview. The form keeps its own draft (ivDraft), so a re-render (e.g. the theme switch) keeps
+// what was typed. Picking a role or stage resets the topics to its defaults, unless you've changed them yourself.
+let ivDraft = null;
+function renderInterviewEdit() {
+  const existing = view.id ? db.interviews.find(x => x.id === view.id) : null, back = view.back || { name: "interviews" };
+  if (!ivDraft || ivDraft.for !== (view.id || "new")) {
+    const base = existing || { firm: "", role: "mna", stage: "technical", format: "video", date: "", time: "", minutes: 30, notes: "", link: "", outcome: "" };
+    ivDraft = { for: view.id || "new", ...JSON.parse(JSON.stringify(base)), focus: { ...(existing ? existing.focus : ivDefaultFocus(base.role, base.stage)) }, edited: !!existing, note: "" };
+  }
+  const f = ivDraft, past = f.date && ivDaysLeft(f) < 0;
+  const opts = (list, cur) => list.map(([v, l]) => `<option value="${v}"${v === cur ? " selected" : ""}>${esc(l)}</option>`).join("");
+  const roleGroups = [...new Set(IV_ROLES.map(r => r[2]))].map(g => `<optgroup label="${esc(g)}">${opts(IV_ROLES.filter(r => r[2] === g), f.role)}</optgroup>`).join("");
+  meta.innerHTML = `<button class="link" id="backLink" type="button">Cancel</button>`;
+  app.innerHTML = `
+    <div class="page-head"><h1>${existing ? "Edit interview" : "Add an interview"}</h1><p>Saved only in this browser, like your progress, and included in backups.</p></div>
+    <form class="card iv-form" id="ivForm" novalidate>
+      <div class="iv-field"><label for="ivFirm">Firm</label><input class="typed-input iv-wide" id="ivFirm" maxlength="80" autocomplete="off" placeholder="Name of the bank or fund" value="${esc(f.firm)}"></div>
+      <div class="iv-grid">
+        <div class="iv-field"><label for="ivRole">Role</label><select class="drill-select" id="ivRole">${roleGroups}</select></div>
+        <div class="iv-field"><label for="ivStage">Stage</label><select class="drill-select" id="ivStage">${opts(IV_STAGES, f.stage)}</select></div>
+        <div class="iv-field"><label for="ivDate">Date</label><input class="typed-input" type="date" id="ivDate" value="${esc(f.date)}" required aria-describedby="ivDateErr"><span class="iv-err" id="ivDateErr" role="alert"></span></div>
+        <div class="iv-field"><label for="ivTime">Time <span class="muted">(optional)</span></label><input class="typed-input" type="time" id="ivTime" value="${esc(f.time)}"></div>
+        <div class="iv-field"><label for="ivFormat">Format</label><select class="drill-select" id="ivFormat">${opts(IV_FORMATS, f.format)}</select></div>
+        <div class="iv-field"><label for="ivMinutes">Time per day</label><select class="drill-select" id="ivMinutes">${IV_MINUTES.map(m => `<option value="${m}"${m === +f.minutes ? " selected" : ""}>${m} minutes</option>`).join("")}</select></div>
+      </div>
+      <p class="style-note">Time per day: how long you want to prepare each day. The daily session is sized to fit it.</p>
+      <div class="iv-field"><label for="ivNotes">Job ad or recruiter notes <span class="muted">(optional)</span></label>
+        <textarea class="iv-textarea" id="ivNotes" rows="5" maxlength="5000" placeholder="Paste the job description, or what the recruiter said the interview covers.">${esc(f.notes)}</textarea>
+        <div class="tile-actions"><button class="btn" type="button" id="ivSuggest">Suggest topics from this text</button><span class="muted" id="ivSuggestNote" aria-live="polite">${esc(f.note)}</span></div>
+      </div>
+      <div class="iv-field"><label for="ivLink">Link <span class="muted">(optional, for your reference: the site can't read it)</span></label><input class="typed-input iv-wide" type="url" id="ivLink" maxlength="500" placeholder="https://" value="${esc(f.link)}"></div>
+      <fieldset class="iv-field iv-topics"><legend>Topics</legend>
+        <p class="style-note">Tap a topic to switch between off, <b>Useful</b> and <b>Key</b> (counts double). Set from the role and stage until you change them. <button class="link" type="button" id="ivReset">Reset to the role's topics</button></p>
+        ${GROUPS.map(g => `<p class="iv-group">${esc(g.name)}</p><div class="iv-chips">${CATEGORIES.filter(c => c.group === g.id).map(c => `<button type="button" class="iv-chip" data-iv-cat="${c.id}" data-w="${f.focus[c.id] || 0}" aria-pressed="${(f.focus[c.id] || 0) > 0}">${esc(c.name)}<span class="iv-chip-w"></span></button>`).join("")}</div>`).join("")}
+      </fieldset>
+      ${past || existing && existing.outcome ? `<div class="iv-field"><label for="ivOutcome">How it went</label><textarea class="iv-textarea" id="ivOutcome" rows="3" maxlength="3000" placeholder="What they asked, what went well, what to work on.">${esc(f.outcome)}</textarea></div>` : ""}
+      <div class="tile-actions"><button class="btn primary" type="submit">${existing ? "Save changes" : "Create plan"}</button><button class="link" type="button" id="ivCancel">Cancel</button></div>
+    </form>`;
+  const $ = id => document.getElementById(id);
+  const chipLabel = b => { const w = +b.dataset.w; b.querySelector(".iv-chip-w").textContent = w === 2 ? "Key" : w === 1 ? "Useful" : ""; b.setAttribute("aria-pressed", w > 0); };
+  const paintChips = () => app.querySelectorAll("[data-iv-cat]").forEach(b => { b.dataset.w = f.focus[b.dataset.ivCat] || 0; chipLabel(b); });
+  paintChips();
+  const read = () => { Object.assign(f, { firm: $("ivFirm").value.trim(), role: $("ivRole").value, stage: $("ivStage").value, date: $("ivDate").value, time: $("ivTime").value, format: $("ivFormat").value, minutes: +$("ivMinutes").value, notes: $("ivNotes").value, link: $("ivLink").value.trim() }); if ($("ivOutcome")) f.outcome = $("ivOutcome").value; };
+  app.querySelectorAll("input, textarea, select").forEach(el => el.addEventListener("input", read));
+  const roleChanged = () => { read(); if (!f.edited) { f.focus = ivDefaultFocus(f.role, f.stage); paintChips(); } };
+  $("ivRole").onchange = roleChanged; $("ivStage").onchange = roleChanged;
+  $("ivReset").onclick = () => { read(); f.focus = ivDefaultFocus(f.role, f.stage); f.edited = false; paintChips(); };
+  app.querySelectorAll("[data-iv-cat]").forEach(b => b.onclick = () => { const c = b.dataset.ivCat; f.focus[c] = ((f.focus[c] || 0) + 1) % 3; if (!f.focus[c]) delete f.focus[c]; f.edited = true; b.dataset.w = f.focus[c] || 0; chipLabel(b); });
+  $("ivSuggest").onclick = () => {
+    read();
+    const found = Object.entries(ivSuggest(f.notes)).sort((a, b) => b[1] - a[1]);
+    const added = found.filter(([c]) => !(f.focus[c] > 0)).map(([c, n]) => { f.focus[c] = n >= 2 ? 2 : 1; return c; });
+    const raised = found.filter(([c, n]) => n >= 2 && f.focus[c] === 1 && !added.includes(c)).map(([c]) => { f.focus[c] = 2; return c; });
+    if (added.length || raised.length) f.edited = true;
+    f.note = !f.notes.trim() ? "Paste some text first." : !found.length ? "No topic words found. Pick the topics below yourself."
+      : added.length || raised.length ? `Added ${[...added, ...raised].map(c => catById(c).name).join(", ")}. Check them below.` : "Every topic in your text is already on.";
+    $("ivSuggestNote").textContent = f.note; paintChips();
+  };
+  const leave = () => { ivDraft = null; go(back); };
+  $("backLink").onclick = leave; $("ivCancel").onclick = leave;
+  $("ivDate").addEventListener("input", () => { $("ivDateErr").textContent = ""; });
+  $("ivForm").onsubmit = e => {
+    e.preventDefault(); read();
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(f.date)) { $("ivDateErr").textContent = "Enter the interview date."; $("ivDate").focus(); return; }
+    const rec = { firm: f.firm, role: f.role, stage: f.stage, format: f.format, date: f.date, time: f.time, minutes: f.minutes,
+      focus: Object.fromEntries(Object.entries(f.focus).filter(([c, w]) => w > 0 && catById(c))), notes: f.notes.trim(), link: f.link, outcome: (f.outcome || "").trim(), updatedAt: Date.now() };
+    let id = view.id;
+    if (existing) Object.assign(existing, rec);
+    else { id = "iv-" + Date.now().toString(36); db.interviews.push({ id, createdAt: Date.now(), ...rec }); }
+    persist(); ivDraft = null;
+    go({ name: "interview", id, back: existing ? back.back || { name: "interviews" } : back });
+  };
+}
+
+// Interview buttons wherever they appear (home card, list).
+function wireIv(from) {
+  app.querySelectorAll("[data-iv-new]").forEach(b => b.onclick = () => go({ name: "interviewEdit", back: { ...from } }));
+  app.querySelectorAll("[data-iv-list]").forEach(b => b.onclick = () => go({ name: "interviews", back: { ...from } }));
+  app.querySelectorAll("[data-iv-open]").forEach(b => b.onclick = () => go({ name: "interview", id: b.dataset.ivOpen, back: { ...from } }));
+}
 
 /* Glossary page: every term A–Z, searchable, each linked to its lesson. */
 function renderGlossary() {
