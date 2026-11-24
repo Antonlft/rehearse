@@ -31,6 +31,7 @@ window.Glossary = [
   { term: "P/E", full: "Price/earnings ratio", def: "Share price divided by earnings per share (or market value divided by net income).", cat: "val" },
   { term: "PEG", full: "Price/earnings-to-growth ratio", def: "P/E divided by expected EPS growth in percentage points, to compare P/Es across companies growing at different speeds.", cat: "val" },
   { term: "DCF", full: "Discounted cash flow", def: "A valuation that projects future cash flows and discounts them to today at a rate that reflects their risk.", cat: "val" },
+  { term: "DDM", full: "Dividend discount model", def: "Values a share as the present value of its expected future dividends, discounted at the cost of equity; used for banks and steady dividend payers.", cat: "val" },
   { term: "FCF", full: "Free cash flow", def: "Cash left after operating costs, tax, working capital investment and capital expenditure.", cat: "val" },
   { term: "FCFF", full: "Free cash flow to the firm", def: "Free cash flow before interest and debt movements, available to all capital providers; discounted at WACC.", cat: "val" },
   { term: "FCFE", full: "Free cash flow to equity", def: "Free cash flow after interest and debt repayments, available to shareholders; discounted at the cost of equity.", cat: "val" },

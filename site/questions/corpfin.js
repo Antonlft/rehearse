@@ -54,7 +54,15 @@ Bank.add("cf", [
   { id: "cf-14", lv: 3, trap: [null, "missed-step", null], q: "What is the present value of the tax shield on permanent debt D at tax rate t?",
     o: ["t × D", "D ÷ t", "t × one year's interest", "Zero"],
     why: "Permanent debt saves t × r × D in tax every year. Discounted at r as a perpetuity, that's worth t × D.",
-    x: ["That formula has no economic meaning.", "The saving recurs every year the debt is outstanding, not just once.", "With taxes, interest deductibility has real value."] }
+    x: ["That formula has no economic meaning.", "The saving recurs every year the debt is outstanding, not just once.", "With taxes, interest deductibility has real value."] },
+  { id: "cf-15", lv: 1, trap: ["concept", "concept", "concept"], q: "Most of a company's costs are fixed. If its revenue rises 10%, what usually happens to its operating profit (EBIT)?",
+    o: ["It rises by more than 10%, as fixed costs are spread over more sales", "It rises by exactly 10%, as costs and revenue move in proportion", "It rises by less than 10%, as fixed costs have to rise along with it", "It stays the same, as the extra revenue is used up by the fixed costs"],
+    why: "This is operating leverage: when most costs are fixed, most of each extra dollar of revenue drops to profit. Say revenue is US$100m, fixed costs US$60m and variable costs US$20m, so EBIT is US$20m. With revenue 10% higher, EBIT = 110 − 60 − 22 = US$28m, a 40% rise. It works in reverse too: a 10% fall in revenue cuts EBIT by 40%, which is why high operating leverage adds risk.",
+    x: ["That only holds if all costs are variable.", "Fixed costs don't rise with revenue in the short run; that's what fixed means.", "The fixed costs are already paid, so only the variable costs come out of the extra revenue."] },
+  { id: "cf-16", lv: 1, trap: ["concept", "wrong-measure", "inverted"], q: "In the capital asset pricing model (CAPM), why does a share's cost of equity depend on its beta rather than on how volatile it is overall?",
+    o: ["Company-specific risk can be diversified away, so investors aren't paid for it", "Overall volatility can't be measured for listed shares, so beta stands in for it", "Beta is overall volatility, adjusted for the size of the company that issued it", "Investors are paid for company-specific risk, which beta captures in full"],
+    why: "A share's risk splits into market (systematic) risk, which affects all shares and can't be diversified away, and company-specific (unsystematic) risk, such as a failed product launch, which mostly cancels out across a portfolio. Investors can only demand a return for the risk they can't avoid, and beta measures exactly that: how much a share moves with the market.",
+    x: ["Volatility is easy to measure from share prices. It just isn't what investors are rewarded for.", "Beta measures how a share moves with the market, not overall volatility: a very volatile share can have a low beta.", "It's the other way round: company-specific risk isn't rewarded, and beta leaves it out."] }
 ]);
 
 // New-format questions (shown only when "new formats" is on).

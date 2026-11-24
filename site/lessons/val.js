@@ -34,7 +34,14 @@ Lessons.add("val", {
     {"kind": "example", "text": "Base case: free cash flow of US$60m, WACC 8% and growth 2%, so value = 60 ÷ 6% = US$1,000m.\nOne step to a WACC of 8.5% gives US$923m; one step to growth of 2.5% gives US$1,091m. The growth step moves value more."},
     {"kind": "watch", "text": "Check the base-case cell matches the model, and that the ranges are realistic.\nExample: with 2% growth, EV = FCF ÷ (WACC − g) doubles when WACC falls from 6% to 4%, so a table running WACC down to 3% shows absurd values."},
     {"kind": "practice", "text": "Describe the table before quoting numbers: what's on each axis, where the base case is, and which input moves the answer most."},
-    {"check": "val-39"}
+    {"check": "val-39"},
+    {"section": "Choosing the method"},
+    {"kind": "idea", "text": "No single method fits every company. Use the one whose inputs you can trust for this business, then cross-check it with another."},
+    {"kind": "formula", "text": "Value per share = {{next year's dividend // cost of equity − growth}}", "note": "The dividend discount model (DDM) with steady growth. Dividends go to shareholders, so discount them at the cost of equity, never the WACC."},
+    {"kind": "how", "text": "Steady, predictable cash flows: a DCF, cross-checked with trading multiples.\nLoss-making but growing fast: revenue multiples against peers growing at a similar rate, or multiples of profit a few years out, with a long-horizon DCF as a check.\nNo revenue yet: recent funding rounds, deals for similar start-ups, and a target exit value discounted back at a high required return.\nBanks and steady dividend payers: a DDM, plus price to tangible book value for banks.\nAt risk of failing, or worth more sold off than run: a liquidation value, as a floor."},
+    {"kind": "example", "text": "A steady dividend payer will pay US$1.50 a share next year, growing 2% a year, and its cost of equity is 8%.\nValue per share = 1.50 ÷ (8% − 2%) = US$25.00."},
+    {"kind": "watch", "text": "Shareholders' equity on the balance sheet isn't a valuation: it records past costs and leaves out the brands and know-how a company built itself. A company that borrowed to buy back shares can even have negative book equity and a healthy share price."},
+    {"check": "val-42"}
   ],
   "example": {
     "question": "A business is worth US$1,500m (EV). It has debt of US$450m, cash of US$120m, non-controlling interests of US$70m, a stake in an associate worth US$30m and 100m diluted shares. What is it worth per share?",

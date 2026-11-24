@@ -158,7 +158,43 @@ Bank.add("val", [
   { id: "val-40", lv: 1, trap: ["concept", "concept", "concept"], q: "Before quoting numbers from a sensitivity table in an interview, what should you check first?",
     o: ["What each axis shows, its step size, and that the base case matches the model", "That every cell is above the current share price, so the shares look cheap", "That the table has at least ten rows and columns, so the range is wide enough", "That the values increase from left to right and from top to bottom"],
     why: "A table is only meaningful if you know what moves along each axis and by how much (a 0.5-point step isn't comparable with a 1-point step), and if its central cell reproduces the base case. Then you can read across a row for one input and down a column for the other.",
-    x: ["A table shows a range of outcomes; some cells will be below the share price, and that's the point.", "Size doesn't matter; a 3 × 5 table is plenty if the steps are sensible.", "Direction depends on the inputs: value falls as WACC rises and rises with growth."] }
+    x: ["A table shows a range of outcomes; some cells will be below the share price, and that's the point.", "Size doesn't matter; a 3 × 5 table is plenty if the steps are sensible.", "Direction depends on the inputs: value falls as WACC rises and rises with growth."] },
+  { id: "val-41", lv: 1, trap: ["concept", "wrong-measure", "concept"], q: "A company's market capitalisation is US$5bn, but the shareholders' equity on its balance sheet is only US$1bn. What best explains the gap?",
+    o: ["Book equity uses historical cost and leaves out home-grown intangibles; the market prices future cash flows", "The gap is goodwill the company hasn't recognised yet, which its auditors will add to the balance sheet", "Shareholders' equity is measured after debt, while market capitalisation is measured before deducting debt", "The shares are overvalued: in an efficient market, market value should be close to the book value of equity"],
+    why: "Shareholders' equity is an accounting figure: assets at historical cost (less depreciation) minus liabilities. Brands, customer relationships and know-how a company builds itself mostly aren't recognised, while the market values the cash the business will earn, not what its assets cost. That's why most profitable companies trade well above book value.",
+    x: ["Goodwill only arises when a company buys another. Goodwill a company builds itself is never recognised.", "Both are measures of equity: market capitalisation is also what's left after debt, just valued by the market.", "Book value isn't an estimate of fair value, so a gap is normal. Price-to-book well above 1x is common for profitable companies."] },
+  { id: "val-42", lv: 1, trap: ["wrong-measure", "wrong-measure", "concept"], q: "A fast-growing software company is still making a loss at every profit line, and expects to turn profitable in about three years. Which approach gives the most sensible first view of its value?",
+    o: ["EV/revenue against peers growing at a similar rate, checked with a long-horizon DCF", "P/E against peers growing at a similar rate, using this year's loss as the earnings", "EV/EBITDA on this year's figures, since EBITDA removes the effect of the company's debt", "Book value, because losses make every earnings-based method impossible to use"],
+    why: "With losses at every line, earnings multiples are negative and meaningless. Revenue multiples, or multiples of a profit figure a few years out, against peers growing at similar rates, are the usual first look. A DCF with a forecast long enough to reach steady margins (often 10 years or more) can cross-check it, though most of its value will sit in the terminal value.",
+    x: ["A P/E on a loss is negative, so it can't be compared with anything.", "EBITDA is negative here too, so the multiple is meaningless; the problem isn't debt.", "Book value says little about a software company, whose main assets (its code and its customers) mostly aren't on the balance sheet."] },
+  { id: "val-43", lv: 2, trap: ["concept", "concept", "concept"], q: "Why do investors rarely rely on a DCF to value a start-up that has no revenue yet?",
+    o: ["Nearly all its value would sit in distant, highly uncertain cash flows", "With no debt, there's no way of working out a WACC for the company", "A DCF needs at least three years of reported accounts to start from", "Losses in the early years would make the DCF value negative every time"],
+    why: "A DCF is only as good as its forecasts. With no revenue, the cash flows that drive value lie many years out and depend on whether the product works at all, so small changes in assumptions swing the answer. Investors lean instead on recent funding rounds, deals for similar companies, and the venture capital method: a target exit value discounted back at a high required return.",
+    x: ["With no debt, the WACC is simply the cost of equity, which can be estimated.", "A DCF works from forecasts. Past accounts help, but they aren't required.", "Early losses lower the value, but later profits can outweigh them. The problem is how uncertain those profits are."] },
+  { id: "val-44", lv: 2, trap: ["concept", "concept", "concept"], q: "When does a liquidation value usually matter most in valuing a company?",
+    o: ["When the business may not survive, or its assets are worth more sold than used", "When the company is growing fast and needs to raise money to fund its expansion", "When it's listed, because the share price already reflects its liquidation value", "When it has no debt, because then no creditors have a claim on the sale proceeds"],
+    why: "A liquidation value estimates what shareholders would get if the assets were sold and the liabilities paid. Assets usually fetch less than book value in a quick sale, especially specialised equipment. It sets a floor in distressed situations, and creditors compare a restructuring plan against it. It can even be the highest value, when a struggling business sits on valuable, easy-to-sell assets such as property.",
+    x: ["A growing company is worth far more as a going concern, so its liquidation value is rarely relevant.", "A listed share price reflects a business that keeps operating, not a sale of its assets.", "A liquidation value is used when there's debt too: creditors are simply paid first from the proceeds."] },
+  { id: "val-45", lv: 2, trap: [null, "wrong-measure", "concept"], q: "When does a dividend discount model make most sense?",
+    o: ["For banks and mature companies that pay out a steady share of their earnings", "For fast-growing companies that reinvest all their cash and pay no dividends", "For any company, using the WACC as the rate to discount its future dividends", "For companies with a lot of debt, since dividends are only paid after interest"],
+    why: "A dividend discount model values a share as the present value of its future dividends, discounted at the cost of equity. With steady growth, value per share = next year's dividend ÷ (cost of equity − growth). It suits companies whose dividends track their earnings, and banks, where debt is part of the business, so free cash flow and the WACC don't work well.",
+    x: ["With no dividends for years, the value rests almost entirely on a guess about when payouts will start.", "Dividends go to shareholders only, so they're discounted at the cost of equity, not the WACC.", "Debt makes dividends riskier, but that isn't a reason to use the model. For most indebted companies a DCF is still the norm."] },
+  { id: "val-46", lv: 3, trap: ["concept", "wrong-measure", "concept"], q: "Why might an analyst use adjusted present value (APV) rather than a DCF at the WACC to value a leveraged buyout target?",
+    o: ["Its debt will fall sharply, so a single WACC would misstate the tax benefit", "APV leaves out the tax benefit of debt, which is too uncertain in a buyout", "APV discounts the cash flows at the cost of debt, the lower and safer rate", "A WACC can't be worked out for a private company that has no share price"],
+    why: "APV values the business as if it had no debt (its cash flows discounted at the unlevered cost of equity), then adds the present value of the tax savings from debt separately. A single WACC assumes a stable mix of debt and equity. In a buyout, debt is paid down year by year, so that mix keeps changing; APV handles the changing debt directly.",
+    x: ["APV keeps the tax benefit of debt, just as a separate piece of value.", "The business's cash flows are discounted at the unlevered cost of equity. Only the tax savings may be discounted at the cost of debt.", "A WACC can be estimated from listed peers. The problem is that it changes as debt is repaid."] },
+  { id: "val-47", lv: 1, trap: ["concept", "concept", "wrong-measure"], q: "Which is a real weakness of precedent transaction multiples?",
+    o: ["Each price reflects that deal's timing, synergies and competition for the asset", "They leave out the control premium, so they understate what a buyer would pay", "Only listed buyers are counted, so private equity deals are never included", "They're based on forecasts, so they change whenever analysts revise estimates"],
+    why: "A precedent shows what one buyer paid at one moment: the market at the time, the synergies that buyer expected, and how many bidders there were. Deals can be years old, and their terms are often only partly disclosed. So use a range of recent deals and adjust for the differences, rather than relying on one headline multiple.",
+    x: ["They include the control premium. That's why they usually come out above trading multiples.", "Private equity deals are included whenever their terms are public.", "Precedent multiples usually use the target's figures for the last 12 months before the deal, so they don't move with new forecasts."] },
+  { id: "val-48", lv: 1, trap: ["concept", "concept", "sign"], q: "When summarising a peer group's EV/EBITDA multiples, why do analysts often prefer the median to the mean?",
+    o: ["One or two extreme multiples can drag the mean far from a typical peer", "The median gives more weight to the largest companies in the peer group", "The mean can only be used when every peer reports in the same currency", "The median is always lower, which gives a more cautious valuation range"],
+    why: "Peer groups are small, and one company with depressed EBITDA can trade at 40x. The median ignores how extreme such an outlier is; the mean doesn't. Show both, or leave out clear outliers and say why.",
+    x: ["The median doesn't weight by size: each peer counts once.", "A multiple divides two figures in the same currency, so currency cancels out.", "The median can sit above or below the mean, depending on where the outliers are."] },
+  { id: "val-49", lv: 2, trap: ["sign", "missed-step", "sign"], q: "In the final year of a DCF forecast, for a company growing steadily at 2–3% a year, how should capex compare with depreciation?",
+    o: ["Slightly above it, so the asset base keeps growing with the business", "Well below it, because the company no longer needs new capacity", "At zero, because growth in the terminal value is already assumed", "Well above it, at the levels of the company's expansion years"],
+    why: "Capex below depreciation means the asset base shrinks, which can't support growth forever. Capex far above it funds expansion the terminal growth rate doesn't assume. Maintenance capex roughly replaces what wears out, and a little growth capex on top supports steady growth. That's why the final year should be normalised before applying the Gordon growth formula.",
+    x: ["A shrinking asset base can't support growing revenue forever.", "Growing cash flows still need investment, so zero capex overstates free cash flow.", "Expansion-level capex doesn't match 2–3% growth, so it understates free cash flow."] }
 ]);
 
 // New-format questions (shown only when "new formats" is on).
@@ -193,7 +229,18 @@ Bank.addFormat("val", [
       { text: "Unfunded defined-benefit pension deficit (after tax)", answer: 0, note: "A promise to employees the company must fund, so it's debt-like." },
       { text: "Lease liabilities (IFRS 16), when EBITDA excludes the lease cost", answer: 0, note: "Under IFRS 16 EBITDA is before lease costs, so leases are debt-like. If you use EBITDA after rent, leave them out." }
     ],
-    why: "Add the claims of other capital providers and the parts of the business EBITDA includes; subtract cash and the investments whose profits EBITDA leaves out." }
+    why: "Add the claims of other capital providers and the parts of the business EBITDA includes; subtract cash and the investments whose profits EBITDA leaves out." },
+  { id: "val-grid-02", lv: 2, type: "grid", q: "Is a DCF of free cash flow, discounted at the WACC, a good fit for valuing each of these?",
+    columns: ["Good fit", "Poor fit"],
+    rows: [
+      { text: "A regulated water utility with stable, predictable cash flows", answer: 0, note: "Cash flows that can be forecast with confidence are exactly what a DCF needs." },
+      { text: "A commercial bank", answer: 1, note: "Debt is a bank's raw material, so free cash flow and the WACC can't separate operating from financing. Dividend models and price to tangible book value are used instead." },
+      { text: "A start-up with no revenue yet", answer: 1, note: "Almost all the value would sit in distant, uncertain cash flows. Funding rounds and the venture capital method are used instead." },
+      { text: "A toll road with 30 years left on its concession and set tariffs", answer: 0, note: "A fixed life and predictable cash flows suit a DCF. The cash flows simply stop when the concession ends, with no perpetual terminal value." },
+      { text: "A company being wound up, with its assets about to be sold", answer: 1, note: "There's no ongoing business to forecast. Value comes from selling the assets, so a liquidation value applies." },
+      { text: "A mature consumer brand with steady growth and margins", answer: 0, note: "Predictable growth and margins make both the forecast and the terminal value reliable." }
+    ],
+    why: "A DCF works best when cash flows can be forecast with some confidence and the business will keep operating. It struggles where debt is part of the business model (banks), where the cash flows are too distant and uncertain (start-ups), and where there's no ongoing business (a liquidation)." }
 ]);
 
 // Answer + reason: pick the answer, then why it's true. Right only if both are right. In each list the right one
@@ -267,7 +314,25 @@ Bank.addFormat("val", [
       "Value is only diluted when shares are sold for less than they're worth. At the market price, the new money matches the new shares.",
       "Cash lowers net debt, but enterprise value (the business) is unchanged. It's equity value that rises, by exactly the cash raised.",
       "Earnings per share may dip if the cash earns little, but each share's value depends on what it owns, which hasn't changed."],
-    why: "Say equity is worth US$1,000m over 100m shares, or US$10 each. Issuing 20m shares at US$10 raises US$200m: equity becomes US$1,200m over 120m shares, still US$10 each. Issuing below what the shares are worth would move value from existing to new shareholders, which is why deeply discounted share sales matter." }
+    why: "Say equity is worth US$1,000m over 100m shares, or US$10 each. Issuing 20m shares at US$10 raises US$200m: equity becomes US$1,200m over 120m shares, still US$10 each. Issuing below what the shares are worth would move value from existing to new shareholders, which is why deeply discounted share sales matter." },
+
+  { id: "val-why-05", lv: 2, type: "reason",
+    q: "A profitable company has negative shareholders' equity after years of borrowing to buy back its shares. Its shares trade at US$50. What does the negative book equity tell you about the value of its shares?",
+    answers: ["Little on its own", "That they're worth nothing", "That it is insolvent", "That the price will fall"],
+    answerNotes: [
+      "Book equity isn't market value. Shareholders own the future cash flows, which the market prices at US$50 a share.",
+      "Insolvency is mainly about being unable to pay debts as they fall due. A profitable company with steady cash flow can service its debt.",
+      "The share price already reflects the debt and the buybacks. Book equity turning negative adds no new information."],
+    reasons: [
+      "Buybacks cut book equity by the cash paid out, while the business keeps earning",
+      "Negative equity means liabilities exceed assets, so shareholders would get nothing",
+      "Accounting rules require a company to stop trading once its equity turns negative",
+      "Negative equity signals future losses, which the market has not yet priced in"],
+    reasonNotes: [
+      "That compares book values. A buyer would value the business on its cash flows, typically well above book.",
+      "No such rule exists. Several large, well-known companies have operated with negative book equity for years.",
+      "Here it comes from buybacks, not losses: the company is profitable."],
+    why: "Shareholders' equity falls by every dollar spent on buybacks or dividends. A company that borrows to return cash can push it below zero while its business keeps earning well. Market value prices those future earnings, so negative book equity on its own says little; look at leverage and interest cover instead. It does make return on equity meaningless." }
 ]);
 
 // Spot the error: a short worked answer with one mistake. Tap the line, then pick the fix. Right only if both are right.
@@ -353,5 +418,31 @@ Bank.addFormat("val", [
       "The company buys its shares back in the market, at the current share price, not at an average.",
       "The treasury stock method assumes the exercise cash buys shares back, which offsets part of the dilution.",
       "Cash divided by the share price gives the number of shares bought back, not the shares in issue."],
-    why: "Under the treasury stock method, in-the-money options are assumed to be exercised, and the cash they bring in buys shares back at the current share price: US$150m ÷ US$20 = 7.5m shares. Net new shares are 10m − 7.5m = 2.5m, so diluted shares are 102.5m. Buying back at the exercise price always cancels out exactly, which would make options look free." }
+    why: "Under the treasury stock method, in-the-money options are assumed to be exercised, and the cash they bring in buys shares back at the current share price: US$150m ÷ US$20 = 7.5m shares. Net new shares are 10m − 7.5m = 2.5m, so diluted shares are 102.5m. Buying back at the exercise price always cancels out exactly, which would make options look free." },
+
+  { id: "val-spot-04", lv: 2, type: "spot",
+    q: "A mature utility has just paid a dividend of US$2.00 a share. Dividends are expected to grow 3% a year forever. Its cost of equity is 9% and its WACC is 7%. A candidate values a share with a dividend discount model. Which line contains the mistake?",
+    lines: [
+      "Dividend just paid: US$2.00",
+      "Next year's dividend: US$2.00 × 1.03 = US$2.06",
+      "Discount rate: the 7% WACC",
+      "Spread over growth: 7% − 3% = 4%",
+      "Value per share: US$2.06 ÷ 4% = US$51.50"],
+    wrong: 2,
+    lineNotes: [
+      "The dividend just paid is given in the question.",
+      "Right: the formula uses next year's dividend.",
+      null,
+      "The subtraction is right, but it uses the wrong rate from line 3.",
+      "The division is right, but it carries the mistake from line 3 forward."],
+    fixes: [
+      "Use the 9% cost of equity: spread 6%, so US$2.06 ÷ 6% = US$34.33",
+      "Use this year's US$2.00 dividend instead: US$2.00 ÷ 4% = US$50.00",
+      "Average the two rates, 8%: spread 5%, so US$2.06 ÷ 5% = US$41.20",
+      "Add growth to the WACC instead: 7% + 3% = 10%, so US$20.60"],
+    fixNotes: [
+      "Next year's dividend is the right one: the formula values the dividends from next year on.",
+      "Dividends belong to shareholders only, so their required return applies, not a blend of the costs of debt and equity.",
+      "The formula divides by the discount rate minus growth, not plus."],
+    why: "Dividends are paid to shareholders, so they're discounted at the return shareholders require: the cost of equity. The WACC blends in the cheaper cost of debt and belongs with cash flows to all investors. Here value = US$2.06 ÷ (9% − 3%) = US$34.33; using the WACC overstates it by half." }
 ]);
