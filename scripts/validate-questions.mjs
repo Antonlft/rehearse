@@ -337,6 +337,28 @@ for (const p of Bank.outLoud || []) {
   if (BAD_TEXT.test(JSON.stringify(p))) fail(`${where}: text contains NaN/Infinity/undefined`);
 }
 
+// Key terms (questions/outloud-terms.js): each id is a technical out-loud prompt or a walk-through card, with 3–8 terms;
+// each term has non-empty ways of saying it, none repeated in the prompt once punctuation and case are ignored.
+const walkIds = new Set();
+for (const src of [Bank.written, Bank.formats || {}]) for (const list of Object.values(src)) for (const q of list) if (q.type === "walk") walkIds.add(q.id);
+const termNorm = x => (x.toLowerCase().match(/[\p{L}\p{N}]+(?:['’][\p{L}]+)*/gu) || []).join(" ");
+let termSets = 0;
+for (const [id, list] of Object.entries(Bank.terms || {})) {
+  termSets++;
+  const where = `key terms for ${id}`, p = (Bank.outLoud || []).find(x => x.id === id);
+  if (!p && !walkIds.has(id)) { fail(`${where}: no out-loud prompt or walk-through card has this id`); continue; }
+  if (p && p.group === "fit") fail(`${where}: fit questions have no key terms`);
+  if (!Array.isArray(list) || list.length < 3 || list.length > 8) { fail(`${where}: list 3–8 terms`); continue; }
+  const seen = new Set();
+  for (const term of list) {
+    const alts = typeof term === "string" ? term.split("|").map(termNorm) : [""];
+    if (alts.some(a => !a)) fail(`${where}: ${JSON.stringify(term)} has an empty way of saying it`);
+    for (const a of alts) { if (a && seen.has(a)) fail(`${where}: "${a}" is listed twice`); seen.add(a); }
+  }
+}
+for (const p of Bank.outLoud || []) if (p.group !== "fit" && !(Bank.terms || {})[p.id]) fail(`out-loud ${p.id}: technical prompts need key terms in questions/outloud-terms.js`);
+for (const id of walkIds) if (!(Bank.terms || {})[id]) fail(`walk-through card ${id}: needs key terms in questions/outloud-terms.js`);
+
 // Paper LBOs (the timed trainer): sampled like case studies, plus a unique permanent id, a name, a short description,
 // a time limit and an assumption sheet. Up to 8 steps, like a case.
 let papers = 0;
@@ -595,7 +617,7 @@ if (errors.length) {
   for (const e of errors) console.error("  - " + e);
   process.exit(1);
 }
-console.log(`✓ ${written - formatQuestions} written questions, ${formatQuestions} new-format questions, ${gens} generators, ${typed} typed-answer generators, ${cases} case stud${cases === 1 ? "y" : "ies"} and ${papers} paper LBO${papers === 1 ? "" : "s"} (${RUNS} samples each), and ${outLoud} out-loud prompts passed.`);
+console.log(`✓ ${written - formatQuestions} written questions, ${formatQuestions} new-format questions, ${gens} generators, ${typed} typed-answer generators, ${cases} case stud${cases === 1 ? "y" : "ies"} and ${papers} paper LBO${papers === 1 ? "" : "s"} (${RUNS} samples each), and ${outLoud} out-loud prompts (${termSets} with key terms) passed.`);
 console.log(`✓ ${askChecked} "Ask Claude" messages built (wrong, right and skipped versions of every question and case step), with nothing missing.`);
 console.log(`✓ The mistake detective flagged ${(alarmHits / Math.max(1, alarmTried) * 100).toFixed(1)}% of ${alarmTried} ordinary wrong typed answers as a slip (5% at most).`);
 console.log(`✓ ${Object.keys(Lessons).length} lessons for ${categoryIds.length} categories (${Object.entries(lessonCounts).map(([k, v]) => `${v} ${k}`).join(", ")}).`);

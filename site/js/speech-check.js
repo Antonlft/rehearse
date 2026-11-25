@@ -18,7 +18,7 @@
 
   // Words with their place in the text: [{ w (lower case), at, end }]. Curly apostrophes count as straight ones.
   function tokens(text) {
-    const out = [], re = /[a-z0-9]+(?:['’][a-z]+)*/gi;
+    const out = [], re = /[\p{L}\p{N}]+(?:['’][\p{L}]+)*/gu;
     let m;
     while ((m = re.exec(text || ""))) out.push({ w: m[0].toLowerCase().replace(/’/g, "'"), at: m.index, end: m.index + m[0].length });
     return out;

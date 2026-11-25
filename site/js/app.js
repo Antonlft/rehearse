@@ -2626,7 +2626,7 @@ function olPrompts() {
   for (const src of [Bank.written, Bank.formats || {}]) for (const [cat, list] of Object.entries(src)) for (const q of list)
     if (q.type === "walk") walks.push({ id: q.id, group: cat, lv: q.lv || 1, q: q.q, points: q.points, tip: q.why, secs: 90, walk: true });
   const order = g => g === "fit" ? -1 : CATEGORIES.findIndex(c => c.id === g);
-  return [...Bank.outLoud, ...walks].sort((a, b) => order(a.group) - order(b.group));
+  return [...Bank.outLoud, ...walks].map(p => Bank.terms && Bank.terms[p.id] ? { ...p, terms: Bank.terms[p.id] } : p).sort((a, b) => order(a.group) - order(b.group));
 }
 const olById = id => olPrompts().find(p => p.id === id);
 // Due ones (most overdue first), then new ones (fit first when preferFit), then the rest (soonest due first). New ones
