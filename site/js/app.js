@@ -188,8 +188,11 @@ db.paperLbos ||= [];
 db.outLoudLog ||= [];
 db.outLoudSchedule ||= {};
 //  26: added db.outLoudNotes: your own answer to an out-loud prompt, { "<prompt id>": text } (up to 2,000 characters),
-//      shown after you answer, next to the key points.
+//      shown after you answer, next to the key points; db.outLoudTranscript: true once you turn on "Write down what I
+//      say" (the browser's speech-to-text). Out-loud log entries answered with it on can also hold words (word count),
+//      wpm (words a minute, when long enough to tell) and fill (filler phrases heard).
 db.outLoudNotes ||= {};
+db.outLoudTranscript = db.outLoudTranscript === true;
 const SCHEMA_VERSION = 26;
 db.schemaVersion = Math.max(db.schemaVersion || 1, SCHEMA_VERSION);
 let saveWarned = false;
@@ -2675,8 +2678,8 @@ function audioOpen() {
 }
 const takesStore = (mode = "readonly") => audioOpen().then(d => d.transaction("takes", mode).objectStore("takes"));
 const takesOf = pid => takesStore().then(st => idbDone(st.index("pid").getAll(pid))).then(list => list.sort((a, b) => b.at - a.at));
-async function saveTake(pid, blob, ms) {
-  await idbDone((await takesStore("readwrite")).add({ pid, at: Date.now(), ms, type: blob.type, blob }));
+async function saveTake(pid, blob, ms, text) {
+  await idbDone((await takesStore("readwrite")).add({ pid, at: Date.now(), ms, type: blob.type, blob, ...(text ? { text } : {}) }));
   for (const t of (await takesOf(pid)).slice(OL_KEEP)) await idbDone((await takesStore("readwrite")).delete(t.key));
 }
 const deleteTake = async key => idbDone((await takesStore("readwrite")).delete(key));
@@ -2685,11 +2688,73 @@ const deleteTake = async key => idbDone((await takesStore("readwrite")).delete(k
 function olCleanup() {
   if (olNoteTimer) { clearTimeout(olNoteTimer); olNoteTimer = null; persist(); } // save notes typed just before leaving
   if (!vocal) return;
+  olUnlisten(vocal, true);
   try { if (vocal.rec && vocal.rec.state !== "inactive") { vocal.rec.onstop = null; vocal.rec.stop(); } } catch {}
   if (vocal.stream) vocal.stream.getTracks().forEach(t => t.stop());
   if (vocal.url) URL.revokeObjectURL(vocal.url);
   (vocal.takeUrls || []).forEach(u => URL.revokeObjectURL(u));
   vocal = null;
+}
+/* "Write down what I say": the browser's own speech-to-text (SpeechRecognition; Chrome, Edge and Safari), listening for
+   US English while you answer. In Chrome the sound goes through Google's servers, in Safari through Apple's; the text
+   comes back to this page only. Chrome stops listening after a pause, so it's restarted until you press Stop. */
+const olSR = () => window.SpeechRecognition || window.webkitSpeechRecognition || null;
+const olText = v => [...(v.final || []), v.interim || ""].join(" ").replace(/\s+/g, " ").trim();
+function olListen(v) {
+  const SR = olSR();
+  if (!SR || !db.outLoudTranscript) return;
+  v.final = []; v.interim = ""; v.listening = true; v.trErr = null; v.heard = true;
+  const start = () => {
+    const r = new SR();
+    r.lang = "en-US"; r.continuous = true; r.interimResults = true;
+    r.onresult = e => {
+      if (vocal !== v) return;
+      let interim = "";
+      for (let k = e.resultIndex; k < e.results.length; k++) {
+        const t = e.results[k][0].transcript.trim();
+        if (e.results[k].isFinal) { if (t) v.final.push(t); } else interim += " " + t;
+      }
+      v.interim = interim.trim();
+      const live = document.getElementById("olLiveText");
+      if (live) live.textContent = olText(v) || "Listening…";
+    };
+    r.onerror = e => {
+      if (vocal !== v) return;
+      if (e.error === "no-speech" || e.error === "aborted") return; // a pause: onend restarts it
+      if (e.error === "audio-capture" && v.rec && !v.recSkipped) return olSkipRecording(v); // can't share the microphone
+      v.listening = false;
+      v.trErr = e.error === "not-allowed" || e.error === "service-not-allowed" ? "Speech-to-text is blocked in this browser, so nothing was written down."
+        : e.error === "network" ? "Speech-to-text needs an internet connection, so nothing was written down."
+        : "Speech-to-text stopped working, so the rest wasn't written down.";
+      const live = document.getElementById("olLiveText");
+      if (live) live.textContent = v.trErr;
+    };
+    r.onend = () => {
+      if (vocal !== v) return;
+      if (v.interim) { v.final.push(v.interim); v.interim = ""; }
+      if (v.listening && v.phase === "rec" && (v.restarts = (v.restarts || 0) + 1) < 60) { try { start(); return; } catch {} }
+      v.sr = null;
+      if (v.phase === "review") renderVocal(); // the last words arrive after Stop
+    };
+    v.sr = r;
+    r.start();
+  };
+  try { start(); } catch { v.listening = false; v.trErr = "Speech-to-text couldn't start in this browser."; }
+}
+function olUnlisten(v, drop = false) {
+  v.listening = false;
+  if (!v.sr) return;
+  try { if (drop) { v.sr.onend = v.sr.onresult = v.sr.onerror = null; v.sr.abort(); v.sr = null; } else v.sr.stop(); } catch {}
+}
+// Some phones can't record and write down at the same time: keep the words and drop the recording.
+function olSkipRecording(v) {
+  try { v.rec.onstop = null; v.rec.stop(); } catch {}
+  if (v.stream) v.stream.getTracks().forEach(t => t.stop());
+  Object.assign(v, { rec: null, stream: null, chunks: [], recSkipped: true });
+  if (v.sr) { v.sr.onend = null; try { v.sr.abort(); } catch {} v.sr = null; }
+  const keep = v.final || [];
+  olListen(v); v.final = keep;
+  renderVocal();
 }
 async function olRecord() {
   const v = vocal;
@@ -2710,22 +2775,26 @@ async function olRecord() {
   };
   v.rec = rec; v.err = null; v.phase = "rec"; v.start = Date.now();
   rec.start();
+  olListen(v);
   renderVocal();
 }
 function olStop() {
   vocal.ms = Date.now() - vocal.start;
+  olUnlisten(vocal);
   if (vocal.rec && vocal.rec.state !== "inactive") vocal.rec.stop(); // onstop moves on to the review
   else { vocal.phase = "review"; renderVocal(); }
 }
 function olSave() {
   const p = olById(vocal.pid), got = vocal.checks.filter(Boolean).length, n = p.points.length, at = Date.now();
+  const text = vocal.heard ? olText(vocal) : "", a = text ? SpeechCheck.analyse(text, vocal.ms) : null;
   scheduleAnswer(db.outLoudSchedule, p.id, got / n >= OL_OK, at);
-  db.outLoudLog = [...db.outLoudLog, { pid: p.id, at, got, n, ms: vocal.ms || 0, rec: !!vocal.blob, ...(view.ivId ? { iv: view.ivId } : {}) }].slice(-OL_LOG_KEEP);
+  db.outLoudLog = [...db.outLoudLog, { pid: p.id, at, got, n, ms: vocal.ms || 0, rec: !!vocal.blob, ...(view.ivId ? { iv: view.ivId } : {}),
+    ...(a ? { words: a.words, fill: a.fillTotal, ...(a.wpm ? { wpm: a.wpm } : {}) } : {}) }].slice(-OL_LOG_KEEP);
   const queue = view.queue || [], last = !queue.length || queue.indexOf(p.id) === queue.length - 1, iv = view.ivId && ivById(view.ivId);
   if (iv && last) ivMarkDone(iv, "vocal"); else persist();
   vocal.result = { got, n };
   vocal.phase = "saved";
-  if (vocal.blob) saveTake(p.id, vocal.blob, vocal.ms || 0).then(() => olTakes(p.id)).catch(() => { if (vocal && vocal.pid === p.id) { vocal.saveErr = true; renderVocal(); } });
+  if (vocal.blob) saveTake(p.id, vocal.blob, vocal.ms || 0, text).then(() => olTakes(p.id)).catch(() => { if (vocal && vocal.pid === p.id) { vocal.saveErr = true; renderVocal(); } });
   renderVocal();
 }
 // Load this prompt's saved recordings, then redraw.
@@ -2736,6 +2805,29 @@ function olTakes(pid) {
     vocal.takes = list; vocal.takeUrls = list.map(t => URL.createObjectURL(t.blob));
     if (vocal.phase !== "rec") renderVocal(); // not while the clock is running: it would restart the screen
   }).catch(() => { if (vocal && vocal.pid === pid) { vocal.takes = []; vocal.noStore = true; } });
+}
+
+// "What we heard": the transcript with filler phrases marked, and the checks on it.
+function olHeard(v, p) {
+  if (!v.heard) return "";
+  const text = olText(v), head = `<p class="label">What we heard</p>`;
+  if (!text) return `<div class="ol-heard">${head}<p class="muted">${v.trErr ? esc(v.trErr) : "No words came through. Check that the browser is using the right microphone, or speak a little closer to it."}</p></div>`;
+  const a = SpeechCheck.analyse(text, v.ms, p.terms);
+  let marked = "", at = 0;
+  for (const m of a.marks) { marked += esc(text.slice(at, m.at)) + `<mark class="ol-fill">${esc(text.slice(m.at, m.end))}</mark>`; at = m.end; }
+  marked += esc(text.slice(at));
+  const aimFor = `aim for ${SpeechCheck.PACE.slow + 10} to ${SpeechCheck.PACE.fast - 10}`;
+  const pace = a.wpm == null ? `${a.words} word${a.words === 1 ? "" : "s"}: too short to judge your pace.`
+    : `${a.words} words, ${a.wpm} a minute: ${a.pace === "good" ? "a good pace." : a.pace === "slow" ? `a bit slow; ${aimFor}.` : `fast; slow down a little and ${aimFor}.`}`;
+  const fill = a.fillTotal ? `Filler phrases: ${a.fill.map(f => `“${esc(f.phrase)}” ×${f.count}`).join(", ")}.` : "No filler phrases heard.";
+  const story = /^tell me about a time/i.test(p.q)
+    ? `<li class="${a.we > a.i ? "ol-warn" : ""}">“I” ${a.i} time${a.i === 1 ? "" : "s"}, “we” ${a.we} time${a.we === 1 ? "" : "s"}. ${a.we > a.i ? "Say what you did yourself: use “I” for your own part." : "Good: your own part comes through."}</li>` : "";
+  const terms = a.terms ? `<li>Key terms heard: ${a.terms.hit.length ? a.terms.hit.map(t => `<span class="ol-term ok">✓ ${esc(t)}</span>`).join(" ") : "none"}${a.terms.miss.length ? `<br>Not heard: ${a.terms.miss.map(t => `<span class="ol-term">${esc(t)}</span>`).join(" ")}` : ""}</li>` : "";
+  return `<div class="ol-heard">${head}
+      <ul class="ol-stats"><li class="${a.pace && a.pace !== "good" ? "ol-warn" : ""}">${pace}</li><li class="${a.fillTotal >= 5 ? "ol-warn" : ""}">${fill}</li>${story}${terms}</ul>
+      <details class="ol-transcript" open><summary>Transcript</summary><p>${marked}</p></details>
+      <p class="muted ol-note">${v.recSkipped ? "This browser couldn't record and write down at the same time, so only the words were kept. " : ""}${v.trErr ? esc(v.trErr) + " " : ""}Speech-to-text makes mistakes${a.terms ? ", can mishear acronyms" : ""} and usually leaves out “um” and “uh”, so treat these as hints, not a score.</p>
+    </div>`;
 }
 
 function renderVocal() {
@@ -2749,15 +2841,20 @@ function renderVocal() {
   clearInterval(tick);
   let box;
   if (v.phase === "ready") box = `
+      ${olSR() ? `<label class="ol-switch"><input type="checkbox" id="olTr"${db.outLoudTranscript ? " checked" : ""}><span><b>Write down what I say</b><span class="muted">Your browser turns your speech into text, so you can check your pace, filler words and more. In Chrome this goes through Google's servers, in Safari through Apple's. The text stays on this device.</span></span></label>`
+        : `<p class="muted ol-note">This browser can't turn speech into text, so there's no transcript. Chrome, Edge and Safari can.</p>`}
       <div class="tile-actions"><button class="btn primary" type="button" id="olRec">Record my answer</button><button class="btn" type="button" id="olNoRec">Answer without recording</button></div>
       ${v.err ? `<p class="ol-err" role="alert">${esc(v.err)}</p>` : ""}
       <p class="muted ol-note">Recordings stay in this browser only, the last ${OL_KEEP} for each question. They aren't sent anywhere or included in backups.</p>`;
   else if (v.phase === "rec") box = `
       <div class="ol-live"><span class="ol-dot${v.rec ? "" : " off"}" aria-hidden="true"></span><span>${v.rec ? "Recording" : "Answering"}</span><strong id="olClock" class="ol-clock">0:00</strong><span class="muted">aim for ${aim}</span></div>
+      ${v.heard ? `<p class="ol-live-text" id="olLiveText">${esc(v.trErr || olText(v) || "Listening…")}</p>` : ""}
+      ${v.recSkipped ? `<p class="muted ol-note">This browser can't record and write down at the same time, so it's only writing down.</p>` : ""}
       <div class="tile-actions"><button class="btn primary" type="button" id="olStop">${v.rec ? "Stop" : "Done"}</button></div>`;
   else {
     const n = p.points.length, got = v.checks.filter(Boolean).length, saved = v.phase === "saved";
     box = `${v.url ? `<div class="ol-take"><p class="label">Your answer · ${paperTime(v.ms || 0)}</p><audio controls preload="metadata" src="${v.url}"></audio></div>` : v.ms ? `<p class="muted">You took ${paperTime(v.ms)} (aim for ${aim}).</p>` : ""}
+      ${olHeard(v, p)}
       <fieldset class="ol-points"${saved ? " disabled" : ""}>
         <legend>Which key points did you cover?</legend>
         ${p.points.map((t, k) => `<label class="ol-point"><input type="checkbox" data-ol-pt="${k}"${v.checks[k] ? " checked" : ""}><span>${rich(t)}</span></label>`).join("")}
@@ -2773,7 +2870,7 @@ function renderVocal() {
   }
   const notes = v.phase === "ready" ? olNoteBox(p, false) : "";
   const ae = document.activeElement, keep = ae && ae.id === "olNote" ? [ae.selectionStart, ae.selectionEnd, ae.scrollTop] : null; // a redraw while typing
-  const takes = (v.takes || []).map((t, k) => `<li><span class="muted">${new Date(t.at).toLocaleString("en-GB", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })} · ${paperTime(t.ms)}</span><audio controls preload="metadata" src="${v.takeUrls[k]}"></audio><button class="link danger-link" type="button" data-ol-del="${t.key}">Delete</button></li>`).join("");
+  const takes = (v.takes || []).map((t, k) => `<li><span class="muted">${new Date(t.at).toLocaleString("en-GB", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })} · ${paperTime(t.ms)}</span><audio controls preload="metadata" src="${v.takeUrls[k]}"></audio><button class="link danger-link" type="button" data-ol-del="${t.key}">Delete</button>${t.text ? `<details class="ol-take-text"><summary>Transcript</summary><p>${esc(t.text)}</p></details>` : ""}</li>`).join("");
   app.innerHTML = `
     <div class="page-head ol-head">
       <p class="label">${esc(olGroupName(p.group))}${qi >= 0 ? ` · ${qi + 1} of ${queue.length}` : ""}${p.status === "draft" ? ` · <span class="ol-draft">Draft</span>` : ""}</p>
@@ -2786,10 +2883,12 @@ function renderVocal() {
   document.getElementById("backLink").onclick = () => go(back);
   const on = (id, f) => { const b = document.getElementById(id); if (b) b.onclick = f; };
   on("olRec", () => { const b = document.getElementById("olRec"); b.disabled = true; b.textContent = "Opening the microphone…"; olRecord(); });
-  on("olNoRec", () => { v.phase = "rec"; v.rec = null; v.start = Date.now(); renderVocal(); });
+  on("olNoRec", () => { v.phase = "rec"; v.rec = null; v.start = Date.now(); olListen(v); renderVocal(); });
   on("olStop", olStop);
+  const trSw = document.getElementById("olTr");
+  if (trSw) trSw.onchange = () => { db.outLoudTranscript = trSw.checked; persist(); };
   on("olSave", olSave);
-  on("olRedo", () => { if (v.url) URL.revokeObjectURL(v.url); Object.assign(v, { phase: "ready", url: null, blob: null, ms: 0, checks: [] }); renderVocal(); });
+  on("olRedo", () => { if (v.url) URL.revokeObjectURL(v.url); olUnlisten(v, true); Object.assign(v, { phase: "ready", url: null, blob: null, ms: 0, checks: [], final: [], interim: "", heard: false, trErr: null, recSkipped: false, restarts: 0 }); renderVocal(); });
   on("olAgain", () => { olCleanup(); renderVocal(); });
   on("olNext", () => go({ ...view, pid: queue[qi + 1] }));
   on("olPlan", () => go({ name: "interview", id: view.ivId, back: { name: "home" } }));

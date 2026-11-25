@@ -1006,5 +1006,20 @@ sup { font-size: 0.72em; line-height: 0; vertical-align: super; }
 .ol-notes:not([open]) { padding-top: 14px; padding-bottom: 14px; }
 .ol-box .ol-notes { padding: 12px 14px; border: 1px solid var(--rule); border-radius: 6px; }
 .ol-has-note { color: var(--navy); }
+.ol-switch { display: flex; gap: 10px; align-items: flex-start; font-size: 14px; line-height: 1.45; cursor: pointer; }
+.ol-switch input { margin-top: 3px; width: 16px; height: 16px; flex: none; accent-color: var(--navy); }
+.ol-switch > span { display: grid; gap: 2px; }
+.ol-switch .muted { font-size: 13px; }
+.ol-live-text { margin: 0; padding: 10px 12px; border-left: 3px solid var(--rule-strong); color: var(--muted); font-size: 15px; line-height: 1.5; max-height: 9em; overflow-y: auto; }
+.ol-heard { display: grid; gap: 8px; padding: 12px 14px; border: 1px solid var(--rule); border-radius: 6px; }
+.ol-heard .label { margin: 0; }
+.ol-stats { margin: 0; padding-left: 18px; display: grid; gap: 4px; font-size: 14px; line-height: 1.45; }
+.ol-stats .ol-warn { color: var(--bad); }
+.ol-transcript summary, .ol-take-text summary { cursor: pointer; font-size: 14px; color: var(--navy); }
+.ol-transcript p, .ol-take-text p { margin: 8px 0 0; font-size: 15px; line-height: 1.55; }
+.ol-fill { background: var(--select); color: inherit; border-bottom: 2px solid var(--bad); padding: 0 1px; }
+.ol-term { display: inline-block; margin: 2px 4px 2px 0; padding: 1px 8px; border: 1px solid var(--rule-strong); border-radius: 999px; font-size: 13px; color: var(--muted); }
+.ol-term.ok { border-color: var(--good); color: var(--good); }
+.ol-takes .ol-take-text { grid-column: 1 / -1; }
 .ol-pick { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; margin: 0; }
 @media (max-width: 560px) { .ol-takes li { grid-template-columns: 1fr auto; } .ol-takes audio { grid-column: 1 / -1; grid-row: 2; } }

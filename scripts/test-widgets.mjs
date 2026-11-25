@@ -125,5 +125,31 @@ for (const [name, w] of Object.entries(W)) {
   } catch (e) { fails.push(`${name}: render failed: ${e.message}`); }
 }
 
+// Out-loud checks on what was said (site/js/speech-check.js): word count, pace, filler phrases, I against we, key terms.
+const sctx = vm.createContext({ Math, Object, Array, String, console });
+sctx.window = sctx;
+vm.runInContext(readFileSync(join(dirname(file), "speech-check.js"), "utf8"), sctx, { filename: "speech-check.js" });
+const S = sctx.SpeechCheck;
+const words = n => Array.from({ length: n }, () => "deal").join(" ");
+let a = S.analyse(words(140), 60000); is("speech", "word count", a.words, 140); is("speech", "pace", a.wpm, 140); is("speech", "pace verdict", a.pace, "good");
+a = S.analyse(words(100), 60000); is("speech", "slow under 120", a.pace, "slow");
+a = S.analyse(words(200), 60000); is("speech", "fast over 170", a.pace, "fast");
+a = S.analyse(words(10), 60000); is("speech", "too few words for a pace", a.wpm, null);
+a = S.analyse(words(60), 10000); is("speech", "too short for a pace", a.wpm, null);
+// "like" counts only on its own: not in "I would like" or "looks like"; "the kind of" isn't a filler, "kind of" alone is.
+a = S.analyse("So basically I would like to, like, join because it looks like the kind of team that is kind of, you know, great. Um.", 30000);
+is("speech", "fillers", JSON.stringify(a.fill.map(f => [f.phrase, f.count])), JSON.stringify([["basically", 1], ["kind of", 1], ["like", 1], ["um", 1], ["you know", 1]]));
+is("speech", "filler total", a.fillTotal, 5);
+const txt = "So basically I would like to, like, join"; const m = S.fillers(txt);
+is("speech", "filler position", txt.slice(m[0].at, m[0].end), "basically"); is("speech", "second filler position", txt.slice(m[1].at, m[1].end), "like");
+is("speech", "curly apostrophe", S.analyse("I’m sure we’ll do it and I’ve said so", 60000).i, 2);
+a = S.analyse("We built the model and we presented it to our client, then I checked my numbers.", 60000); is("speech", "I count", a.i, 2); is("speech", "we count", a.we, 3);
+// Key terms: any of the alternatives, as whole words ("ev" isn't heard inside "every").
+const tl = ["free cash flow|FCF", "weighted average cost of capital|WACC|whack", "terminal value", "enterprise value|EV"];
+a = S.analyse("Project the FCF, discount it at the WACC, and add a terminal value. Every step matters.", 60000, tl);
+is("speech", "terms heard", JSON.stringify(a.terms.hit), JSON.stringify(["free cash flow", "weighted average cost of capital", "terminal value"]));
+is("speech", "terms not heard", JSON.stringify(a.terms.miss), JSON.stringify(["enterprise value"]));
+is("speech", "no terms list", S.analyse("hello", 1000).terms, null);
+
 if (fails.length) { console.error(`✗ ${fails.length} of ${checks} widget checks failed:`); for (const f of fails) console.error("  - " + f); process.exit(1); }
-console.log(`✓ ${checks} widget checks passed (${Object.keys(W).length} widgets).`);
+console.log(`✓ ${checks} widget checks passed (${Object.keys(W).length} widgets, plus the out-loud speech checks).`);
