@@ -997,5 +997,14 @@ sup { font-size: 0.72em; line-height: 0; vertical-align: super; }
 .ol-box .mblock { margin: 0; }
 .ol-takes { list-style: none; margin: 8px 0 0; padding: 0; display: grid; gap: 10px; }
 .ol-takes li { display: grid; grid-template-columns: auto 1fr auto; align-items: center; gap: 12px; }
+.ol-notes { display: grid; gap: 10px; }
+.ol-notes summary { cursor: pointer; font-weight: 600; display: flex; align-items: baseline; gap: 10px; list-style: none; }
+.ol-notes summary::-webkit-details-marker { display: none; }
+.ol-notes summary::before { content: "▸"; color: var(--muted); width: 10px; }
+.ol-notes[open] summary::before { content: "▾"; }
+.ol-notes summary .muted { font-weight: 400; font-size: 13px; }
+.ol-notes:not([open]) { padding-top: 14px; padding-bottom: 14px; }
+.ol-box .ol-notes { padding: 12px 14px; border: 1px solid var(--rule); border-radius: 6px; }
+.ol-has-note { color: var(--navy); }
 .ol-pick { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; margin: 0; }
 @media (max-width: 560px) { .ol-takes li { grid-template-columns: 1fr auto; } .ol-takes audio { grid-column: 1 / -1; grid-row: 2; } }

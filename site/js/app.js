@@ -187,7 +187,10 @@ db.paperLbos ||= [];
 //      ("rehearse-audio"). An interview's today.done can also hold vocal.
 db.outLoudLog ||= [];
 db.outLoudSchedule ||= {};
-const SCHEMA_VERSION = 25;
+//  26: added db.outLoudNotes: your own answer to an out-loud prompt, { "<prompt id>": text } (up to 2,000 characters),
+//      shown after you answer, next to the key points.
+db.outLoudNotes ||= {};
+const SCHEMA_VERSION = 26;
 db.schemaVersion = Math.max(db.schemaVersion || 1, SCHEMA_VERSION);
 let saveWarned = false;
 const persist = () => {
@@ -2635,6 +2638,26 @@ function olQueue(list, preferFit = false, now = Date.now()) {
 }
 const olIvPool = iv => olPrompts().filter(p => p.group === "fit" || ivCats(iv).includes(p.group));
 const olWhen = id => { const s = db.outLoudSchedule[id]; if (!s) return ""; const d = Math.round((s.dueAt - startOfDay(Date.now())) / 864e5); return d <= 0 ? "due now" : d === 1 ? "tomorrow" : `in ${d} days`; };
+const OL_NOTE_MAX = 2000;
+const olNote = id => typeof db.outLoudNotes[id] === "string" ? db.outLoudNotes[id] : "";
+let olNoteTimer = null;
+function olSetNote(id, text) {
+  text = text.slice(0, OL_NOTE_MAX);
+  if (text.trim()) db.outLoudNotes[id] = text; else delete db.outLoudNotes[id];
+  clearTimeout(olNoteTimer); olNoteTimer = setTimeout(persist, 400);
+}
+// "My answer": your own version, folded before you answer, hidden while you answer, open afterwards.
+function olNoteBox(p, open, inBox = false) {
+  const t = olNote(p.id);
+  const hint = p.group === "fit" ? "The facts, stories and numbers you want to use, as bullet points. Keep it short enough to say in time."
+    : "The steps in order, in your own words, as bullet points.";
+  return `<details class="${inBox ? "" : "card "}ol-notes"${open ? " open" : ""}>
+      <summary><span>${t ? "My answer" : "Write my own answer"}</span>${t ? `<span class="muted">your notes</span>` : ""}</summary>
+      <label class="sr-only" for="olNote">My answer</label>
+      <textarea class="iv-textarea" id="olNote" rows="6" maxlength="${OL_NOTE_MAX}" placeholder="${esc(hint)}">${esc(t)}</textarea>
+      <p class="muted ol-note">Saved as you type, with your progress (and in backups). It shows here after each answer, never while you're answering.</p>
+    </details>`;
+}
 const olLast = id => { for (let k = db.outLoudLog.length - 1; k >= 0; k--) if (db.outLoudLog[k].pid === id) return db.outLoudLog[k]; return null; };
 
 // Recordings, in IndexedDB: { key, pid, at, ms, type, blob }.
@@ -2660,6 +2683,7 @@ const deleteTake = async key => idbDone((await takesStore("readwrite")).delete(k
 
 // Stop recording and free the microphone and any players' memory (leaving the page, or moving to another prompt).
 function olCleanup() {
+  if (olNoteTimer) { clearTimeout(olNoteTimer); olNoteTimer = null; persist(); } // save notes typed just before leaving
   if (!vocal) return;
   try { if (vocal.rec && vocal.rec.state !== "inactive") { vocal.rec.onstop = null; vocal.rec.stop(); } } catch {}
   if (vocal.stream) vocal.stream.getTracks().forEach(t => t.stop());
@@ -2738,6 +2762,7 @@ function renderVocal() {
         <legend>Which key points did you cover?</legend>
         ${p.points.map((t, k) => `<label class="ol-point"><input type="checkbox" data-ol-pt="${k}"${v.checks[k] ? " checked" : ""}><span>${rich(t)}</span></label>`).join("")}
       </fieldset>
+      ${olNoteBox(p, true, true)}
       <div class="mblock mb-how"><span class="mb-label">How to shape it</span><p class="mb-text">${rich(p.tip)}</p></div>
       ${saved ? `<div class="feedback ${v.result.got / v.result.n >= OL_OK ? "ok" : "no"}" role="status" id="olResult" tabindex="-1">
           <p class="feedback-title">You covered ${v.result.got} of ${v.result.n}</p>
@@ -2746,6 +2771,8 @@ function renderVocal() {
         <div class="tile-actions">${qi >= 0 && qi < queue.length - 1 ? `<button class="btn primary" type="button" id="olNext">Next question · ${qi + 2} of ${queue.length}</button>` : view.ivId ? `<button class="btn primary" type="button" id="olPlan">Back to your plan</button>` : `<button class="btn primary" type="button" id="olAnother">Next question</button>`}<button class="btn" type="button" id="olAgain">Try again</button></div>`
       : `<div class="tile-actions"><button class="btn primary" type="button" id="olSave">Save · ${got} of ${n}</button><button class="link" type="button" id="olRedo">Answer again</button></div>`}`;
   }
+  const notes = v.phase === "ready" ? olNoteBox(p, false) : "";
+  const ae = document.activeElement, keep = ae && ae.id === "olNote" ? [ae.selectionStart, ae.selectionEnd, ae.scrollTop] : null; // a redraw while typing
   const takes = (v.takes || []).map((t, k) => `<li><span class="muted">${new Date(t.at).toLocaleString("en-GB", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })} · ${paperTime(t.ms)}</span><audio controls preload="metadata" src="${v.takeUrls[k]}"></audio><button class="link danger-link" type="button" data-ol-del="${t.key}">Delete</button></li>`).join("");
   app.innerHTML = `
     <div class="page-head ol-head">
@@ -2754,6 +2781,7 @@ function renderVocal() {
       <p>Answer out loud as you would in the interview, in about ${aim}. Then check yourself against the key points.</p>
     </div>
     <section class="card ol-box">${box}</section>
+    ${notes}
     ${takes ? `<section class="card iv-sec"><h2>Your last recordings</h2><ul class="ol-takes">${takes}</ul></section>` : ""}`;
   document.getElementById("backLink").onclick = () => go(back);
   const on = (id, f) => { const b = document.getElementById(id); if (b) b.onclick = f; };
@@ -2771,6 +2799,12 @@ function renderVocal() {
     const b = document.getElementById("olSave");
     if (b) b.textContent = `Save · ${v.checks.filter(Boolean).length} of ${p.points.length}`;
   });
+  const note = document.getElementById("olNote");
+  if (note) {
+    note.oninput = () => olSetNote(p.id, note.value);
+    note.onblur = () => { clearTimeout(olNoteTimer); persist(); };
+    if (keep) { note.focus({ preventScroll: true }); note.setSelectionRange(keep[0], keep[1]); note.scrollTop = keep[2]; }
+  }
   app.querySelectorAll("[data-ol-del]").forEach(b => b.onclick = () => confirmModal("Delete this recording?", "It can't be recovered.", "Delete", () => deleteTake(+b.dataset.olDel).then(() => olTakes(p.id))));
   if (v.phase === "rec") {
     const clock = document.getElementById("olClock"), upd = () => {
@@ -2793,7 +2827,7 @@ function renderVocalList() {
   const s = db.outLoudSchedule, now = Date.now();
   const tag = p => !s[p.id] ? "New" : s[p.id].dueAt <= now ? "Due" : null;
   const row = p => { const l = olLast(p.id), t = tag(p); return `<button class="iv-row" type="button" data-ol-open="${p.id}">
-      <span class="iv-row-main"><b>${esc(p.q)}</b><span class="muted">${esc(olGroupName(p.group))}${p.status === "draft" ? " · draft" : ""}</span></span>
+      <span class="iv-row-main"><b>${esc(p.q)}</b><span class="muted">${esc(olGroupName(p.group))}${p.status === "draft" ? " · draft" : ""}${olNote(p.id) ? ` · <span class="ol-has-note">your notes</span>` : ""}</span></span>
       <span class="iv-row-side">${t ? `<span class="drill-tag drill-${t.toLowerCase()}">${t}</span>` : ""}${l ? `<span class="muted">${l.got} of ${l.n}${s[p.id] && s[p.id].dueAt > now ? ` · ${olWhen(p.id)}` : ""}</span>` : ""}</span>
     </button>`; };
   const nDue = all.filter(p => s[p.id] && s[p.id].dueAt <= now).length;
@@ -3858,6 +3892,7 @@ function backupProblem(d) {
   if ("qStats" in d && !isObj(d.qStats)) return "This backup is damaged: qStats is the wrong shape.";
   for (const k of ["excluded", "log", "sprints"]) if (k in d && !Array.isArray(d[k])) return `This backup is damaged: ${k} should be a list.`;
   if ("lessonRead" in d && !isObj(d.lessonRead)) return "This backup is damaged: lessonRead is the wrong shape.";
+  if ("outLoudNotes" in d && !isObj(d.outLoudNotes)) return "This backup is damaged: outLoudNotes is the wrong shape.";
   return null;
 }
 
@@ -3902,7 +3937,7 @@ const resetBtn = document.getElementById("resetBtn");
 if (resetBtn) resetBtn.onclick = () => confirmModal("Reset your progress?",
   "This deletes your scores, history, rounds in progress, category choices and out-loud recordings in this browser. It can't be undone.", "Reset progress", () => {
     clearInterval(tick);
-    olCleanup();
+    olCleanup(); clearTimeout(olNoteTimer);
     try { localStorage.removeItem(STORE_KEY); } catch {}
     try { if (audioDb) audioDb.close(); const r = indexedDB.deleteDatabase(AUDIO_DB); r.onsuccess = r.onerror = r.onblocked = () => location.reload(); }
     catch { location.reload(); }
