@@ -3152,6 +3152,7 @@ const IV_WORDS = [
   [/\b(valuations?|dcf|discounted cash flows?|multiples|comparables?|comps|precedents?|fairness opinions?)\b/i, ["val"]],
   [/\b(m&a|mergers?|acquisitions?|sell-side|buy-side|due diligence|auctions?|divestitures?|carve-outs?)\b/i, ["mna"]],
   [/\b(information memorand\w*|investment memos?|info memos?|ims?|cims?|investment committees?|ic memos?|equity story)\b/i, ["memo"]],
+  [/\b(share purchase agreements?|sale and purchase agreements?|warranties|indemnit(?:y|ies)|w&i|management packages?|management equity|sweet equity|shareholders' agreements?|drag-along|tag-along|merger control|antitrust)\b/i, ["terms"]],
   [/\b(restructuring|distressed|insolvency|chapter 11|liability management|turnaround)\b/i, ["rx"]],
   [/\b(accounting|financial statements?|three[- ]statements?|3[- ]statements?|ifrs|gaap|balance sheets?|cash flow statements?)\b/i, ["acc"]],
   [/\b(wacc|cost of capital|capital structure|corporate finance|dividend policy)\b/i, ["cf"]],
