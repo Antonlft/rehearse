@@ -2,7 +2,7 @@
 // Fields: method (sections { section } and labelled blocks { kind, title?, text, note? }, in the order of Lessons.ORDER), example (question, working steps, answer), source (text, optional url), widget (interactive "Try it"), widgets (optional extra ones).
 Lessons.add("credit", {
   "status": "draft",
-  "newQuestions": "2026-11-24",
+  "newQuestions": "2026-11-26",
   "summary": [
     "A bond's price is the present value of its coupons and principal, so when yields rise, prices fall.",
     "Duration measures that sensitivity: price change ≈ − modified duration × change in yield. It's higher for long, low-coupon bonds.",
@@ -33,14 +33,14 @@ Lessons.add("credit", {
     {"kind": "how", "text": "Mandatory prepayments: part of each year's excess cash flow (often 50%, stepping down to 25% and then 0% as leverage falls), the proceeds of asset sales not reinvested, and the whole loan on a change of control.\nVoluntary prepayment: allowed at any time, but a refinancing or repricing in the first six months often costs 1% (a 101 soft call).\nFinancial covenants: in maintenance loans, leverage is tested every quarter, usually set with 25–35% headroom to the business plan.\nEquity cure: the sponsor can put in new equity to fix a breach, usually a limited number of times and not in back-to-back quarters.\nEvents of default: non-payment, a covenant breach that isn't cured, a default on other debt (cross-default), insolvency or false statements. Lenders can then demand immediate repayment (acceleration) and enforce their security.\nAmendments and waivers: most changes need a majority of lenders; cutting the margin or the amount, or delaying repayment, needs every lender affected.\nSecurity and guarantees: shares in the main companies, bank accounts, receivables and key assets, with guarantees from the main subsidiaries."},
     {"kind": "example", "text": "Net debt is US$400m and EBITDA US$100m: leverage 4.0x against a 5.0x covenant. Headroom = 1 − 4.0 ÷ 5.0 = 20%: EBITDA can fall to US$80m before a breach.\nIf EBITDA falls to US$75m, leverage is 5.3x. To cure, net debt must fall to 5.0 × 75 = US$375m, so the sponsor puts in US$25m."},
     {"kind": "watch", "text": "A breach isn't the end. Most are fixed by a waiver or an amendment, usually for a fee, a higher margin or some debt repaid, because lenders rarely want to take over the company. What a breach gives them is leverage in that negotiation."},
-    {"check": "cr-01"},
+    {"check": "cr-37"},
     {"section": "The intercreditor agreement", "added": "2026-11-26"},
     {"kind": "idea", "text": "When a company has several layers of debt, the intercreditor agreement sets the rules between the lenders: who is paid first, who can enforce and when, and what juniors must hand over if they're paid out of turn."},
     {"kind": "how", "title": "Who is paid first from an enforcement sale", "numbered": true, "text": "Costs of enforcing and the agents' fees.\nSuper senior debt, if any, such as the revolving credit facility and hedging.\nSenior term loans.\nSecond-lien loans or mezzanine debt.\nShareholder loans, then the shareholders."},
     {"kind": "read", "text": "Structural subordination: debt borrowed higher up the group is paid only from what's left in the subsidiaries.\nContractual subordination: lenders to the same company agree an order in the intercreditor agreement.\nPayment blockage: after a senior default, payments to junior lenders stop, often for a limited period each year.\nStandstill: junior lenders can't enforce for a set period, often three to five months depending on the default, so senior lenders act first.\nTurnover: anything a junior lender receives out of turn must be passed to the senior lenders.\nRelease: in a distressed sale run by the senior lenders, the junior debt and its security can be released, so the buyer takes the company clean."},
     {"kind": "example", "text": "After a default, the senior lenders sell the company for US$350m. Enforcement costs are US$10m, senior debt US$300m, second-lien debt US$100m and shareholder loans US$50m.\nCosts take 10, senior lenders are repaid in full (300), and the second-lien lenders get the remaining 40: 40 cents per dollar. Shareholder loans get nothing."},
     {"kind": "watch", "text": "Junior lenders aren't powerless. Payment blockage and standstill periods end, so a long dispute hands them a voice, and they can often buy out the senior debt at par to take control of the process."},
-    {"check": "cr-19"}
+    {"check": "cr-45"}
   ],
   "example": {
     "question": "A three-year bond pays a 4% annual coupon and the market yield is 5%. What is its price per 100?",

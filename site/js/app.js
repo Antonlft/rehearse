@@ -3156,7 +3156,7 @@ const IV_WORDS = [
   [/\b(restructuring|distressed|insolvency|chapter 11|liability management|turnaround)\b/i, ["rx"]],
   [/\b(accounting|financial statements?|three[- ]statements?|3[- ]statements?|ifrs|gaap|balance sheets?|cash flow statements?)\b/i, ["acc"]],
   [/\b(wacc|cost of capital|capital structure|corporate finance|dividend policy)\b/i, ["cf"]],
-  [/\b(credit|leveraged finance|lev ?fin|high[- ]yield|covenants?|term loans?|direct lending|private credit|bonds?)\b/i, ["credit"]],
+  [/\b(credit|leveraged finance|lev ?fin|high[- ]yield|covenants?|term loans?|direct lending|private credit|bonds?|intercreditors?|leveraged loans?|loan agreements?|facilit(?:y|ies) agreements?)\b/i, ["credit"]],
   [/\b(ecm|dcm|ipos?|capital markets|rights issues?|block trades?|bond issu\w*|equity offerings?)\b/i, ["cm"]],
   [/\b(fig|financial institutions?|banks|insurers?|insurance|asset managers?|asset management)\b/i, ["fig"]],
   [/\b(hotels?|hospitality|lodging|revpar|adr|occupancy|leisure)\b/i, ["hk", "hom"]],

@@ -130,7 +130,59 @@ Bank.add("credit", [
   { id: "cr-33", lv: 2, trap: ["concept", "concept", "concept"], q: "In a buy-and-build strategy, why might a sponsor's financing include a delayed draw term loan?",
     o: ["It commits funding now for bolt-on deals, to be drawn as they're done", "It lets the company postpone its first interest payment by a year", "It's drawn on day one but repaid once all the bolt-on deals are done", "It replaces the revolver, so no working capital line is needed"],
     why: "A delayed draw term loan is a committed facility the borrower can draw over a set period (often one to two years), typically for acquisitions or capex. The sponsor knows the money is there for bolt-ons without paying interest on it upfront. Lenders usually charge a ticking fee on the undrawn amount and set conditions for each draw, such as a leverage test.",
-    x: ["Interest starts when the money is drawn. It doesn't delay interest on debt already drawn.", "It's drawn later, as deals happen, not on day one.", "The revolver still funds day-to-day working capital. A delayed draw term loan funds specific uses."] }
+    x: ["Interest starts when the money is drawn. It doesn't delay interest on debt already drawn.", "It's drawn later, as deals happen, not on day one.", "The revolver still funds day-to-day working capital. A delayed draw term loan funds specific uses."] },
+  { id: "cr-34", lv: 2, q: "What does an excess cash flow sweep in a leveraged loan require?",
+    o: ["Part of each year's surplus cash goes to repay the loan early", "All cash above a set minimum is held in a blocked bank account", "The margin steps up each year the company holds surplus cash", "Surplus cash is paid to the sponsor as a dividend each year"],
+    why: "A set share of each year's excess cash flow, often 50% stepping down to 25% and 0% as leverage falls, goes to prepay the term loans. It speeds up deleveraging when the business does well.",
+    x: ["The cash isn't locked away; it's used to repay debt.", "Margins can step down as leverage falls (a margin ratchet), but the sweep is about repayment, not pricing.", "Dividends are usually restricted by the loan, not required."] },
+  { id: "cr-35", lv: 2, trap: ["wrong-measure", "missed-step", "concept"], q: "Excess cash flow is US$40m. The loan sweeps 50% of it when leverage is above 4.0x, 25% between 3.0x and 4.0x, and nothing below 3.0x. Leverage is 3.6x. How much must be prepaid?",
+    o: ["US$10m", "US$20m", "US$40m", "Nothing"],
+    why: "At 3.6x the 25% step applies: 25% × 40 = US$10m. Had leverage stayed above 4.0x, it would have been US$20m.",
+    x: ["That's the 50% rate, which applies only above 4.0x.", "The sweep takes a share of excess cash flow, not all of it.", "Nothing is swept only below 3.0x; at 3.6x the 25% step applies."] },
+  { id: "cr-36", lv: 2, trap: ["concept", "wrong-measure", "concept"], q: "A term loan has six months of 101 soft call protection. Four months after closing, the borrower refinances it at a lower margin. What does it pay?",
+    o: ["101% of the amount repaid: a 1% premium", "Par, since soft call protection only applies to bonds", "A make-whole: the present value of the interest lost", "102% of the amount repaid, the usual first-year rate"],
+    why: "A soft call charges 1% if the loan is refinanced or repriced to a lower margin during the protection period, here six months. After that, the loan can be repaid at par.",
+    x: ["Soft call protection is a loan feature; bonds have non-call periods and call premiums.", "A make-whole is a bond feature and costs far more.", "A 102/101 schedule is a hard call, more common in private credit; a soft call is 101."] },
+  { id: "cr-37", lv: 2, trap: ["inverted", "wrong-measure", "inverted"], q: "A company has net debt of US$300m and EBITDA of US$75m. Its covenant caps leverage at 5.0x. With debt unchanged, how far can EBITDA fall before a breach?",
+    o: ["20%", "25%", "1.0x", "80%"],
+    why: "Leverage today = 300 ÷ 75 = 4.0x. The covenant is hit when EBITDA = 300 ÷ 5.0 = US$60m, a fall of 15 ÷ 75 = 20%. Or: 1 − 4.0 ÷ 5.0 = 20%.",
+    x: ["That's how far debt could rise with EBITDA unchanged: (5.0 − 4.0) ÷ 4.0.", "That's the gap in turns of leverage, not the fall in EBITDA.", "That's the EBITDA at the breach as a share of today's, not the fall."] },
+  { id: "cr-38", lv: 2, trap: ["wrong-measure", "wrong-measure", "concept"], q: "Net debt is US$480m and EBITDA has fallen to US$90m, against a 5.0x leverage covenant. The sponsor's equity cure is used to repay debt. How much equity does it need to put in?",
+    o: ["US$30m", "US$90m", "US$450m", "US$6m"],
+    why: "The covenant allows net debt of 5.0 × 90 = US$450m. Net debt is US$480m, so US$30m of new equity, used to repay debt, brings leverage back to 5.0x.",
+    x: ["That's EBITDA itself, not the excess debt.", "That's the debt the covenant allows, not the amount to repay.", "That's what an equity cure counted as extra EBITDA would need (480 ÷ 5.0 − 90 = 6); here the cure repays debt."] },
+  { id: "cr-39", lv: 2, q: "A company misses a payment on a small bilateral loan. Why might its main term loan also go into default?",
+    o: ["A cross-default clause makes a default on other debt a default here too", "All of its loans share one security package, so they default together by law", "Rating agencies are told of the missed payment, which cancels the term loan", "The term loan's margin resets after any missed payment, which is a default"],
+    why: "Lenders don't want to wait while other creditors act first, so a default on other debt above a set size counts as a default under their loan too. That's why one small default can spread through a whole capital structure.",
+    x: ["Shared security doesn't make loans default together; the cross-default clause does.", "Ratings can fall, but that doesn't cancel a loan.", "Some loans charge default interest, but that's a result of a default, not the cause."] },
+  { id: "cr-40", lv: 2, q: "After an event of default, who usually decides whether to accelerate a syndicated loan?",
+    o: ["A majority of the lenders, acting through the agent", "Any single lender, for its own share of the loan", "The borrower's auditors, once they flag the default", "A court, which has to approve it before it happens"],
+    why: "Syndicated lenders act together: the agent accelerates the loan, demanding immediate repayment, when a majority of lenders tell it to. That stops one lender from pulling the company down alone.",
+    x: ["Lenders in a syndicate give up acting alone in exchange for acting together.", "Auditors can raise doubts about the company, but they have no power over the loan.", "Acceleration is a contractual right; no court approval is needed."] },
+  { id: "cr-41", lv: 2, q: "Which change to a syndicated loan usually needs the consent of every lender affected?",
+    o: ["Cutting the margin or delaying a repayment", "Waiving a breach of the leverage covenant", "Resetting the covenant levels for next year", "Allowing an acquisition the loan would block"],
+    why: "Changes to the money terms (amount, margin, maturity, repayment dates) need every affected lender. Covenant waivers, resets and most consents need only a majority, usually 50% in the US and 66⅔% in Europe.",
+    x: ["Covenant waivers usually need a majority of lenders, not all of them.", "Covenant resets are a majority decision too.", "Consents to deals the loan restricts are usually a majority decision."] },
+  { id: "cr-42", lv: 2, q: "Under an intercreditor agreement, what does payment blockage do after a senior default?",
+    o: ["Stops payments to the junior lenders for a period", "Stops the senior lenders enforcing for a period", "Adds the junior lenders' interest to the senior loan", "Lets the junior lenders run the enforcement instead"],
+    why: "While a senior default continues, the company can't pay the junior lenders, so cash stays with the senior lenders. The blockage is usually limited, for example to a set number of days a year.",
+    x: ["It's the juniors who are held back: a standstill stops them enforcing.", "Junior interest isn't moved into the senior loan; it's simply not paid.", "The senior lenders control enforcement, not the juniors."] },
+  { id: "cr-43", lv: 2, q: "Why does an intercreditor agreement put junior lenders on a standstill?",
+    o: ["So senior lenders control enforcement first, without a junior rushing in", "So junior lenders keep receiving interest while the senior lenders enforce", "So the borrower gets time to refinance before any lender takes action", "So junior lenders can buy the senior debt at a discount in the meantime"],
+    why: "For a set period, often a few months, junior lenders can't accelerate or enforce. The senior lenders, who have most at stake in the assets, decide what happens first.",
+    x: ["Payment blockage usually stops junior interest at the same time.", "The standstill protects the senior lenders, not the borrower.", "Juniors can often buy out the senior debt, but at par, and that isn't the purpose of the standstill."] },
+  { id: "cr-44", lv: 1, q: "A mezzanine lender receives a US$5m payment that the intercreditor agreement blocked. What must it do?",
+    o: ["Hand it over to the senior lenders", "Keep it, and take it off later interest", "Return it to the company as a reserve", "Keep it, since the borrower chose to pay"],
+    why: "Under the turnover clause, anything a junior lender receives out of turn is held for the senior lenders and passed to them. It keeps the agreed order of payment intact.",
+    x: ["Offsetting it against later interest would still pay the junior out of turn.", "Turnover goes to the senior lenders, not back to the company.", "The borrower can't override the order the lenders agreed between themselves."] },
+  { id: "cr-45", lv: 3, trap: ["missed-step", "missed-step", "concept"], q: "An enforcement sale raises US$420m. Costs are US$12m, the super senior revolver US$40m, the senior term loan US$300m and the second-lien loan US$120m. What do second-lien lenders recover per dollar?",
+    o: ["About 57 cents", "About 90 cents", "About 67 cents", "About 89 cents"],
+    why: "In order: costs 12, revolver 40, senior 300, which leaves 420 − 352 = US$68m for the second-lien lenders: 68 ÷ 120 ≈ 57 cents per dollar.",
+    x: ["That leaves out the super senior revolver, which is paid before the senior term loan.", "That leaves out the enforcement costs, which come first.", "That shares the money pro rata across all the debt, ignoring the order of payment."] },
+  { id: "cr-46", lv: 2, q: "In a distressed sale run by the senior lenders, why can they release the junior debt and its security?",
+    o: ["So the buyer takes the company free of debt it isn't taking on", "So that the junior lenders are repaid in full before the sale", "Because junior debt is always written off in any company sale", "So that the junior lenders can block a sale at too low a price"],
+    why: "No buyer pays for a company that still carries debt it doesn't want. The release lets the senior lenders sell it clean; juniors are protected by rules on how the sale is run, such as a fair process or an independent valuation.",
+    x: ["Juniors are paid only from what's left after the senior lenders.", "Outside an enforcement, junior debt is repaid or transferred, not written off.", "The release does the opposite: it stops juniors blocking the sale."] }
 ]);
 
 // New-format questions (shown only when "new formats" is on).
@@ -244,4 +296,72 @@ Bank.addFormat("credit", [
       "Repayments belong with the charges being covered, not taken off the cash flow.",
       "Capex is already deducted in line 1, so adding it to the charges counts it twice."],
     why: "Fixed charge cover tests whether cash flow covers every fixed payment, so scheduled repayments count alongside interest: (100 − 20 − 10) ÷ (30 + 25) = 70 ÷ 55 = 1.27x. The covenant is met, but with little headroom: a fall of about US$4m in cash flow would breach it." }
+]);
+
+// Loan agreements and the intercreditor agreement (added 2026-11-26).
+Bank.addFormat("credit", [
+  { id: "cr-walk-02", lv: 2, type: "walk", q: "Walk me through the key terms of a leveraged loan.",
+    points: [
+      "Pricing and repayment: a margin over SOFR, often a small discount at issue, and for a term loan B about 1% a year with the rest repaid at maturity.",
+      "Mandatory prepayments: part of excess cash flow (stepping down as leverage falls), asset sale proceeds and a change of control; voluntary prepayment at par after a short 101 soft call.",
+      "Covenants: a maintenance leverage covenant tested quarterly with headroom to the plan and an equity cure, or only incurrence covenants if it's covenant-lite.",
+      "Events of default (non-payment, covenant breach, cross-default, insolvency) let a majority of lenders accelerate; money terms can only change with every affected lender.",
+      "Security and guarantees from the main companies, and an intercreditor agreement setting the ranking against any second-lien or mezzanine debt."
+    ],
+    why: "Group the terms by what they protect: getting paid (pricing, prepayments), early warning (covenants), what lenders can do (defaults, acceleration) and what they recover (security, intercreditor)." },
+
+  { id: "cr-why-03", lv: 2, type: "reason",
+    q: "A sponsor-backed company will narrowly breach its leverage covenant next quarter. Trading is otherwise solid. What usually happens?",
+    answers: ["A waiver or amendment, for a fee or a higher margin", "The lenders accelerate and take over the company", "The company files for insolvency to protect itself", "Nothing: a breach matters only once a payment is missed"],
+    answerNotes: [
+      "Lenders can, but rarely want to: running a company isn't their business, and a forced sale would lose value.",
+      "Insolvency would destroy value for everyone; a narrow breach in a solid business is fixed by negotiation.",
+      "A covenant breach is an event of default in its own right, once any cure period passes."],
+    reasons: [
+      "Lenders rarely want the company; the breach gives them leverage to reprice",
+      "A breach lets lenders enforce, so they usually take control at once",
+      "Insolvency protection stops the lenders from acting on the breach",
+      "Only a missed payment counts as an event of default under a loan"],
+    reasonNotes: [
+      "Being able to enforce isn't the same as wanting to: lenders usually prefer a fee and better terms.",
+      "Filing is a last resort for a company that can't pay, not a response to a narrow breach.",
+      "Covenant breaches, cross-default and insolvency are events of default too."],
+    why: "Most covenant breaches end in a negotiation. The sponsor may use an equity cure; otherwise lenders agree a waiver or reset in return for a fee, a higher margin or some debt repaid. The covenant's job is to bring them to the table early." },
+
+  { id: "cr-spot-03", lv: 2, type: "spot",
+    q: "An analyst works out covenant headroom. Net debt is US$360m, EBITDA US$90m and the leverage covenant 5.0x. Which line contains the mistake?",
+    lines: [
+      "Leverage today: 360 ÷ 90 = 4.0x",
+      "EBITDA at which leverage hits 5.0x: 360 ÷ 5.0 = US$72m",
+      "Headroom in dollars: 90 − 72 = US$18m",
+      "As a share of EBITDA: 18 ÷ 72 = 25%",
+      "So EBITDA can fall 25% before a breach"],
+    wrong: 3,
+    lineNotes: [
+      "Right: net debt ÷ EBITDA.",
+      "Right: the EBITDA at which net debt is exactly 5.0 times EBITDA.",
+      "Right: EBITDA can fall by US$18m.",
+      null,
+      "The wording is right, but it carries forward the mistake from line 4."],
+    fixes: [
+      "Divide by today's EBITDA: 18 ÷ 90 = 20%",
+      "Divide by net debt: 18 ÷ 360 = 5%",
+      "Use the leverage gap: (5.0 − 4.0) ÷ 4.0 = 25%",
+      "Divide by the covenant level: 18 ÷ 5.0 = 3.6%"],
+    fixNotes: [
+      "Headroom is a fall in EBITDA, so it's measured against EBITDA, not debt.",
+      "That's how far debt could rise, not how far EBITDA can fall; it gives the same wrong 25%.",
+      "The covenant is a multiple, not an amount of EBITDA."],
+    why: "A fall is measured from where you start: US$18m out of today's US$90m is 20%. Check: 1 − 4.0 ÷ 5.0 = 20%." },
+
+  { id: "cr-ord-02", lv: 2, type: "order",
+    q: "A company breaches its leverage covenant and nothing is fixed. Put the steps in their usual order.",
+    answer: [
+      "The quarterly test shows leverage above the covenant",
+      "The compliance certificate reports the breach to the lenders",
+      "The cure period passes with no equity cure or waiver",
+      "An event of default is now continuing",
+      "A majority of lenders tell the agent to accelerate the loan",
+      "The senior lenders enforce their security while junior lenders stand still"],
+    why: "The test and the certificate reveal the breach; the cure period gives the sponsor a chance to fix it. Only then is there a continuing event of default, which lets a majority of lenders accelerate and the senior lenders enforce first." }
 ]);
