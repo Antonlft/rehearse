@@ -546,6 +546,9 @@ sup { font-size: 0.72em; line-height: 0; vertical-align: super; }
 .mb-eq { font-size: 16px; font-weight: 500; line-height: 1.5; display: grid; gap: 8px; }
 .mb-line { display: block; }
 .mb-text .mb-line + .mb-line { margin-top: 6px; }
+.lesson .mblock .mb-ol { max-width: 52ch; margin: 0; padding-left: 22px; } /* a numbered block: same width as the text */
+.mb-ol .mb-line { display: list-item; }
+.mb-ol .mb-line::marker { color: var(--muted); font-variant-numeric: tabular-nums; }
 .mb-lead { font-weight: 600; color: var(--ink); } /* a line's opening label, e.g. "Churn:" */
 /* "New" badge: small and solid in the text colour, so it stands out without borrowing a group or status colour. */
 .pill.new-pill { display: inline-block; margin-left: 8px; padding: 1px 7px; font-size: 9.5px; line-height: 1.5; vertical-align: 2px; background: var(--ink); color: var(--page); }

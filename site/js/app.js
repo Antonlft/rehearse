@@ -2240,7 +2240,9 @@ function markRead(cat, title, d) {
 function methodHtml(items, cat) {
   const block = b => `<div class="mblock mb-${esc(b.kind)}">
       <span class="mb-label">${mbIcon(b.kind)}${esc(Lessons.BLOCKS[b.kind] || b.kind)}${b.title ? ` · ${esc(b.title)}` : ""}</span>
-      ${b.kind === "formula" ? `<p class="mb-eq">${b.text.split("\n").map(line => `<span class="mb-line">${rich(line)}</span>`).join("")}</p>` : `<p class="mb-text">${b.text.split("\n").map(line => `<span class="mb-line">${LEAD_KINDS.has(b.kind) ? leadLine(line) : rich(line)}</span>`).join("")}</p>`}
+      ${b.kind === "formula" ? `<p class="mb-eq">${b.text.split("\n").map(line => `<span class="mb-line">${rich(line)}</span>`).join("")}</p>`
+        : b.numbered ? `<ol class="mb-text mb-ol">${b.text.split("\n").map(line => `<li class="mb-line">${LEAD_KINDS.has(b.kind) ? leadLine(line) : rich(line)}</li>`).join("")}</ol>` // parts in a set order, e.g. a document's sections
+        : `<p class="mb-text">${b.text.split("\n").map(line => `<span class="mb-line">${LEAD_KINDS.has(b.kind) ? leadLine(line) : rich(line)}</span>`).join("")}</p>`}
       ${b.note ? `<p class="mb-note">${b.note.split("\n").map(line => `<span class="mb-line">${rich(line)}</span>`).join("")}</p>` : ""}
     </div>`;
   const item = b => typeof b === "string" ? `<p>${rich(b)}</p>`

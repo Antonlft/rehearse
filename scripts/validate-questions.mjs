@@ -24,7 +24,8 @@
 //    with one cell per column and an optional `base` [row, column] inside it.
 //  - every category has a lesson (site/lessons/<category>.js, loaded by index.html); a "stub" may be empty, but a
 //    "draft" or "reviewed" lesson needs a method, a worked example (question, working, answer) and a source (or a list);
-//    method items are paragraphs, { section, added? } headings or blocks { kind, title?, text, note? } (kinds: Lessons.BLOCKS);
+//    method items are paragraphs, { section, added? } headings or blocks { kind, title?, text, note?, numbered? } (kinds: Lessons.BLOCKS; numbered: true shows the
+//    lines as a numbered list, for parts in a set order, and needs 2+ lines and a kind other than formula);
 //    `added` on a section and `newQuestions` on a lesson are real dates written YYYY-MM-DD (they drive the "New" badges);
 //    within each section blocks follow Lessons.ORDER, and a kind repeated in a section needs a title on each block;
 //    every section of a draft or reviewed lesson has an Example block, right under the rule it illustrates;
@@ -463,8 +464,8 @@ for (const [cat, l] of Object.entries(Lessons)) {
   if (l.newQuestions != null && !isDate(l.newQuestions)) fail(`${where}: newQuestions must be a date written YYYY-MM-DD, got ${JSON.stringify(l.newQuestions)}`);
   for (const p of l.method || []) if (p && typeof p === "object" && text(p.section) && p.added != null && !isDate(p.added)) fail(`${where}: section "${p.section}" has added ${JSON.stringify(p.added)}; write it as a date YYYY-MM-DD`);
   const isCheck = p => p && typeof p === "object" && Object.keys(p).length === 1 && text(p.check);
-  const okItem = p => text(p) || isSection(p) || isCheck(p) || (p && typeof p === "object" && Object.hasOwn(BLOCKS, p.kind) && text(p.text) && (p.note == null || text(p.note)) && (p.title == null || text(p.title)) && Object.keys(p).every(k => ["kind", "title", "text", "note"].includes(k)));
-  if (l.method != null && (!Array.isArray(l.method) || l.method.some(p => !okItem(p)))) fail(`${where}: method must list paragraphs, { section: "Title" } headings or blocks { kind: ${Object.keys(BLOCKS).join(" | ")}, title?, text, note? }`);
+  const okItem = p => text(p) || isSection(p) || isCheck(p) || (p && typeof p === "object" && Object.hasOwn(BLOCKS, p.kind) && text(p.text) && (p.note == null || text(p.note)) && (p.title == null || text(p.title)) && (p.numbered == null || (p.numbered === true && p.kind !== "formula" && p.text.split("\n").length >= 2)) && Object.keys(p).every(k => ["kind", "title", "text", "note", "numbered"].includes(k)));
+  if (l.method != null && (!Array.isArray(l.method) || l.method.some(p => !okItem(p)))) fail(`${where}: method must list paragraphs, { section: "Title" } headings or blocks { kind: ${Object.keys(BLOCKS).join(" | ")}, title?, text, note?, numbered? (true, 2+ lines, not a formula) }`);
   else if (Array.isArray(l.method)) {
     // Split into sections (one implicit section if there are none). Within a section, blocks follow Lessons.ORDER,
     // and a kind used more than once needs a title on each of those blocks.
