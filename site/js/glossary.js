@@ -126,6 +126,18 @@ window.Glossary = [
   { term: "DIP", full: "Debtor-in-possession financing", def: "New money lent to a company in Chapter 11, ranking ahead of its existing debt.", cat: "rx" },
   { term: "RSA", full: "Restructuring support agreement", def: "A contract in which creditors agree to back a restructuring plan before it's filed.", cat: "rx" },
   { term: "A&E", full: "Amend and extend", def: "Changing a loan's terms and pushing out its maturity instead of refinancing it.", cat: "rx" },
+  // Loan agreements and intercreditor terms: words, written as they appear mid-sentence, so lower case
+  { term: "headroom", full: "Room before a covenant breach", def: "How far a figure, usually EBITDA, can fall before a covenant is breached; for leverage, 1 − current leverage ÷ covenant level.", cat: "credit" },
+  { term: "excess cash flow", full: "Surplus cash as the loan defines it", def: "Cash left after interest, scheduled repayments, capex and other agreed items; a share of it must often prepay the loan (a sweep).", cat: "credit" },
+  { term: "soft call", full: "1% premium on an early refinancing", def: "A loan refinanced or repriced to a lower margin within a set period after closing, often six months, is repaid at 101.", cat: "credit" },
+  { term: "equity cure", full: "Fixing a covenant breach with new equity", def: "The sponsor puts in new equity, counted as debt repaid or extra EBITDA, to bring a covenant back into line; allowed a limited number of times.", cat: "credit" },
+  { term: "event of default", full: "Trigger for lenders' remedies", def: "A breach listed in the loan, such as non-payment, an uncured covenant breach, cross-default or insolvency, that lets lenders accelerate.", cat: "credit" },
+  { term: "cross-default", full: "Default on other debt counts here too", def: "A clause making a default on the borrower's other debt, above a set size, an event of default under this loan.", cat: "credit" },
+  { term: "acceleration", full: "Demanding immediate repayment", def: "After an event of default, lenders (usually a majority, through the agent) declare the whole loan due at once.", cat: "credit" },
+  { term: "intercreditor agreement", full: "The rules between lenders", def: "The contract that sets which lenders are paid first, who can enforce and when, and what juniors must hand over if paid out of turn.", cat: "credit" },
+  { term: "super senior", full: "Paid before the senior lenders", def: "Debt repaid first from enforcement proceeds, after costs; usually the revolving credit facility and hedging.", cat: "credit" },
+  { term: "payment blockage", full: "Junior payments stopped", def: "After a senior default, the company can't pay the junior lenders for a period, so cash stays with the senior lenders.", cat: "credit" },
+  { term: "standstill", full: "A period with no enforcement", def: "A period during which lenders agree not to enforce; in an intercreditor agreement, junior lenders wait so senior lenders act first.", cat: "credit" },
   // Capital markets
   { term: "ECM", full: "Equity capital markets", def: "Raising money by issuing shares: initial public offerings, follow-ons, block trades and rights issues.", cat: "cm" },
   { term: "DCM", full: "Debt capital markets", def: "Raising money by issuing bonds and other debt securities.", cat: "cm" },
