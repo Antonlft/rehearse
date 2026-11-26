@@ -8,6 +8,7 @@ const CATEGORIES = [
   { id: "mna", group: "deals", name: "M&A process & documents", desc: "Mergers and acquisitions (M&A): auctions, letters of intent (LOIs), share purchase agreements (SPAs), deal protection, accretion/dilution" },
   { id: "lbo", group: "deals", name: "LBO & private equity", desc: "Leveraged buyouts (LBOs): returns, leverage, fund economics and exits" },
   { id: "rx", group: "deals", name: "Restructuring", desc: "Priority of claims, Chapter 11, schemes and liability management" },
+  { id: "memo", group: "deals", name: "Information & investment memos", desc: "The sell-side information memorandum (IM) and the fund's investment committee (IC) memo: what goes in each, how to build it and how to make it convincing" },
   { id: "credit", group: "mkt", name: "Credit & debt", desc: "Covenants, ratings, bonds and seniority" },
   { id: "cm", group: "mkt", name: "ECM & DCM", desc: "Equity and debt capital markets (ECM, DCM): initial public offerings (IPOs), rights issues, block trades, convertibles and bond issuance" },
   { id: "fig", group: "mkt", name: "Financial institutions (FIG)", desc: "Financial institutions group (FIG): banks, insurers and asset managers, their capital, margins and valuation" },
@@ -280,6 +281,8 @@ const WALK_EVERY = 10; // at most one walk-through card per this many questions 
 const CASE_EVERY = 10; // at most one case study per this many questions in a round
 const CASE_SHARE = 0.5; // with new formats on, chance that a calculation slot in a category with cases becomes a case
 const casesOf = cat => Bank.cases[cat] || [];
+// False for a category that so far has only its lesson: no question of any kind to practise yet.
+const hasQuestions = cat => !!(written(cat).length || gens(cat).length || (Bank.formats[cat] || []).length || (Bank.numeric[cat] || []).length || casesOf(cat).length);
 const onlyNew = () => db.newFormats && db.formatsOnly; // "New formats only" question style
 const styleOf = () => !db.newFormats ? "classic" : db.formatsOnly ? "new" : "mixed";
 const STYLES = [
@@ -927,7 +930,8 @@ function catRow(c, grp) {
   const st = db.catStats[c.id], w = written(c.id).length, g = gens(c.id).length;
   const nc = onlyNew() ? newCount(c.id) : null;
   const bank = nc !== null ? (nc ? `${nc} new-format question${nc > 1 ? "s" : ""}` : `<span class="muted">None yet</span>`)
-    : w && g ? `${w} written + calculations` : w ? `${w} written` : "Calculations only";
+    : w && g ? `${w} written + calculations` : w ? `${w} written` : g ? "Calculations only" : `<span class="muted">None yet</span>`;
+  const none = nc === 0 || !hasQuestions(c.id); // nothing to practise yet (a new category can start with its lesson only)
   const acc = st && st.n ? Math.round(st.ok / st.n * 100) : null;
   return `
     <div class="cat-row${grp ? ` grp-${grp}` : ""}">
@@ -935,7 +939,7 @@ function catRow(c, grp) {
       <div class="cat-bank">${bank}</div>
       <div class="cat-acc">${acc === null ? `<span class="muted">Not attempted</span>`
         : `<span><b>${acc}%</b> <span class="muted">· ${st.ok}/${st.n}</span></span><span class="bar"><i style="width:${acc}%"></i></span>`}</div>
-      <div class="cat-act">${nc === 0 && !db.attempts[c.id] ? `<button class="btn" type="button" disabled title="No new-format questions in this category yet">Practise</button>` : actionButtons(c.id, "Practise", false)}</div>
+      <div class="cat-act">${none && !db.attempts[c.id] ? `<button class="btn" type="button" disabled title="${nc === 0 ? "No new-format questions in this category yet" : "No questions in this category yet: read the lesson for now"}">Practise</button>` : actionButtons(c.id, "Practise", false)}</div>
     </div>`;
 }
 
@@ -3722,12 +3726,13 @@ function renderLesson() {
       ${srcs.length ? srcs.map(x => `<p class="lesson-source">${srcHtml(x)}</p>`).join("") : missing}
     </section>
     <div class="result-actions">
-      <button class="btn primary lg" id="practiseBtn" type="button">Practise this category</button>
+      ${hasQuestions(view.cat) ? `<button class="btn primary lg" id="practiseBtn" type="button">Practise this category</button>` : ""}
       <button class="btn lg" id="backBtn" type="button">Back</button>
     </div>`;
   glOnce = null;
   document.getElementById("backLink").onclick = document.getElementById("backBtn").onclick = () => go(back);
-  document.getElementById("practiseBtn").onclick = () => newRound(view.cat);
+  const pb = document.getElementById("practiseBtn");
+  if (pb) pb.onclick = () => newRound(view.cat);
   app.querySelectorAll("[data-glossary]").forEach(b => b.onclick = () => go({ name: "glossary", back: { ...view } }));
   tries.forEach((w, i) => Widgets.mount(document.getElementById("lessonWidget" + i), w.type, w.values || {}));
   app.querySelectorAll("[data-check]").forEach(el => mountCheck(el, view.cat));
