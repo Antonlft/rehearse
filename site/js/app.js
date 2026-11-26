@@ -1055,6 +1055,8 @@ function dueTile() {
 //    so this first needs an aggregation rule (e.g. the average lv of a category's written questions, or its share of
 //    lv-3 questions). Decide that rule rather than invent one when this is revisited.
 const byName = (a, b) => a.name.localeCompare(b.name, "en", { sensitivity: "base" });
+// Browse: each group folds; the ones you open stay open until the page is reloaded.
+const browseOpen = new Set();
 function renderBrowseTab() {
   return `
     <div class="section-head">
@@ -1062,9 +1064,14 @@ function renderBrowseTab() {
       <p class="practice-summary">${practiceSummary()} · <button class="link" type="button" data-goto-tab="progress">Change in Progress &amp; settings</button></p>
     </div>
     <div class="cat-table">
-      <div class="cat-row cat-head" aria-hidden="true"><span>Category</span><span>Question bank</span><span>Your accuracy</span><span></span></div>
-      ${GROUPS.map(g => { const cats = CATEGORIES.filter(c => c.group === g.id).sort(byName);
-        return `<div class="cat-group grp-${g.family}">${esc(g.name)}<span class="grp-count">${cats.length} categories</span></div>` + cats.map(c => catRow(c, g.family)).join(""); }).join("")}
+      ${GROUPS.map(g => {
+        const cats = CATEGORIES.filter(c => c.group === g.id).sort(byName), tried = cats.filter(c => db.catStats[c.id] && db.catStats[c.id].n).length;
+        return `<details class="cat-fold grp-${g.family}" data-fold="${g.id}"${browseOpen.has(g.id) ? " open" : ""}>
+          <summary class="cat-group"><span class="cat-group-main"><span class="cat-group-name">${esc(g.name)}</span><span class="cat-group-list">${cats.map(c => esc(c.name)).join(" · ")}</span></span>
+            <span class="grp-count">${cats.length} categories<br>${tried ? `${tried} practised` : "Not started"}</span></summary>
+          <div class="cat-row cat-head" aria-hidden="true"><span>Category</span><span>Question bank</span><span>Your accuracy</span><span></span></div>
+          ${cats.map(c => catRow(c, g.family)).join("")}
+        </details>`; }).join("")}
     </div>`;
 }
 
@@ -1120,6 +1127,7 @@ function wireHome() {
     homeTab = b.dataset.gotoTab; renderHome(); window.scrollTo(0, 0);
     document.querySelector(`[data-home-tab="${homeTab}"]`).focus();
   });
+  app.querySelectorAll("[data-fold]").forEach(d => d.ontoggle = () => { if (d.open) browseOpen.add(d.dataset.fold); else browseOpen.delete(d.dataset.fold); });
   app.querySelectorAll("[data-lessons]").forEach(b => b.onclick = () => go({ name: "lessons" }));
   app.querySelectorAll("[data-glossary]").forEach(b => b.onclick = () => go({ name: "glossary", back: { name: "home" } }));
   app.querySelectorAll("[data-drill]").forEach(b => b.onclick = () => go({ name: "drill", back: { name: "home" } }));

@@ -197,6 +197,20 @@ main { padding-block: 30px 48px; }
 .cat-group .grp-count { font-size: 12px; font-weight: 500; color: var(--muted); }
 .cat-row[class*="grp-"] { box-shadow: inset 4px 0 0 var(--grp); }
 .cat-group + .cat-row { border-top: 0; }
+.cat-fold + .cat-fold { border-top: 1px solid var(--rule); }
+.cat-fold > .cat-group { border-top: 0; cursor: pointer; list-style: none; align-items: flex-start; }
+.cat-fold > .cat-group::-webkit-details-marker { display: none; }
+.cat-fold > .cat-group::before { content: "▸"; flex: none; width: 12px; color: var(--grp); font-size: 13px; line-height: 22px; }
+.cat-fold[open] > .cat-group::before { content: "▾"; }
+.cat-fold:first-child > .cat-group { border-top-left-radius: var(--radius); border-top-right-radius: var(--radius); }
+.cat-fold:last-child:not([open]) > .cat-group { border-bottom-left-radius: var(--radius); border-bottom-right-radius: var(--radius); }
+.cat-fold > .cat-group:hover .cat-group-name { text-decoration: underline; text-underline-offset: 3px; }
+.cat-fold > .cat-group:focus-visible { outline: 2px solid var(--grp); outline-offset: -2px; }
+.cat-group-main { display: grid; gap: 3px; flex: 1; min-width: 0; line-height: 1.4; }
+.cat-group-list { font-size: 12px; font-weight: 400; color: var(--muted); }
+.cat-fold[open] .cat-group-list { display: none; }
+.cat-group .grp-count { text-align: right; white-space: nowrap; line-height: 1.5; }
+.cat-fold .cat-head { border-radius: 0; border-top: 1px solid var(--rule); }
 .cat-name { min-width: 0; }
 .cat-name h3 { font-size: 14px; font-weight: 600; }
 .cat-name p { font-size: 12px; color: var(--muted); }
