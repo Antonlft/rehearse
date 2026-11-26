@@ -3148,7 +3148,7 @@ function ivDefaultFocus(role, stage) {
 // Topic words in a pasted job ad or recruiter note → the categories they point to. Plain matching, nothing leaves the
 // page. Each entry: [pattern, categories].
 const IV_WORDS = [
-  [/\b(lbos?|leveraged buy-?outs?|buy-?outs?|private equity|financial sponsors?|sponsors?|paper lbo)\b/i, ["lbo"]],
+  [/\b(lbos?|leveraged buy-?outs?|buy-?outs?|private equity|financial sponsors?|sponsors?|paper lbo|continuation (?:funds?|vehicles?)|secondaries|gp-led|lp-led)\b/i, ["lbo"]],
   [/\b(valuations?|dcf|discounted cash flows?|multiples|comparables?|comps|precedents?|fairness opinions?)\b/i, ["val"]],
   [/\b(m&a|mergers?|acquisitions?|sell-side|buy-side|due diligence|auctions?|divestitures?|carve-outs?)\b/i, ["mna"]],
   [/\b(information memorand\w*|investment memos?|info memos?|ims?|cims?|investment committees?|ic memos?|equity story)\b/i, ["memo"]],

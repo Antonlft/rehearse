@@ -146,7 +146,52 @@ Bank.add("lbo", [
   { id: "lbo-37", lv: 2, trap: ["sign", "concept", "concept"], q: "In an LBO, how does the tax deductibility of interest affect the sponsor's returns, and what limits it?",
     o: ["It cuts tax, leaving more cash to repay debt, but many countries cap the deduction", "It raises the company's tax bill, as the lenders are taxed on the interest it pays", "It has no effect on cash, because tax is only an accounting entry until the exit", "It lets the company deduct the whole purchase price from its taxable profit"],
     why: "Interest is deducted before tax, so each dollar of interest saves tax at the company's rate. That leaves more cash to repay debt, which lifts the equity return: the 'tax shield'. It's limited, though: many countries cap net interest deductions, often at 30% of taxable EBITDA (the EU's rule, for example), so very high leverage can leave some interest that isn't deductible.",
-    x: ["The lenders' tax is their own affair. The company's tax bill falls.", "Tax is paid in cash, so a lower tax bill means more cash every year.", "The purchase price isn't deductible. Interest is, and in some deals so is depreciation on assets written up for tax."] }
+    x: ["The lenders' tax is their own affair. The company's tax bill falls.", "Tax is paid in cash, so a lower tax bill means more cash every year.", "The purchase price isn't deductible. Interest is, and in some deals so is depreciation on assets written up for tax."] },
+  // Holding companies, tax and continuation funds (added 2026-11-26).
+  { id: "lbo-38", lv: 2, trap: ["concept", "wrong-measure", "concept"], q: "A buyout group has tax EBITDA of US$80m and net interest of US$30m. Under an interest cap of 30% of tax EBITDA, how much can it deduct this year, and what happens to the rest?",
+    o: ["US$24m deductible; US$6m carried forward", "US$30m deductible; nothing carried forward", "US$9m deductible; US$21m carried forward", "US$24m deductible; US$6m lost for good"],
+    why: "The cap is 30% × 80 = US$24m, so US$24m of the US$30m is deducted this year. The other US$6m is refused for now, but it can usually be carried forward and deducted in a later year with spare room under the cap.",
+    x: ["The interest is above the cap, so not all of it can be deducted this year.", "That takes 30% of the interest, not 30% of tax EBITDA.", "Refused interest isn't lost: it can usually be carried forward to a later year."] },
+  { id: "lbo-39", lv: 1, trap: ["inverted", "concept", "concept"], q: "In a typical buyout structure, which company borrows the senior debt and buys the target's shares?",
+    o: ["BidCo, the company at the bottom of the chain", "TopCo, where the fund and managers invest", "MidCo, which can hold the shareholder loans", "The target itself, before the deal completes"],
+    why: "Senior lenders want to lend as close as possible to the business's cash and assets, so the borrower is BidCo, which owns the target directly. Debt higher up the chain, at MidCo or TopCo, ranks behind it.",
+    x: ["TopCo sits at the top: it's where the equity and the management package go in.", "MidCo sits between the equity and the senior debt, holding shareholder loans or junior debt.", "The target can't borrow to buy its own shares. BidCo borrows, and the debt is brought closer to the target's profits afterwards."] },
+  { id: "lbo-40", lv: 2, trap: ["concept", "inverted", "concept"], q: "Why does debt borrowed by MidCo rank behind debt borrowed by BidCo, even with no agreement saying so?",
+    o: ["MidCo's lenders only reach BidCo's assets after BidCo's own creditors are paid", "MidCo's debt is borrowed later, and later loans rank behind earlier ones by law", "MidCo's lenders charge lower interest, so they agree to rank behind as standard", "MidCo's debt counts as equity in the group accounts under IFRS"],
+    why: "This is structural subordination. MidCo's only asset is its shares in BidCo. If BidCo fails, its own creditors are paid from its assets first; only what's left flows up to MidCo as a shareholder, and then to MidCo's lenders.",
+    x: ["Ranking doesn't depend on when a loan was made, but on which company owes it and on any intercreditor agreement.", "Junior lenders charge more, not less, because they're paid after the senior debt.", "It's debt, not equity. It ranks behind because MidCo is a shareholder of BidCo, not one of its creditors."] },
+  { id: "lbo-41", lv: 2, trap: ["concept", "concept", "concept"], q: "After a buyout, why are BidCo and the target often put in the same tax group, merged, or the debt pushed down to the target?",
+    o: ["So BidCo's interest can be set against the target's taxable profits", "So the target's past tax losses can be sold to another group for cash", "So the purchase price can be depreciated against the target's revenue", "So the senior lenders no longer need security over the target's shares"],
+    why: "BidCo pays the interest but has no business of its own, so no profits to set it against. A tax group (a consolidated return in the US, group relief in the UK, tax integration in France), a merger or a debt pushdown lets the interest reduce tax on the target's profits. The interest cap and other anti-avoidance rules still apply.",
+    x: ["Tax losses generally can't be sold, and a change of ownership often restricts their use.", "The price paid for shares isn't depreciated. Interest is the deduction the structure is built to use.", "Lenders still take security; pushing debt down brings them closer to the assets rather than releasing it."] },
+  { id: "lbo-42", lv: 2, trap: ["concept", "concept", "concept"], q: "A fund lends to its buyout group through a shareholder loan at 15% a year, when an independent lender would charge about 9%. How will tax authorities usually treat the interest?",
+    o: ["Interest above an arm's-length rate of about 9% can be refused", "All 15% is deductible, because the loan agreement sets the rate", "None of it is deductible, because a shareholder can't lend money", "All 15% is deductible, but only once the loan is repaid at exit"],
+    why: "Interest on a loan from a shareholder is deductible only at an arm's-length rate: what an unrelated lender would charge on the same terms. The excess can be refused, or taxed as a distribution. Anti-hybrid rules can also refuse a deduction if the lender isn't taxed on the matching income, and the interest cap still applies on top.",
+    x: ["Tax authorities test the rate against what an independent lender would charge, whatever the contract says.", "Shareholders can lend; it's the rate, and rules such as anti-hybrid rules, that limit the deduction.", "When the interest is paid doesn't change the test: interest above an arm's-length rate can still be refused."] },
+  { id: "lbo-43", lv: 2, trap: ["concept", "missed-step", "inverted"], q: "A buyout costs US$15m in advisers' fees on the acquisition and US$10m in fees for arranging the term loan. Under IFRS, how are they treated in the group accounts?",
+    o: ["Advisers' fees expensed; loan fees spread over the loan's life", "Both added to goodwill, as part of the cost of the acquisition", "Both expensed in full in the year the deal completes", "Loan fees expensed now; advisers' fees spread over five years"],
+    why: "IFRS 3 treats acquisition costs (advisers, due diligence) as expenses when they're incurred. Fees for arranging debt are costs of the loan under IFRS 9: they reduce its carrying amount and are released as extra interest over its life. In the sources and uses table, both are uses of funds.",
+    x: ["Under IFRS 3, acquisition costs aren't added to goodwill: they're expensed as incurred.", "Only the advisers' fees are expensed. Loan fees reduce the loan's carrying amount and are spread over its life (IFRS 9).", "That's the wrong way round: the acquisition fees are expensed, and the financing fees are spread."] },
+  { id: "lbo-44", lv: 1, trap: ["concept", "concept", "concept"], q: "In private equity secondaries, what is the difference between an LP-led and a GP-led deal?",
+    o: ["LP-led: an investor sells its stake in a fund; GP-led: the manager sells companies to a new fund it runs", "LP-led: investors buy the fund's companies directly; GP-led: the manager buys them for itself", "LP-led: a company is sold to another sponsor's fund; GP-led: the company is floated on a stock exchange", "LP-led: a stake is sold before the fund invests; GP-led: after the fund's ten-year life has ended"],
+    why: "In an LP-led deal an investor (a limited partner) sells its stake in a fund to a secondary buyer, usually at a price set against net asset value. In a GP-led deal the manager (the general partner) sells one or more of the fund's companies to a continuation fund it also manages, backed by new secondary investors.",
+    x: ["In an LP-led deal the investor sells its fund stake, not the companies, and in a GP-led one a new fund buys, backed by new investors, not the manager alone.", "Selling to another sponsor is a secondary buyout, and a flotation is an initial public offering (IPO); neither is a secondaries deal.", "Both can happen at any point. GP-led deals often come late in a fund's life, but investors sell stakes earlier too."] },
+  { id: "lbo-45", lv: 2, trap: ["concept", "concept", "concept"], q: "When a fund moves a company into a continuation fund, what choice do the old fund's investors usually get?",
+    o: ["Sell for cash at the agreed price, or roll their stake into the new vehicle", "Keep their stake in the old fund, which carries on for another ten years", "Receive shares in the company directly, in proportion to their commitments", "Vote on the price, which is then set by the investors' advisory committee"],
+    why: "The continuation fund buys the company from the old fund at a price set through a competitive process. Each existing investor then chooses: take its share of that price in cash, paid by the new secondary investors, or roll its stake into the new vehicle, usually on the new terms.",
+    x: ["The company leaves the old fund: that's the point. Investors who want to stay in must roll into the new vehicle.", "They don't receive the shares directly; they take cash or keep an indirect stake through the continuation fund.", "The advisory committee (LPAC) approves the conflict, but the price comes from a competitive process run by an adviser."] },
+  { id: "lbo-46", lv: 2, trap: ["concept", "concept", "concept"], q: "Why does a continuation fund deal usually need a competitive price process, a fairness opinion and approval from the investors' advisory committee (LPAC)?",
+    o: ["The same manager sells for the old fund and buys for the new one", "The secondary investors aren't allowed to do their own due diligence", "The deal is a public offer, so a fairness opinion is required by law", "The company's lenders must approve any change in the fund that owns it"],
+    why: "The general partner (GP) sets the price for the old fund's investors and also manages the fund that buys, earning a fresh fee and carry on an asset it already knows. To show the price is fair, it tests it in a competitive process run by an adviser, often gets an independent fairness opinion, and asks the LPAC to approve the conflict.",
+    x: ["Secondary buyers do their own due diligence. The issue is that the seller and the buyer are run by the same manager.", "It's a private sale between two funds, not a public offer.", "Lenders may need to consent under a change-of-control clause, but that's not why the LPAC approves the deal."] },
+  { id: "lbo-47", lv: 2, trap: ["inverted", "concept", "double-count"], q: "A fund moves a company valued at US$400m into a continuation fund. Investors holding 70% of the old fund choose to sell; the rest roll. How much cash goes to the sellers, and how much value rolls over?",
+    o: ["US$280m to sellers; US$120m rolled", "US$120m to sellers; US$280m rolled", "US$400m to sellers; nothing rolled", "US$280m to sellers; US$400m rolled"],
+    why: "The sellers' 70% × 400 = US$280m is paid in cash, funded by the new secondary investors. The other 30%, US$120m, rolls into the new vehicle. The continuation fund owns the whole company; its investors are the rollers plus the new money.",
+    x: ["That swaps the two: 70% sell, so 70% × 400 = US$280m is paid out.", "Only the investors who choose to sell are paid; the others keep their US$120m stake in the new vehicle.", "That counts the sellers' share twice: only the 30% that stays, US$120m, rolls over."] },
+  { id: "lbo-48", lv: 3, trap: ["inverted", "inverted", "concept"], q: "A continuation fund pays its manager carry of 10% of profits above 1.5x and 20% above 2.5x. Why do investors want this tiered structure?",
+    o: ["It ties the manager's pay to proving the transfer price was fair", "It lets the manager take carry before investors get their money back", "It lowers the manager's carry if the company beats the business plan", "It replaces the management fee, which continuation funds don't charge"],
+    why: "The manager set the price and sits on both sides, so investors want its reward to depend on the company doing well from that price. Tiered carry pays little unless returns are strong. Managers are also expected to roll much of the carry paid out by the old fund, putting their own money at risk alongside the new investors.",
+    x: ["Carry starts only above 1.5x, after investors have their money back and a solid return.", "It's the other way round: the rate rises from 10% to 20% as returns go up.", "Continuation funds usually charge a fee too, just a lower one than the original fund."] }
 ]);
 
 // New-format questions (shown only when "new formats" is on).
@@ -299,4 +344,72 @@ Bank.addFormat("lbo", [
       "Here the ordinary shares do far better: they grow from US$20m to about US$83m, roughly 33% a year.",
       "They pay the same price per share. The 'sweet' part comes from the structure, not from a discount."],
     why: "This is 'sweet equity'. Managers and sponsor buy ordinary shares at the same price, but the sponsor puts most of its money into loan notes (or preference shares) with a fixed return. The notes grow to 180 × 1.12⁵ = US$317m, leaving US$83m for the ordinary shares. The managers' 10% is worth US$8.3m, about 4.1x their US$2m; the sponsor gets 317 + 74.5 = US$392m on US$198m, about 2.0x. That gearing gives managers a strong reason to grow the value." }
+]);
+
+// Holding companies, tax and continuation funds (added 2026-11-26).
+Bank.addFormat("lbo", [
+  { id: "lbo-why-04", lv: 2, type: "reason",
+    q: "Two buyout groups each have tax EBITDA of US$100m and an interest cap of 30% of tax EBITDA. Group A pays US$25m of net interest a year; Group B pays US$45m. Which saves more tax per dollar of interest this year?",
+    answers: ["Group A", "Group B", "The same"],
+    answerNotes: [
+      "Group B deducts more in total (US$30m against US$25m), but US$15m of its interest gets no deduction this year.",
+      "Per dollar it's the same only below the cap. Group B is above it, so a third of its interest saves no tax now."],
+    reasons: [
+      "Only interest up to 30% of tax EBITDA is deductible, so B's extra US$15m isn't",
+      "More interest always means a bigger deduction, so B saves more on each dollar",
+      "Each dollar of interest saves tax at the same rate, whatever the total",
+      "A's lower interest points to a riskier loan, so less of it is deductible"],
+    reasonNotes: [
+      "B's total deduction is bigger, but only up to the US$30m cap; past that, extra interest saves no tax this year.",
+      "That's true only below the cap. Above it, the extra interest isn't deductible this year.",
+      "The cap depends on tax EBITDA, not on how risky the loan is."],
+    why: "The cap is 30% × 100 = US$30m for both. All of Group A's US$25m is deductible, so every dollar saves tax. Group B can deduct only US$30m of its US$45m: the last US$15m saves nothing this year and is carried forward. So past the cap, each extra dollar of debt adds less tax saving than a simple model suggests." },
+
+  { id: "lbo-spot-02", lv: 2, type: "spot",
+    q: "A buyout group has EBITDA of US$120m, depreciation of US$20m, net interest of US$50m, a 25% tax rate and an interest cap of 30% of tax EBITDA (here, equal to EBITDA). A candidate works out its tax for the year. Which line contains the mistake?",
+    lines: [
+      "EBIT: US$120m of EBITDA − US$20m of depreciation = US$100m",
+      "Cap: 30% × US$120m of tax EBITDA = US$36m deductible",
+      "Refused: US$50m − US$36m = US$14m, carried forward to a later year",
+      "Taxable profit: US$100m − US$50m of interest = US$50m",
+      "Tax: 25% × US$50m = US$12.5m"],
+    wrong: 3,
+    lineNotes: [
+      "Right: depreciation is taken off EBITDA to reach EBIT.",
+      "Right: the cap is 30% of tax EBITDA.",
+      "Right: the excess interest isn't lost, it's carried forward.",
+      null,
+      "The maths is right, but it uses the wrong taxable profit from the line above."],
+    fixes: [
+      "Deduct only the US$36m allowed: taxable profit US$64m, tax US$16m",
+      "Deduct the US$14m refused instead: taxable profit US$86m, tax US$21.5m",
+      "Also deduct the US$14m carried forward: taxable profit US$36m, tax US$9m",
+      "Apply the cap to EBIT instead: deduct US$30m, so tax is US$17.5m"],
+    fixNotes: [
+      "The refused US$14m is what can't be deducted; the allowed US$36m is what comes off.",
+      "The carried-forward interest can only be used in a later year with spare room under the cap, not this year, when the cap is already full.",
+      "The cap is set on tax EBITDA, before depreciation, not on EBIT."],
+    why: "Only US$36m of the US$50m of interest is deductible this year. Taxable profit = 100 − 36 = US$64m, so tax is 25% × 64 = US$16m, US$3.5m more than if all the interest counted. The refused US$14m is carried forward to a year with room under the cap." },
+
+  { id: "lbo-grid-05", lv: 1, type: "grid", q: "In a typical buyout structure, where does each usually sit?",
+    columns: ["TopCo", "MidCo", "BidCo"],
+    rows: [
+      { text: "The fund's ordinary shares", answer: 0, note: "The equity goes in at the top of the chain." },
+      { text: "Sweet equity bought by the managers", answer: 0, note: "The management package sits in TopCo, alongside the fund's shares." },
+      { text: "Payment-in-kind (PIK) notes from outside lenders", answer: 1, note: "Junior debt like PIK notes is borrowed at MidCo, above the senior debt." },
+      { text: "Debt that ranks behind the senior loan only because of where it's borrowed", answer: 1, note: "Debt borrowed higher up the chain is structurally junior to debt at BidCo." },
+      { text: "The senior term loan", answer: 2, note: "Senior lenders lend to BidCo, closest to the target's cash and assets." },
+      { text: "Direct ownership of the target's shares", answer: 2, note: "BidCo is the company that buys the target." }
+    ],
+    why: "Equity goes in at the top (TopCo), junior debt in the middle (MidCo) and senior debt at the bottom (BidCo), next to the business. The lower the level, the closer the lender is to the target's cash and assets, and the safer its claim." },
+
+  { id: "lbo-walk-03", lv: 2, type: "walk", q: "What is a continuation fund, and why would a GP use one?",
+    points: [
+      "Definition: a new fund, run by the same manager, that buys one or more companies from an older fund, backed by new secondary investors.",
+      "Why: the old fund is near the end of its life, but the manager thinks a company still has room to grow and doesn't want to sell it yet.",
+      "Investors' choice: sell for cash at the agreed price, or roll their stake into the new vehicle.",
+      "Economics: the old fund's carry is paid out and largely rolled; the new vehicle charges a lower fee, with carry tiered by returns.",
+      "Conflict: the manager is on both sides, so the price is tested in a competitive process, often with a fairness opinion, and the LPAC approves it."
+    ],
+    why: "Finish with the trade-off: investors who want cash get it now, and the manager keeps a good company for longer, but only if it can show the price is fair." }
 ]);
