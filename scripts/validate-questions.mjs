@@ -76,7 +76,7 @@ for (const f of [...questionFiles, ...generatorFiles, ...lessonFiles, "js/glossa
 // Every category in the bank must exist in app.js.
 const appSrc = readFileSync(join(SITE, "js/app.js"), "utf8");
 const appCats = new Set([...appSrc.matchAll(/\{ id: "([a-z]+)"/g)].map(m => m[1]));
-const groupIds = new Set([...(/const GROUPS = \[(.*?)\];/.exec(appSrc)?.[1] || "").matchAll(/id: "([a-z]+)"/g)].map(m => m[1]));
+const groupIds = new Set([...(/const GROUPS = \[([\s\S]*?)\];/.exec(appSrc)?.[1] || "").matchAll(/id: "([a-z]+)"/g)].map(m => m[1]));
 const categoryIds = [...appCats].filter(id => !groupIds.has(id)); // the 18 categories (GROUPS also use "id:")
 for (const cat of new Set([...Object.keys(Bank.written), ...Object.keys(Bank.gens), ...Object.keys(Bank.numeric || {}), ...Object.keys(Bank.formats || {}), ...Object.keys(Bank.cases || {})])) if (!appCats.has(cat)) fail(`category "${cat}" isn't defined in app.js CATEGORIES`);
 

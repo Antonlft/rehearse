@@ -2,18 +2,18 @@
 const STORE_KEY = "rehearse.v3";
 const GEN_SHARE = 0.25;
 const CATEGORIES = [
-  { id: "fig", name: "Financial institutions (FIG)", desc: "Financial institutions group (FIG): banks, insurers and asset managers, their capital, margins and valuation" },
-  { id: "val", name: "Valuation", desc: "Multiples, the bridge from enterprise value (EV) to equity value, discounted cash flow (DCF) and terminal value" },
-  { id: "mna", name: "M&A process & documents", desc: "Mergers and acquisitions (M&A): auctions, letters of intent (LOIs), share purchase agreements (SPAs), deal protection, accretion/dilution" },
-  { id: "lbo", name: "LBO & private equity", desc: "Leveraged buyouts (LBOs): returns, leverage, fund economics and exits" },
-  { id: "rx", name: "Restructuring", desc: "Priority of claims, Chapter 11, schemes and liability management" },
-  { id: "acc", name: "Accounting & statements", desc: "The three statements, working capital and key International Financial Reporting Standards (IFRS) rules" },
-  { id: "cf", name: "Corporate finance", desc: "Cost of capital, capital structure and payout policy" },
-  { id: "credit", name: "Credit & debt", desc: "Covenants, ratings, bonds and seniority" },
-  { id: "cm", name: "ECM & DCM", desc: "Equity and debt capital markets (ECM, DCM): initial public offerings (IPOs), rights issues, block trades, convertibles and bond issuance" },
-  { id: "maths", name: "Quick maths", desc: "Compound annual growth rate (CAGR), discounting, perpetuities, breakevens and basis points" },
-  { id: "bt", name: "Brain teasers", desc: "Probability, logic puzzles and mental arithmetic" },
-  { id: "econ", name: "Economics & markets", desc: "Rates, inflation, foreign exchange (FX) and the macro cycle" },
+  { id: "acc", group: "core", name: "Accounting & statements", desc: "The three statements, working capital and key International Financial Reporting Standards (IFRS) rules" },
+  { id: "val", group: "core", name: "Valuation", desc: "Multiples, the bridge from enterprise value (EV) to equity value, discounted cash flow (DCF) and terminal value" },
+  { id: "cf", group: "core", name: "Corporate finance", desc: "Cost of capital, capital structure and payout policy" },
+  { id: "mna", group: "deals", name: "M&A process & documents", desc: "Mergers and acquisitions (M&A): auctions, letters of intent (LOIs), share purchase agreements (SPAs), deal protection, accretion/dilution" },
+  { id: "lbo", group: "deals", name: "LBO & private equity", desc: "Leveraged buyouts (LBOs): returns, leverage, fund economics and exits" },
+  { id: "rx", group: "deals", name: "Restructuring", desc: "Priority of claims, Chapter 11, schemes and liability management" },
+  { id: "credit", group: "mkt", name: "Credit & debt", desc: "Covenants, ratings, bonds and seniority" },
+  { id: "cm", group: "mkt", name: "ECM & DCM", desc: "Equity and debt capital markets (ECM, DCM): initial public offerings (IPOs), rights issues, block trades, convertibles and bond issuance" },
+  { id: "fig", group: "mkt", name: "Financial institutions (FIG)", desc: "Financial institutions group (FIG): banks, insurers and asset managers, their capital, margins and valuation" },
+  { id: "econ", group: "mkt", name: "Economics & markets", desc: "Rates, inflation, foreign exchange (FX) and the macro cycle" },
+  { id: "maths", group: "puzzles", name: "Quick maths", desc: "Compound annual growth rate (CAGR), discounting, perpetuities, breakevens and basis points" },
+  { id: "bt", group: "puzzles", name: "Brain teasers", desc: "Probability, logic puzzles and mental arithmetic" },
   { id: "hk", group: "hl", name: "Hotel economics & KPIs", desc: "Key performance indicators (KPIs): occupancy, average daily rate (ADR), revenue per available room (RevPAR), gross operating profit (GOP) and earnings before interest, tax, depreciation and amortisation (EBITDA)" },
   { id: "hom", group: "hl", name: "Hotel operating models", desc: "Lease vs management vs franchise, operating and property company (OpCo/PropCo) splits, and fee structures" },
   { id: "rev", group: "hl", name: "Real estate valuation", desc: "Yields, price per key and bed, net operating income (NOI), discounted cash flow (DCF) and exit yields, and real estate investment trusts (REITs)" },
@@ -21,13 +21,20 @@ const CATEGORIES = [
   { id: "pf", group: "hl", name: "Property finance & rates", desc: "Loan-to-value (LTV), interest cover (ICR) and debt service cover (DSCR) ratios, debt yield, swaps, benchmark rates and leverage" },
   { id: "hds", group: "hl", name: "Hospitality & living deal structuring", desc: "Sale process, asset vs share deals, leasebacks, joint ventures (JVs), forward funding" }
 ];
-CATEGORIES.forEach(c => c.group ||= "fin");
-const GROUPS = [{ id: "fin", name: "Finance & accounting" }, { id: "hl", name: "Hospitality & living" }];
+// Groups, in the order shown. family sets the colour (finance navy, hospitality teal) and the label of a mixed selection.
+const GROUPS = [
+  { id: "core", family: "fin", name: "Accounting & valuation" },
+  { id: "deals", family: "fin", name: "Deals: M&A, LBOs & restructuring" },
+  { id: "mkt", family: "fin", name: "Debt, capital markets & banks" },
+  { id: "puzzles", family: "fin", name: "Maths & brain teasers" },
+  { id: "hl", family: "hl", name: "Hospitality & living" }
+];
+const groupById = id => GROUPS.find(g => g.id === id);
 const LEVELS = { 1: "Basic", 2: "Intermediate", 3: "Advanced" };
 const catById = id => CATEGORIES.find(c => c.id === id);
 const groupLabel = ids => {
-  const gs = [...new Set(ids.map(id => catById(id).group))];
-  return gs.length === 1 ? GROUPS.find(g => g.id === gs[0]).name : "Finance, real estate & hospitality";
+  const gs = [...new Set(ids.map(id => catById(id).group))].map(groupById), fams = new Set(gs.map(g => g.family));
+  return gs.length === 1 ? gs[0].name : fams.size === 1 && fams.has("fin") ? "Finance & accounting" : fams.size === 1 ? gs[0].name : "Finance, real estate & hospitality";
 };
 const RETRY = "retry";
 // "Due for review": a round of only the written questions (new formats included, when on) due for review, most overdue first, kept
@@ -840,7 +847,7 @@ function renderSetup() {
       </div>
       ${GROUPS.map(g => `
         <div class="check-group">
-          <div class="check-group-head grp-${g.id}"><h3>${esc(g.name)}</h3><button class="link" type="button" data-only="${g.id}">Only this group</button></div>
+          <div class="check-group-head grp-${g.family}"><h3>${esc(g.name)}</h3><button class="link" type="button" data-only="${g.id}">Only this group</button></div>
           <div class="check-grid">
             ${CATEGORIES.filter(c => c.group === g.id).map(c => `
               <label class="check" for="cat-${c.id}">
@@ -1057,7 +1064,7 @@ function renderBrowseTab() {
     <div class="cat-table">
       <div class="cat-row cat-head" aria-hidden="true"><span>Category</span><span>Question bank</span><span>Your accuracy</span><span></span></div>
       ${GROUPS.map(g => { const cats = CATEGORIES.filter(c => c.group === g.id).sort(byName);
-        return `<div class="cat-group grp-${g.id}">${esc(g.name)}<span class="grp-count">${cats.length} categories</span></div>` + cats.map(c => catRow(c, g.id)).join(""); }).join("")}
+        return `<div class="cat-group grp-${g.family}">${esc(g.name)}<span class="grp-count">${cats.length} categories</span></div>` + cats.map(c => catRow(c, g.family)).join(""); }).join("")}
     </div>`;
 }
 
