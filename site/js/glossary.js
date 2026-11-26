@@ -71,6 +71,8 @@ window.Glossary = [
   { term: "IC", full: "Investment committee", def: "The group of senior partners at a fund that approves or rejects each investment, usually on the basis of an investment memo.", cat: "memo" },
   { term: "SWOT", full: "Strengths, weaknesses, opportunities and threats", def: "A one-page summary of a company's internal strengths and weaknesses and the external opportunities and threats it faces.", cat: "memo" },
   { term: "ESG", full: "Environmental, social and governance", def: "The non-financial factors a fund reviews before investing, such as emissions, working conditions and board oversight.", cat: "memo" },
+  { term: "ROFO", full: "Right of first offer", def: "A shareholder who wants to sell must first ask the other shareholders to make an offer before going to outside buyers.", cat: "terms" },
+  { term: "ROFR", full: "Right of first refusal", def: "A shareholder with an outside offer must let the other shareholders buy on the same terms first.", cat: "terms" },
   { term: "VDD", full: "Vendor due diligence", def: "Due diligence reports commissioned by the seller and shared with all bidders.", cat: "mna" },
   { term: "NYSE", full: "New York Stock Exchange", def: "The largest US stock exchange.", cat: "mna" },
   { term: "JV", full: "Joint venture", def: "A business or asset owned and run jointly by two or more partners.", cat: "hds" },

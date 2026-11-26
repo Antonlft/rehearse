@@ -9,6 +9,7 @@ const CATEGORIES = [
   { id: "lbo", group: "deals", name: "LBO & private equity", desc: "Leveraged buyouts (LBOs): returns, leverage, fund economics and exits" },
   { id: "rx", group: "deals", name: "Restructuring", desc: "Priority of claims, Chapter 11, schemes and liability management" },
   { id: "memo", group: "deals", name: "Information & investment memos", desc: "The sell-side information memorandum (IM) and the fund's investment committee (IC) memo: what goes in each, how to build it and how to make it convincing" },
+  { id: "terms", group: "deals", name: "Deal terms & protections", desc: "Share purchase agreement (SPA) protections, from signing to completion, the management package and the shareholders' agreement" },
   { id: "credit", group: "mkt", name: "Credit & debt", desc: "Covenants, ratings, bonds and seniority" },
   { id: "cm", group: "mkt", name: "ECM & DCM", desc: "Equity and debt capital markets (ECM, DCM): initial public offerings (IPOs), rights issues, block trades, convertibles and bond issuance" },
   { id: "fig", group: "mkt", name: "Financial institutions (FIG)", desc: "Financial institutions group (FIG): banks, insurers and asset managers, their capital, margins and valuation" },

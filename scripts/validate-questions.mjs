@@ -582,7 +582,7 @@ Glossary.forEach((g, i) => {
   if (!categoryIds.includes(g.cat)) fail(`${where}: cat must be a category id, got ${JSON.stringify(g.cat)}`);
 });
 // Not acronyms for this rule: currencies and places, Roman numerals, and people's or publishers' names in sources.
-const NOT_ACRONYMS = new Set(["US", "UK", "EU", "II", "III", "IV", "McGraw", "DeMarzo", "McKinsey", "HotelAVE"]);
+const NOT_ACRONYMS = new Set(["US", "UK", "EU", "II", "III", "IV", "McGraw", "DeMarzo", "McKinsey", "McKenzie", "HotelAVE"]);
 const ACRONYM = /(?<![A-Za-z0-9])(?=[A-Za-z0-9&/]*[A-Z][A-Za-z0-9&/]*[A-Z])[A-Za-z][A-Za-z0-9&/]*[A-Za-z0-9](?![A-Za-z0-9])/g;
 const known = t => NOT_ACRONYMS.has(t) || glTerms.has(t) || (t.endsWith("s") && glTerms.has(t.slice(0, -1)));
 for (const [cat, l] of Object.entries(Lessons)) {
