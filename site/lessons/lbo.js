@@ -7,7 +7,7 @@ Lessons.add("lbo", {
     "A private equity sponsor buys a company mostly with debt, repays the debt from the company's own cash and sells after three to seven years.",
     "Returns come from earnings before interest, tax, depreciation and amortisation (EBITDA) growth, debt paydown and any change in the multiple.",
     "Track both the money multiple and the internal rate of return (IRR): the multiple shows how much was made, the IRR how fast.",
-    "The money comes from a fund: investors commit capital, and the manager earns a yearly fee plus a share of profits above a hurdle."
+    "A fund invests through a chain of holding companies, earns a fee plus a share of profits, and can move an asset it isn't ready to sell into a continuation fund."
   ],
   "method": [
     {"section": "The deal"},
@@ -38,7 +38,22 @@ Lessons.add("lbo", {
     {"kind": "how", "title": "Limited partners (LPs) and the general partner (GP)", "text": "The money comes from a fund, a limited partnership. LPs (pension funds, insurers, endowments) commit capital that the GP calls as it invests. The GP charges a management fee of about 1.5–2% a year and earns carried interest, typically 20% of profits."},
     {"kind": "how", "title": "The waterfall", "text": "Under a whole-fund (European) waterfall, proceeds go first to return the LPs' capital, then to an 8% compounded preferred return, then to a GP catch-up until the GP has 20% of all profit; the rest is split 80/20."},
     {"kind": "example", "text": "US$100m invested for five years that returns US$200m: capital back 100, preferred return 46.9, catch-up 11.7 to the GP, then 41.3 split 80/20. The GP's carry is US$20m, exactly 20% of the US$100m profit."},
-    {"check": "lbo-22"}
+    {"check": "lbo-22"},
+    {"section": "Structuring the buyout: holding companies and tax", "added": "2026-11-26"},
+    {"kind": "idea", "text": "A buyout isn't one company buying another. The fund sets up a chain of new holding companies, so each kind of money sits at its own level and the interest can be set against the target's profits."},
+    {"kind": "formula", "title": "The interest cap", "text": "Deductible net interest = the lower of net interest and 30% × tax EBITDA\nInterest refused this year = net interest − deductible net interest", "note": "Tax EBITDA is taxable profit before interest, depreciation and amortisation. Refused interest can usually be carried forward to a year with spare room. The EU rule allows a small safe harbour (up to €3m of net interest); the US rule is section 163(j), back on an EBITDA basis since 2025."},
+    {"kind": "how", "numbered": true, "text": "The fund and the managers invest in TopCo: the ordinary shares, plus the fund's preference shares or loan notes. The management package sits here.\nTopCo owns MidCo, which can hold shareholder loans or borrow junior debt such as payment-in-kind (PIK) notes.\nMidCo owns BidCo, which borrows the senior debt and buys the target's shares.\nBidCo and the target join a tax group, merge, or push the debt down, so the interest is deducted from the target's profits. Thresholds vary: for example, 80% ownership for a US consolidated return, 75% for UK group relief and 95% in France."},
+    {"kind": "read", "text": "Why the layers: debt borrowed higher up is structurally junior to debt lower down, so each layer has its own ranking. Senior lenders also take security over the shares of BidCo and the target, so they can sell the whole group without a court process.\nShareholder loans: their interest is deductible only at an arm's-length rate, and anti-hybrid rules can refuse it.\nDeal fees: under International Financial Reporting Standards (IFRS), advisers' fees on the acquisition are expensed in the group accounts (IFRS 3); the fees for arranging the loans reduce the loan's carrying amount and are spread over its life (IFRS 9)."},
+    {"kind": "example", "text": "The group's tax EBITDA is US$100m and its net interest US$40m. The cap is 30% × 100 = US$30m, so US$10m isn't deductible this year.\nAt a 25% tax rate that costs 10 × 25% = US$2.5m of tax now; the US$10m is carried forward and deducted in a later year with room under the cap."},
+    {"kind": "watch", "text": "Don't assume all LBO interest saves tax. With high leverage, or once EBITDA falls, the cap bites just when cash is tight, and the model should show it."},
+    {"check": "lbo-37"},
+    {"section": "Secondaries and continuation funds", "added": "2026-11-26"},
+    {"kind": "idea", "text": "Funds have a fixed life of about ten years. Secondaries let an investor sell out early, or let the manager keep a good asset past the fund's end by moving it into a new vehicle."},
+    {"kind": "how", "text": "LP-led secondary: an investor (an LP) sells its stake in a fund to a secondary buyer, usually at a price set against the fund's net asset value (NAV).\nGP-led secondary: the manager (the GP) sells one or more of the fund's companies to a new continuation fund that it also manages, backed by new secondary investors. It can be single-asset, multi-asset, or a strip sale of a slice of every company.\nThe choice: each existing investor either sells for cash at the agreed price or rolls its stake into the new vehicle.\nThe economics: the old fund's carry is paid out on the sale, and the manager is expected to roll much of it back in. The new vehicle usually charges a lower fee, with carry tiered by returns, for example 10% above 1.5x rising to 20% above 2.5x."},
+    {"kind": "read", "text": "The conflict: the manager sits on both sides, selling for the old fund and buying for the new one. So the price is tested by a competitive process run by an adviser, often backed by an independent fairness opinion, and the investors' advisory committee (LPAC) approves the conflict.\nWhy investors accept: sellers get cash now instead of waiting; buyers get a known company with a manager that believes in it."},
+    {"kind": "example", "text": "A fund's best company is valued at US$500m, and the fund's life is nearly over. A continuation fund buys it at that value.\nInvestors holding 60% sell and receive US$300m in cash, paid by the new secondary investors. Those holding 40% roll their US$200m into the new vehicle, which also raises US$100m for add-on acquisitions."},
+    {"kind": "watch", "text": "Don't mix this up with a secondary buyout, where one fund sells a company to a different fund. In a continuation fund, the same manager stays in control on both sides, which is why the price has to be proven."},
+    {"check": "lbo-07"}
   ],
   "example": {
     "question": "A sponsor buys a company with EBITDA of US$50m at 8x, funded with US$250m of debt. Five years later EBITDA is US$70m, it sells at 8x, and debt is down to US$150m. What are the MOIC and IRR?",
@@ -50,9 +65,12 @@ Lessons.add("lbo", {
     ],
     "answer": "2.7x and about 22% a year. EBITDA growth added US$160m and debt paydown US$100m; the multiple added nothing."
   },
-  "source": {
-    "text": "Joshua Rosenbaum & Joshua Pearl, Investment Banking: Valuation, LBOs, M&A, and IPOs (Wiley): the LBO chapters"
-  },
+  "source": [
+    { "text": "Joshua Rosenbaum & Joshua Pearl, Investment Banking: Valuation, LBOs, M&A, and IPOs (Wiley): the LBO chapters" },
+    { "text": "Internal Revenue Service: questions and answers on the limit on business interest (section 163(j))", "url": "https://www.irs.gov/node/153731" },
+    { "text": "European Union: the anti-tax-avoidance directive, Council Directive (EU) 2016/1164, article 4", "url": "https://eur-lex.europa.eu/eli/dir/2016/1164/oj" },
+    { "text": "Skadden: the Institutional Limited Partners Association's final continuation vehicle guidance (2026)", "url": "https://www.skadden.com/insights/publications/2026/11/ilpas-final-continuation-vehicle-guidance" }
+  ],
   "widget": {
     "type": "lboReturns",
     "values": {
